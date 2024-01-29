@@ -8,5 +8,3 @@ export type MeshInfo = {
 	vertexArray: Float32Array;
 	dimensions: MeshDimensionInfo;
 };
-
-export type MeshInfoTuple = { main: MeshInfo; coverage: MeshInfo };

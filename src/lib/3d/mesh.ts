@@ -11,13 +11,12 @@ const BOTTOM_THICKNESS = 2;
 const EDGE_THICKNESS = 2;
 const TEXT_THICKNESS = 1;
 const ROUND_CORRECTION = 1;
-/*global __BASE_URL__*/
-const BASE_URL = __BASE_URL__;
 
 export const CYLINDER = (radius: number, height: number) =>
 	new CylinderGeometry(radius, radius, height, MathMinMax(radius * 8, 16, 48));
 
-export const BOX = (width: number, height: number, depth: number) => new BoxGeometry(width, height, depth);
+export const BOX = (width: number, height: number, depth: number) =>
+	new BoxGeometry(width, height, depth);
 
 export const MESH = (geometry: BoxGeometry | CylinderGeometry | TextGeometry) => {
 	const result = new Brush(geometry.translate(0, 0, 0));

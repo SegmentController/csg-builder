@@ -31,11 +31,7 @@ export default defineConfig({
 			$lib: path.resolve(__dirname, './src/lib'),
 			$stores: path.resolve(__dirname, './src/stores'),
 			$types: path.resolve(__dirname, './src/types'),
-			$projects: path.resolve(__dirname, './projects'),
+			$projects: path.resolve(__dirname, './projects')
 		}
 	},
-	define: {
-		__PKG_VERSION__: `"${package_.version}"`,
-		__BASE_URL__: `"${process.env.NODE_ENV === 'production' ? '/pcb-tht-holder' : ''}"`
-	}
 });

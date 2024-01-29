@@ -8,28 +8,14 @@
 		"noEmit": true,
 		"isolatedModules": true,
 		"paths": {
-			"$components/*": [
-				"./src/components/*"
-			],
-			"$lib/*": [
-				"./src/lib/*"
-			],
-			"$stores/*": [
-				"./src/stores/*"
-			],
-			"$types/*": [
-				"./src/types/*"
-			],
-			"$projects/*": [
-				"./projects/*"
-			]
+			"$components/*": ["./src/components/*"],
+			"$lib/*": ["./src/lib/*"],
+			"$stores/*": ["./src/stores/*"],
+			"$types/*": ["./src/types/*"],
+			"$projects/*": ["./projects/*"]
 		}
 	},
-	"include": [
-		"src/**/*.ts",
-		"projects/**/*.ts",
-		"src/**/*.svelte"
-	],
+	"include": ["src/**/*.ts", "projects/**/*.ts", "src/**/*.svelte"],
 	"references": [
 		{
 			"path": "./tsconfig.node.json"

@@ -1,33 +1,27 @@
 <script lang="ts">
 	import './app.postcss';
 
-	import { onMount } from 'svelte';
-
-	import AppNavigation from './AppNavigation.svelte';
 	import { Canvas } from '@threlte/core';
-	import Mesh3DScene from '$components/Mesh3DScene.svelte';
-	import { MathMax } from '$lib/Math';
 
+	import App3DScene from './App3DScene.svelte';
+	import { MathMax } from '$lib/Math';
 	import {} from '$projects/sample';
 
-	onMount(() => {});
+	import AppNavigation from './AppNavigation.svelte';
 
 	let volume: number;
+	let vertices: Float32Array | undefined;
+	const setVertices = (v: Float32Array) => (volume = MathMax([...(vertices = v)]));
+
 	let wireframe: boolean = false;
-	let vertices: Float32Array | undefined = undefined;
 </script>
 
-<AppNavigation
-	on:select={(e) => {
-		vertices = e.detail.vertices;
-		volume = MathMax([...e.detail.vertices]);
-	}}
-/>
+<AppNavigation on:select={(event) => setVertices(event.detail)} bind:wireframe />
 <div class="canvasContainer">
 	{#if vertices}
 		{#key vertices}
 			<Canvas>
-				<Mesh3DScene {vertices} {volume} {wireframe} />
+				<App3DScene {vertices} {volume} {wireframe} />
 			</Canvas>
 		{/key}
 	{/if}
@@ -40,7 +34,5 @@
 	.canvasContainer {
 		width: 100%;
 		height: calc(100vh - 94px);
-		background: #888;
-		background: linear-gradient(-45deg, #888 0%, #ccc 100%);
 	}
 </style>
