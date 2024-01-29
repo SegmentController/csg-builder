@@ -6,8 +6,6 @@ import path from 'path';
 import { defineConfig } from 'vite';
 import { purgeCss } from 'vite-plugin-tailwind-purgecss';
 
-import package_ from './package.json';
-
 export default defineConfig({
 	plugins: [svelte()],
 	build: {
@@ -33,5 +31,5 @@ export default defineConfig({
 			$types: path.resolve(__dirname, './src/types'),
 			$projects: path.resolve(__dirname, './projects')
 		}
-	},
+	}
 });

@@ -1,24 +1,18 @@
-import { Brush, Evaluator, SUBTRACTION } from 'three-bvh-csg';
-
-import { CYLINDER, MESH } from '$lib/3d/mesh';
+import { Mesh } from '$lib/3d/Mesh';
 import { addToComponentStore } from '$stores/componentStore';
 
 import { box } from './box';
 
-export const house = (): Brush => {
-	let mesh = box();
-	mesh.updateMatrixWorld();
+export const house = (): Mesh => {
+	const mesh = box();
 
-	const circle = MESH(CYLINDER(3.7, 30));
-	circle.updateMatrixWorld();
-
-	const evaluator = new Evaluator();
-	mesh = evaluator.evaluate(mesh, circle, SUBTRACTION);
+	const c = Mesh.fromCylinder(4, 30);
+	mesh.sub(c);
 
 	return mesh;
 };
 
 addToComponentStore({
-	name: 'Tiny house',
-	receiveData: () => new Float32Array(house().geometry.attributes['position'].array)
+	name: '[Composed]',
+	receiveData: () => house().vertices
 });

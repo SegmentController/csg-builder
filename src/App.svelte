@@ -3,10 +3,10 @@
 
 	import { Canvas } from '@threlte/core';
 
-	import App3DScene from './App3DScene.svelte';
 	import { MathMax } from '$lib/Math';
 	import {} from '$projects/sample';
 
+	import App3DScene from './App3DScene.svelte';
 	import AppNavigation from './AppNavigation.svelte';
 
 	let volume: number;
@@ -33,6 +33,6 @@
 	}
 	.canvasContainer {
 		width: 100%;
-		height: calc(100vh - 94px);
+		height: calc(100vh - 120px);
 	}
 </style>
