@@ -13,12 +13,12 @@ export const sideWindow = (width: number, height: number, depth: number): BodySe
 	).setNegative();
 	const result = new BodySet(Body.fromCube(width, height, depth, 'brown'), empty).merge();
 
-	empty.y(3);
+	//empty.y(3);
 
 	result.append(
 		empty,
-		Body.fromCube(BORDER, height, depth - 1, 'brown'),
-		Body.fromCube(width, BORDER, depth - 1, 'brown')
+		Body.fromCube(BORDER, height, depth - 1, 'brown').dZ(-0.5),
+		Body.fromCube(width, BORDER, depth - 1, 'brown').dZ(-0.5)
 	);
 
 	return result;

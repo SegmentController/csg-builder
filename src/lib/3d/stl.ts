@@ -11,8 +11,12 @@ export const generateBinaryStlFromVertices = (vertices: Float32Array): Uint8Arra
 		let index = 0;
 		while (index < vertices.length) {
 			for (let pointIndex = 0; pointIndex < 3; pointIndex++) pos = writeFloatLE(buffer, 0, pos);
-			for (let pointIndex = 0; pointIndex < 9; pointIndex++)
-				pos = writeFloatLE(buffer, vertices.at(index++)!, pos);
+			for (let pointIndex = 0; pointIndex < 3; pointIndex++) {
+				pos = writeFloatLE(buffer, vertices.at(index + 0)!, pos);
+				pos = writeFloatLE(buffer, -vertices.at(index + 2)!, pos);
+				pos = writeFloatLE(buffer, vertices.at(index + 1)!, pos);
+				index += 3;
+			}
 			pos = writeInt16LE(buffer, 0, pos);
 		}
 	}

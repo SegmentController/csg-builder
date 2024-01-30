@@ -23,6 +23,7 @@ export class Body {
 		return result;
 	}
 	private static fakeAddition(brush: Brush): Brush {
+		return brush;
 		return new Evaluator().evaluate(
 			brush,
 			this.geometryToBrush(new BoxGeometry(0, 0, 0)),
@@ -43,18 +44,23 @@ export class Body {
 			color
 		);
 
-	public x(x: number): Body {
-		this.brush.position.setX(x);
+	public merge = (body: Body): Body => {
+		this.brush = new Evaluator().evaluate(this.brush, body.brush, ADDITION);
+		return this;
+	};
+
+	public dX(x: number): Body {
+		this.brush.position.x += x;
 		this.brush.updateMatrixWorld();
 		return this;
 	}
-	public y(y: number): Body {
-		this.brush.position.setY(y);
+	public dY(y: number): Body {
+		this.brush.position.y += y;
 		this.brush.updateMatrixWorld();
 		return this;
 	}
-	public z(z: number): Body {
-		this.brush.position.setZ(z);
+	public dZ(z: number): Body {
+		this.brush.position.z += z;
 		this.brush.updateMatrixWorld();
 		return this;
 	}
@@ -81,7 +87,6 @@ export class Body {
 		return this;
 	}
 
-	public get vertices(): Float32Array {
-		return new Float32Array(this.brush.geometry.attributes['position'].array);
-	}
+	public getVertices = (): Float32Array =>
+		new Float32Array(this.brush.geometry.attributes['position'].array);
 }

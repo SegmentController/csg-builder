@@ -5,7 +5,7 @@ import { addToComponentStore } from '$stores/componentStore';
 export const box = (): BodySet => {
 	const result = new BodySet(Body.fromCube(10, 10, 10, 'blue'));
 
-	const cyl = Body.fromCylinder(3, 30, 'red').rotateX(30).rotateY(30).rotateZ(30).setNegative();
+	const cyl = Body.fromCylinder(3, 30, 'red').setNegative().rotateX(30).rotateY(30).rotateZ(30);
 	result.merge(cyl);
 	result.append(cyl);
 

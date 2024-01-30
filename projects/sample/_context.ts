@@ -1,5 +1,5 @@
 export const context = {
-	draft: true,
+	production: true,
 
 	width: 240
 };

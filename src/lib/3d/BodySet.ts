@@ -16,8 +16,8 @@ export class BodySet {
 			else this.bodies.push(b);
 		return this;
 	}
-	public merge(body?: Body): BodySet {
-		if (body) this.append(body);
+	public merge(...body: (Body | BodySet)[]): BodySet {
+		if (body.length > 0) this.append(...body);
 		if (this.bodies.length > 1) {
 			let brush = this.bodies[0].brush;
 			const color = this.bodies[0].color;
@@ -29,6 +29,32 @@ export class BodySet {
 				);
 			this.bodies = [new Body(brush, color)];
 		}
+		return this;
+	}
+
+	public dX(x: number): BodySet {
+		for (const body of this.bodies) body.dX(x);
+		return this;
+	}
+	public dY(y: number): BodySet {
+		for (const body of this.bodies) body.dY(y);
+		return this;
+	}
+	public dZ(z: number): BodySet {
+		for (const body of this.bodies) body.dZ(z);
+		return this;
+	}
+
+	public rotateX(angle: number): BodySet {
+		for (const body of this.bodies) body.rotateX(angle);
+		return this;
+	}
+	public rotateY(angle: number): BodySet {
+		for (const body of this.bodies) body.rotateY(angle);
+		return this;
+	}
+	public rotateZ(angle: number): BodySet {
+		for (const body of this.bodies) body.rotateZ(angle);
 		return this;
 	}
 

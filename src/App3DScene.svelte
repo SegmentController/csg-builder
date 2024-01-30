@@ -32,7 +32,7 @@
 	>
 		<T.BufferGeometry>
 			<T.BufferAttribute
-				args={[body.vertices, 3]}
+				args={[body.getVertices(), 3]}
 				attach={(parent, self) => {
 					parent.setAttribute('position', self);
 					parent.computeVertexNormals();

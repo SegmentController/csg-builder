@@ -16,13 +16,13 @@
 	let bodyset: BodySet | undefined;
 	const setBodySet = (bs: BodySet) => {
 		bodyset = bs;
-		volume = MathMax(bs.getBodies().map((b) => MathMax([...b.vertices])));
+		volume = MathMax(bs.getBodies().map((b) => MathMax([...b.getVertices()])));
 	};
 	const download = () => {
 		if (!bodyset) return;
 
 		bodyset.merge();
-		const vertices = bodyset.getBodies()[0].vertices;
+		const vertices = bodyset.getBodies()[0].getVertices();
 		const stlData = generateBinaryStlFromVertices(vertices);
 
 		virtualDownload('a.stl', stlData);
