@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { Navbar, NavBrand, NavUl, Select, Toggle } from 'flowbite-svelte';
+	import { Button, Navbar, NavBrand, NavUl, Select, Toggle } from 'flowbite-svelte';
 	import NavContainer from 'flowbite-svelte/NavContainer.svelte';
 	import { createEventDispatcher, onMount } from 'svelte';
 
@@ -8,6 +8,7 @@
 
 	const dispatch = createEventDispatcher<{
 		select: BodySet;
+		download: void;
 	}>();
 	export let wireframe: boolean;
 
@@ -45,11 +46,12 @@
 				<Select
 					placeholder="Select model part..."
 					size="lg"
-					class="w-96"
+					class="w-72"
 					items={getComponentStoreValue().map((c) => ({ value: c.name, name: c.name }))}
 					bind:value={selected}
 					on:change={change}
 				/>
+				<Button on:click={() => dispatch('download')}>Download</Button>
 			{/if}
 		</NavUl>
 	</NavContainer>

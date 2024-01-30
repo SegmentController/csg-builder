@@ -26,6 +26,9 @@
 		position.x={body.brush.position.x}
 		position.y={body.brush.position.z}
 		position.z={-body.brush.position.y}
+		rotation.x={body.brush.rotation.x}
+		rotation.y={body.brush.rotation.y}
+		rotation.z={body.brush.rotation.z}
 	>
 		<T.BufferGeometry>
 			<T.BufferAttribute

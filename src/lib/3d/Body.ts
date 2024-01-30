@@ -15,9 +15,7 @@ export class Body {
 		this.brush.updateMatrixWorld();
 	}
 
-	public clone(): Body {
-		return new Body(this.brush, this.color);
-	}
+	public clone = (): Body => new Body(this.brush, this.color);
 
 	private static geometryToBrush(geometry: BoxGeometry | CylinderGeometry): Brush {
 		const result = new Brush(geometry.translate(0, 0, 0));
@@ -32,15 +30,11 @@ export class Body {
 		);
 	}
 
-	static fromCube(width: number, height: number, depth: number, color: string): Body {
-		return new Body(
-			this.fakeAddition(this.geometryToBrush(new BoxGeometry(width, height, depth))),
-			color
-		);
-	}
+	static fromCube = (width: number, height: number, depth: number, color: string): Body =>
+		new Body(this.fakeAddition(this.geometryToBrush(new BoxGeometry(width, height, depth))), color);
 
-	static fromCylinder(radius: number, height: number, color: string): Body {
-		return new Body(
+	static fromCylinder = (radius: number, height: number, color: string): Body =>
+		new Body(
 			this.fakeAddition(
 				this.geometryToBrush(
 					new CylinderGeometry(radius, radius, height, MathMinMax(radius * 8, 16, 48))
@@ -48,7 +42,6 @@ export class Body {
 			),
 			color
 		);
-	}
 
 	public x(x: number): Body {
 		this.brush.position.setX(x);
@@ -62,6 +55,23 @@ export class Body {
 	}
 	public z(z: number): Body {
 		this.brush.position.setZ(z);
+		this.brush.updateMatrixWorld();
+		return this;
+	}
+
+	private angleToRadian = (degree: number) => degree * (Math.PI / 180);
+	public rotateX(angle: number): Body {
+		this.brush.rotation.x += this.angleToRadian(angle);
+		this.brush.updateMatrixWorld();
+		return this;
+	}
+	public rotateY(angle: number): Body {
+		this.brush.rotation.y += this.angleToRadian(angle);
+		this.brush.updateMatrixWorld();
+		return this;
+	}
+	public rotateZ(angle: number): Body {
+		this.brush.rotation.z += this.angleToRadian(angle);
 		this.brush.updateMatrixWorld();
 		return this;
 	}

@@ -6,19 +6,14 @@ export class BodySet {
 	private evaluator = new Evaluator();
 	private bodies: Body[] = [];
 
-	public constructor(body: Body | Body[] | BodySet | BodySet[]) {
-		if (Array.isArray(body)) {
-			for (const b of body)
-				if (b instanceof BodySet) this.bodies.push(...b.getBodies());
-				else this.bodies.push(b);
-		} else {
-			if (body instanceof BodySet) this.bodies.push(...body.getBodies());
-			else this.bodies.push(body);
-		}
+	public constructor(...body: (Body | BodySet)[]) {
+		this.append(...body);
 	}
 
-	public append(body: Body): BodySet {
-		this.bodies.push(body);
+	public append(...body: (Body | BodySet)[]): BodySet {
+		for (const b of body)
+			if (b instanceof BodySet) this.bodies.push(...b.getBodies());
+			else this.bodies.push(b);
 		return this;
 	}
 	public merge(body?: Body): BodySet {
@@ -37,7 +32,5 @@ export class BodySet {
 		return this;
 	}
 
-	public getBodies(): Body[] {
-		return this.bodies;
-	}
+	public getBodies = (): Body[] => this.bodies;
 }
