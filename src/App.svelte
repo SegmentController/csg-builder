@@ -3,6 +3,7 @@
 
 	import { Canvas } from '@threlte/core';
 
+	import type { BodySet } from '$lib/3d/BodySet';
 	import { MathMax } from '$lib/Math';
 	import {} from '$projects/sample';
 
@@ -10,18 +11,21 @@
 	import AppNavigation from './AppNavigation.svelte';
 
 	let volume: number;
-	let vertices: Float32Array | undefined;
-	const setVertices = (v: Float32Array) => (volume = MathMax([...(vertices = v)]));
+	let bodyset: BodySet | undefined;
+	const setBodySet = (bs: BodySet) => {
+		bodyset = bs;
+		volume = MathMax(bs.getBodies().map((b) => MathMax([...b.vertices])));
+	};
 
 	let wireframe: boolean = false;
 </script>
 
-<AppNavigation on:select={(event) => setVertices(event.detail)} bind:wireframe />
+<AppNavigation on:select={(event) => setBodySet(event.detail)} bind:wireframe />
 <div class="canvasContainer">
-	{#if vertices}
-		{#key vertices}
+	{#if bodyset}
+		{#key bodyset}
 			<Canvas>
-				<App3DScene {vertices} {volume} {wireframe} />
+				<App3DScene {bodyset} {volume} {wireframe} />
 			</Canvas>
 		{/key}
 	{/if}

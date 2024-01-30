@@ -1,8 +1,10 @@
 import { get, writable } from 'svelte/store';
 
+import type { BodySet } from '$lib/3d/BodySet';
+
 export type Component = {
 	name: string;
-	receiveData: () => Float32Array;
+	receiveData: () => BodySet;
 };
 
 export const componentStore = writable<Component[]>([]);

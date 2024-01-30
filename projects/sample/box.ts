@@ -1,11 +1,18 @@
-import { Mesh } from '$lib/3d/Mesh';
+import { Body } from '$lib/3d/Body';
+import { BodySet } from '$lib/3d/BodySet';
 import { addToComponentStore } from '$stores/componentStore';
 
-export const box = (): Mesh => {
-	return Mesh.fromCube(10, 10, 10);
+export const box = (): BodySet => {
+	const result = new BodySet(Body.fromCube(10, 10, 10, 'blue'));
+
+	const cyl = Body.fromCylinder(3, 30, 'red').setNegative();
+	result.merge(cyl);
+	result.append(cyl);
+
+	return result;
 };
 
 addToComponentStore({
-	name: 'Wall',
-	receiveData: () => box().vertices
+	name: 'Box',
+	receiveData: () => box()
 });

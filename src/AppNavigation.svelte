@@ -3,10 +3,11 @@
 	import NavContainer from 'flowbite-svelte/NavContainer.svelte';
 	import { createEventDispatcher, onMount } from 'svelte';
 
+	import type { BodySet } from '$lib/3d/BodySet';
 	import { getComponentStoreValue } from '$stores/componentStore';
 
 	const dispatch = createEventDispatcher<{
-		select: Float32Array;
+		select: BodySet;
 	}>();
 	export let wireframe: boolean;
 

@@ -1,18 +1,14 @@
-import { Mesh } from '$lib/3d/Mesh';
+import { BodySet } from '$lib/3d/BodySet';
 import { addToComponentStore } from '$stores/componentStore';
 
 import { box } from './box';
+import { brickWall } from './brickWall';
 
-export const house = (): Mesh => {
-	const mesh = box();
-
-	const c = Mesh.fromCylinder(4, 30);
-	mesh.sub(c);
-
-	return mesh;
+export const house = (): BodySet => {
+	return new BodySet([box(), brickWall(20, 20)]);
 };
 
 addToComponentStore({
 	name: '[Composed]',
-	receiveData: () => house().vertices
+	receiveData: () => house()
 });
