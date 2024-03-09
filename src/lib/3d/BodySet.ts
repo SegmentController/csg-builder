@@ -25,7 +25,7 @@ export class BodySet {
 				brush = this.evaluator.evaluate(
 					brush,
 					this.bodies[c].brush,
-					this.bodies[c].negative ? SUBTRACTION : ADDITION
+					this.bodies[c].negative ? SUBTRACTION : ADDITION,
 				);
 			this.bodies = [new Body(brush, color)];
 		}

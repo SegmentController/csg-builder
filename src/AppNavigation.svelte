@@ -25,11 +25,15 @@
 	});
 
 	let selected: string;
+	let generateTimeMs = 0;
 	const change = () => {
 		const sel = getComponentStoreValue().find((c) => c.name === selected);
 		if (sel) {
+			const startTime = Date.now();
+			const data = sel.receiveData();
+			generateTimeMs = Date.now() - startTime;
 			window.location.href = `/#${sel.name}`;
-			dispatch('select', sel.receiveData());
+			dispatch('select', data);
 		}
 	};
 </script>
@@ -42,6 +46,7 @@
 		</NavBrand>
 		<NavUl>
 			{#if getComponentStoreValue().length}
+				<span class="my-auto text-xs">{generateTimeMs}ms</span>
 				<Toggle id="wireframe" bind:checked={wireframe}>Wireframe</Toggle>
 				<Select
 					placeholder="Select model part..."
