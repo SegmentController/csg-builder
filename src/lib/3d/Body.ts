@@ -23,7 +23,7 @@ export class Body {
 		return result;
 	}
 	private static fakeAddition(brush: Brush): Brush {
-		return brush;
+		//return brush;
 		return new Evaluator().evaluate(
 			brush,
 			this.geometryToBrush(new BoxGeometry(0, 0, 0)),
