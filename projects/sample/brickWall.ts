@@ -4,33 +4,46 @@ import { addToComponentStore } from '$stores/componentStore';
 
 import { context } from './_context';
 
-const BW = 4;
-const BH = 2;
+const BW = 3;
+const BH = 1;
+const SEP_WIDTH = 0.2;
+const SEP_DEPTH = 0.2;
 
-export const brickWall = (width: number, height: number): BodySet => {
-	const result = new BodySet(Body.fromCube(width, height, 2, 'red'));
+export const brickItem = (width: number, height: number, depth: number): BodySet => {
+	const result = new BodySet(Body.fromCube(width, height, depth, 'red'));
 
 	if (context.production) {
 		let oddRow = false;
-		// for (let h = -height / 2; h < height / 2; h += BH) {
-		// 	const lh = Body.fromCube(width, 0.4, 1, 'blue').setNegative().dY(h).dZ(1);
-		// 	result.merge(lh);
-		// 	// for (let w = -width / 2; w < width / 2; w += BW) {
-		// 	// 	const lw = Body.fromCube(0.4, BH, 1, 'green')
-		// 	// 		.setNegative()
-		// 	// 		.dX(oddRow ? w : w + BW / 2)
-		// 	// 		.dY(h + BH / 2)
-		// 	// 		.dZ(1);
-		// 	// 	result.merge(lw);
-		// 	// }
-		// 	oddRow = !oddRow;
-		// }
+		for (let h = -height / 2; h < height / 2; h += BH) {
+			const lh = Body.fromCube(width, SEP_WIDTH, SEP_DEPTH, 'blue')
+				.setNegative()
+				.dY(h)
+				.dZ(depth / 2 - SEP_DEPTH / 2);
+			result.merge(lh);
+			for (let w = -width / 2; w < width / 2; w += BW) {
+				const lw = Body.fromCube(SEP_WIDTH, BH, SEP_DEPTH, 'green')
+					.setNegative()
+					.dX(oddRow ? w : w + BW / 2)
+					.dY(h + BH / 2)
+					.dZ(depth / 2 - SEP_DEPTH / 2);
+				result.merge(lw);
+			}
+			oddRow = !oddRow;
+		}
 	}
 
 	return result;
 };
 
+export const brickWall = (cx: number, cy: number): BodySet => {
+	return BodySet.array(brickItem(BW * 2, BH * 2, 1).getBodies()[0], cx, cy);
+};
+
+addToComponentStore({
+	name: 'BrickItem',
+	receiveData: () => brickItem(6, 2, 1)
+});
 addToComponentStore({
 	name: 'BrickWall',
-	receiveData: () => brickWall(125, 110)
+	receiveData: () => brickWall(4, 4)
 });

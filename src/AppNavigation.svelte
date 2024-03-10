@@ -26,12 +26,16 @@
 
 	let selected: string;
 	let generateTimeMs = 0;
+	let vertexCount = 0;
 	const change = () => {
 		const sel = getComponentStoreValue().find((c) => c.name === selected);
 		if (sel) {
 			const startTime = Date.now();
 			const data = sel.receiveData();
+			data.merge();
+			vertexCount = data.getBodies()[0].getVertices().length / 9;
 			generateTimeMs = Date.now() - startTime;
+
 			window.location.href = `/#${sel.name}`;
 			dispatch('select', data);
 		}
@@ -46,7 +50,11 @@
 		</NavBrand>
 		<NavUl>
 			{#if getComponentStoreValue().length}
-				<span class="my-auto text-xs">{generateTimeMs}ms</span>
+				<span class="my-auto text-xs"
+					>{generateTimeMs} ms
+					<br />
+					{vertexCount} tr.
+				</span>
 				<Toggle id="wireframe" bind:checked={wireframe}>Wireframe</Toggle>
 				<Select
 					placeholder="Select model part..."

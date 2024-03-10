@@ -1,9 +1,11 @@
-import { BoxGeometry, CylinderGeometry } from 'three';
-import { ADDITION, Brush, Evaluator } from 'three-bvh-csg';
+import { BoxGeometry, BufferGeometry, CylinderGeometry } from 'three';
+import { ADDITION, Brush, Evaluator, SUBTRACTION } from 'three-bvh-csg';
 
 import { MathMinMax } from '$lib/Math';
 
 export class Body {
+	private static evaluator: Evaluator = new Evaluator();
+
 	public brush: Brush;
 	public negative: boolean = false;
 
@@ -11,23 +13,23 @@ export class Body {
 		brush: Brush,
 		public color: string
 	) {
-		this.brush = brush;
+		this.brush = Body.fakeAddition(brush);
 		this.brush.updateMatrixWorld();
 	}
 
-	public clone = (): Body => new Body(this.brush, this.color);
+	public clone = (): Body => new Body(this.brush.clone(true), this.color);
 
-	private static geometryToBrush(geometry: BoxGeometry | CylinderGeometry): Brush {
+	private static geometryToBrush(geometry: BoxGeometry | CylinderGeometry | BufferGeometry): Brush {
 		const result = new Brush(geometry.translate(0, 0, 0));
 		result.updateMatrixWorld();
 		return result;
 	}
 	private static fakeAddition(brush: Brush): Brush {
-		//return brush;
-		return new Evaluator().evaluate(
+		return brush;
+		return this.evaluator.evaluate(
 			brush,
 			this.geometryToBrush(new BoxGeometry(0, 0, 0)),
-			ADDITION
+			SUBTRACTION
 		);
 	}
 

@@ -25,7 +25,7 @@ export class BodySet {
 				brush = this.evaluator.evaluate(
 					brush,
 					this.bodies[c].brush,
-					this.bodies[c].negative ? SUBTRACTION : ADDITION,
+					this.bodies[c].negative ? SUBTRACTION : ADDITION
 				);
 			this.bodies = [new Body(brush, color)];
 		}
@@ -56,6 +56,20 @@ export class BodySet {
 	public rotateZ(angle: number): BodySet {
 		for (const body of this.bodies) body.rotateZ(angle);
 		return this;
+	}
+
+	public static array(source: Body, cx: number, cy: number): BodySet {
+		const result = new BodySet();
+		for (let x = 0; x < cx; x++)
+			for (let y = 0; y < cy; y++)
+				result.merge(
+					source
+						.clone()
+						.dX(x * 6)
+						.dY(y * 2)
+						.dZ(0)
+				);
+		return result;
 	}
 
 	public getBodies = (): Body[] => this.bodies;
