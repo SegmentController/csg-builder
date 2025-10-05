@@ -8,6 +8,11 @@ CSG Builder is a web-based 3D STL file generator for THT (Through-Hole Technolog
 
 **Live site:** https://segmentcontroller.github.io/pcb-tht-holder/
 
+## Requirements
+
+- Node.js >= 22.0.0
+- npm >= 10.0.0
+
 ## Development Commands
 
 ```bash
@@ -45,15 +50,25 @@ The application uses a layered CSG system built on three.js and three-bvh-csg:
 
 - Wraps a three-bvh-csg `Brush` object
 - Supports transformations: `dX/dY/dZ` for translation, `rotateX/rotateY/rotateZ` for rotation
-- Can be marked as negative (for subtraction operations)
+- Can be marked as negative (for subtraction operations via `setNegative()`)
 - Static factory methods: `Body.fromCube()` and `Body.fromCylinder()`
 
 **BodySet (`src/lib/3d/BodySet.ts`)**: Container for multiple Body objects with:
 
 - `append()`: Adds bodies to the set without merging
 - `merge()`: Combines all bodies using CSG operations (ADDITION for normal bodies, SUBTRACTION for negative bodies)
-- Supports array generation for repeated patterns
+- Supports array generation for repeated patterns via `BodySet.array()`
 - Transformations apply to all bodies in the set
+
+### Coordinate System Transformations
+
+**CRITICAL**: The application uses different coordinate systems internally vs for rendering/export:
+
+- **Internal (Body/BodySet)**: Standard Three.js coordinates (X, Y, Z)
+- **3D Display (App3DScene.svelte:26-28)**: Y and Z are swapped for camera positioning
+- **STL Export (stl.ts:16-17)**: Y and Z coordinates are swapped, and Z is negated
+
+When debugging position/rotation issues, always verify which coordinate system you're working in.
 
 ### Component/Project System
 
@@ -64,6 +79,27 @@ Projects are defined in the `projects/` directory and registered via the compone
 3. Register components using `addToComponentStore()` with a name and `receiveData` function
 4. Export from `projects/index.ts`
 
+**Example:**
+
+```typescript
+// projects/myproject/mypart.ts
+import { Body } from '$lib/3d/Body';
+import { BodySet } from '$lib/3d/BodySet';
+import { addToComponentStore } from '$stores/componentStore';
+
+export const myPart = (): BodySet => {
+	const base = Body.fromCube(10, 10, 2, 'blue');
+	const hole = Body.fromCylinder(2, 3, 'red').setNegative(true);
+
+	return new BodySet(base, hole);
+};
+
+addToComponentStore({
+	name: 'My Part',
+	receiveData: () => myPart()
+});
+```
+
 The component store (`src/stores/componentStore.ts`) manages available models that appear in the UI dropdown.
 
 ### STL Export
@@ -71,16 +107,18 @@ The component store (`src/stores/componentStore.ts`) manages available models th
 Binary STL generation (`src/lib/3d/stl.ts`):
 
 - Takes Float32Array vertices from merged geometry
-- Coordinate system transformation: Y and Z axes are swapped during export
+- Uses low-level binary writers from `src/lib/buffer.ts` (writeInt16LE, writeInt32LE, writeFloatLE)
+- Coordinate system transformation: Y and Z axes are swapped, Z is negated
 - Outputs standard binary STL format (80-byte header + triangle count + 50 bytes per triangle)
+- Download handled by `src/lib/download.ts` using Blob URLs with dynamic filename based on model name
 
 ### UI Components
 
 **App.svelte**: Main component that:
 
 - Orchestrates the navigation, 3D scene, and download functionality
-- Manages the selected BodySet
-- Triggers STL generation and download
+- Manages the selected BodySet and model name
+- Triggers STL generation and download with proper filename (`{modelName}.stl`)
 
 **AppNavigation.svelte**: Navigation bar with:
 
@@ -89,13 +127,14 @@ Binary STL generation (`src/lib/3d/stl.ts`):
 - Download button
 - Performance metrics (generation time, triangle count)
 - URL hash-based model selection for deep linking
+- Uses Svelte 5 callback props (`onselect`, `ondownload`) instead of deprecated event dispatcher
 
 **App3DScene.svelte**: 3D rendering using @threlte/core:
 
 - Renders each Body as a separate mesh
 - Coordinate transformation for display (Y/Z swap)
 - Supports wireframe mode
-- Handles negative bodies with transparency
+- Handles negative bodies with transparency (opacity 0.25)
 
 ## Path Aliases
 
@@ -107,14 +146,20 @@ The project uses TypeScript path aliases configured in both `tsconfig.json` and 
 - `$types/*` → `./src/types/*`
 - `$projects` → `./projects`
 
-## Build Output
+## Build Configuration
 
-Production builds output to `docs/` directory (configured for GitHub Pages deployment) with base path `/pcb-tht-holder`.
+- **Output directory**: `docs/` (configured for GitHub Pages deployment)
+- **Base path**: `/pcb-tht-holder` (in production)
+- **Build target**: `esnext` (in vite.config.ts)
+
+## Known Issues
+
+- **Body.ts:27-32**: The `fakeAddition()` method has unreachable code after the early return. The commented-out code performs a fake SUBTRACTION operation that is currently disabled.
 
 ## Technology Stack
 
-- **Framework:** Svelte 5
-- **Build tool:** Vite
+- **Framework:** Svelte 5 (using modern callback props pattern, not event dispatchers)
+- **Build tool:** Vite 7
 - **3D library:** Three.js with @threlte/core wrapper
 - **CSG operations:** three-bvh-csg
 - **UI components:** Flowbite Svelte

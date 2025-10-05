@@ -64,6 +64,7 @@ export default [
 			'svelte/sort-attributes': 'error',
 			'svelte/prefer-const': 'error',
 			'unicorn/filename-case': 'off',
+			'unicorn/number-literal-case': 'off',
 			'unicorn/prefer-global-this': 'off',
 			'unicorn/require-module-specifiers': 'off',
 			'no-alert': 'error',
