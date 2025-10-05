@@ -3,6 +3,7 @@
 
 	import { Canvas } from '@threlte/core';
 
+	import type { Body } from '$lib/3d/Body';
 	import type { BodySet } from '$lib/3d/BodySet';
 	import { generateBinaryStlFromVertices } from '$lib/3d/stl';
 	import { virtualDownload } from '$lib/download';
@@ -14,17 +15,16 @@
 
 	let volume = $state(0);
 	let name = $state('');
-	let bodyset = $state<BodySet | undefined>();
+	let body = $state<Body | undefined>();
 	const setBodySet = (recentName: string, bs: BodySet) => {
 		name = recentName;
-		bodyset = bs;
-		volume = MathMax(bs.getBodies().map((b) => MathMax([...b.getVertices()])));
+		body = bs.merge().getBodies()[0];
+		volume = MathMax([...body.getVertices()]);
 	};
 	const download = () => {
-		if (!bodyset) return;
+		if (!body) return;
 
-		bodyset.merge();
-		const vertices = bodyset.getBodies()[0].getVertices();
+		const vertices = body.getVertices();
 		const stlData = generateBinaryStlFromVertices(vertices);
 
 		virtualDownload(name + '.stl', stlData);
@@ -35,10 +35,10 @@
 
 <AppNavigation ondownload={download} onselect={setBodySet} bind:wireframe />
 <div class="canvasContainer">
-	{#if bodyset}
-		{#key bodyset}
+	{#if body}
+		{#key body}
 			<Canvas>
-				<App3DScene {bodyset} {volume} {wireframe} />
+				<App3DScene {body} {volume} {wireframe} />
 			</Canvas>
 		{/key}
 	{/if}

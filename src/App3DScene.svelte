@@ -1,26 +1,25 @@
 <script lang="ts">
 	import { T } from '@threlte/core';
 	import { OrbitControls } from '@threlte/extras';
+	import { onMount } from 'svelte';
+	import type { BufferGeometry, NormalOrGLBufferAttributes } from 'three';
 
-	import type { BodySet } from '$lib/3d/BodySet';
+	import type { Body } from '$lib/3d/Body';
 
 	type Properties = {
-		bodyset: BodySet;
+		body: Body;
 		volume: number;
 		wireframe: boolean;
 	};
 
-	let { bodyset, volume, wireframe }: Properties = $props();
+	let { body, volume, wireframe }: Properties = $props();
 
 	const CAMERA_FAR = 2;
 
-	// Cache vertices to avoid re-creating Float32Array on every render
-	const bodiesWithVertices = $derived(
-		bodyset.getBodies().map((body) => ({
-			body,
-			vertices: body.getVertices()
-		}))
-	);
+	let bufferGeometry = $state<BufferGeometry<NormalOrGLBufferAttributes> | undefined>();
+	onMount(() => {
+		if (bufferGeometry) bufferGeometry.computeVertexNormals();
+	});
 </script>
 
 <T.PerspectiveCamera
@@ -30,26 +29,12 @@
 	<OrbitControls />
 </T.PerspectiveCamera>
 
-<T.PointLight color="white" decay={1 / 10} position={[0 * volume, 2 * volume, 2 * volume]} />
-<T.AmbientLight intensity={1 / 3} />
+<T.PointLight decay={0.1} intensity={1} position={[0, 1 * volume, 2 * volume]} />
+<T.AmbientLight color="white" intensity={0.5} />
 
-{#each bodiesWithVertices as { body, vertices }}
-	<T.Mesh
-		position.x={body.brush.position.x}
-		position.y={body.brush.position.z}
-		position.z={-body.brush.position.y}
-		rotation.x={body.brush.rotation.x}
-		rotation.y={body.brush.rotation.y}
-		rotation.z={body.brush.rotation.z}
-	>
-		<T.BufferGeometry>
-			<T.BufferAttribute args={[vertices, 3]} attach="attributes.position" />
-		</T.BufferGeometry>
-		<T.MeshStandardMaterial
-			color={body.color}
-			opacity={body.negative ? 0.25 : 1}
-			transparent
-			{wireframe}
-		/>
-	</T.Mesh>
-{/each}
+<T.Mesh>
+	<T.BufferGeometry bind:ref={bufferGeometry}>
+		<T.BufferAttribute args={[body.getVertices(), 3]} attach="attributes.position" />
+	</T.BufferGeometry>
+	<T.MeshPhongMaterial color={body.color} {wireframe} />
+</T.Mesh>

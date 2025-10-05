@@ -13,7 +13,7 @@ export class Body {
 		brush: Brush,
 		public color: string
 	) {
-		this.brush = Body.fakeAddition(brush);
+		this.brush = brush;
 		this.brush.updateMatrixWorld();
 	}
 
@@ -24,19 +24,14 @@ export class Body {
 		result.updateMatrixWorld();
 		return result;
 	}
-	private static fakeAddition(brush: Brush): Brush {
-		return brush;
-	}
 
 	static fromCube = (width: number, height: number, depth: number, color: string): Body =>
-		new Body(this.fakeAddition(this.geometryToBrush(new BoxGeometry(width, height, depth))), color);
+		new Body(this.geometryToBrush(new BoxGeometry(width, height, depth)), color);
 
 	static fromCylinder = (radius: number, height: number, color: string): Body =>
 		new Body(
-			this.fakeAddition(
-				this.geometryToBrush(
-					new CylinderGeometry(radius, radius, height, MathMinMax(radius * 8, 16, 48))
-				)
+			this.geometryToBrush(
+				new CylinderGeometry(radius, radius, height, MathMinMax(radius * 8, 16, 48))
 			),
 			color
 		);

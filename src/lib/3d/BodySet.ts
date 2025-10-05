@@ -70,14 +70,7 @@ export class BodySet {
 	public static array(source: Body, cx: number, cy: number): BodySet {
 		const result = new BodySet();
 		for (let x = 0; x < cx; x++)
-			for (let y = 0; y < cy; y++)
-				result.merge(
-					source
-						.clone()
-						.dX(x * 6)
-						.dY(y * 2)
-						.dZ(0)
-				);
+			for (let y = 0; y < cy; y++) result.merge(source.clone().d(x * 6, y * 2, 0));
 		return result;
 	}
 
