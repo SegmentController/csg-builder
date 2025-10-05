@@ -5,6 +5,8 @@ export type Component = {
 	receiveData: () => BodySet;
 };
 
+export type ComponentsMap = Record<string, () => BodySet>;
+
 // Module-level reactive state (Svelte 5 runes)
 const components = $state<Component[]>([]);
 
@@ -12,7 +14,7 @@ const components = $state<Component[]>([]);
 export const getComponentStoreValue = (): Component[] => components;
 
 // Simplified add function (direct mutation)
-export const addToComponentStore = (componentsMap: Record<string, () => BodySet>) => {
+export const addToComponentStore = (componentsMap: ComponentsMap) => {
 	for (const [name, receiveData] of Object.entries(componentsMap)) {
 		if (components.some((c) => c.name === name)) continue;
 		components.push({ name, receiveData });

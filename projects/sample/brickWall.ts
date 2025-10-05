@@ -1,6 +1,6 @@
 import { Body } from '$lib/3d/Body';
 import { BodySet } from '$lib/3d/BodySet';
-import { addToComponentStore } from '$stores/componentStore.svelte';
+import type { ComponentsMap } from '$stores/componentStore.svelte';
 
 import { context } from './_context';
 
@@ -39,7 +39,7 @@ export const brickWall = (cx: number, cy: number): BodySet => {
 	return BodySet.array(brickItem(BW * 2, BH * 2, 1).getBodies()[0], cx, cy);
 };
 
-addToComponentStore({
+export const components: ComponentsMap = {
 	BrickItem: () => brickItem(6, 2, 1),
 	BrickWall: () => brickWall(4, 4)
-});
+};

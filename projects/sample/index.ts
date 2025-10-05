@@ -1,29 +1,12 @@
-// import { BodySet } from '$lib/3d/BodySet';
 import { addToComponentStore } from '$stores/componentStore.svelte';
 
-// import { brickWall } from './brickWall';
-// import { sideWindow } from './sideWindow';
-import { box } from './box';
+import { components as boxComponents } from './box';
+import { components as brickComponents } from './brickWall';
+import { components as windowComponents } from './sideWindow';
 
-// export const house = (): BodySet => {
-// 	const result = new BodySet(brickWall(10, 18));
-
-// 	for (let c = 0; c < 4; c++)
-// 		result.append(
-// 			sideWindow(15, 30, 3)
-// 				.dX(c * 30 - 40)
-// 				.dZ(0.5)
-// 		);
-
-// 	result.merge();
-
-// 	return result;
-// };
-
-// addToComponentStore({
-// 	'[Composed]': () => house()
-// });
-
+// Register all components from this project
 addToComponentStore({
-	Box: () => box()
+	...brickComponents,
+	...boxComponents,
+	...windowComponents
 });

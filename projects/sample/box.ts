@@ -1,5 +1,6 @@
 import { Body } from '$lib/3d/Body';
 import { BodySet } from '$lib/3d/BodySet';
+import type { ComponentsMap } from '$stores/componentStore.svelte';
 
 export const box = (): BodySet => {
 	const result = new BodySet(Body.fromCube(10, 10, 10, 'blue'));
@@ -9,4 +10,8 @@ export const box = (): BodySet => {
 	result.append(cyl);
 
 	return result;
+};
+
+export const components: ComponentsMap = {
+	Box: () => box()
 };

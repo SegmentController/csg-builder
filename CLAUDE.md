@@ -92,35 +92,41 @@ Projects are defined in the `projects/` directory and registered via the compone
 
 1. Create a new folder under `projects/` (e.g., `projects/myproject/`)
 2. Define geometry functions that return `BodySet` objects
-3. Register components using `addToComponentStore({ ComponentName: () => componentFunction() })`
-4. Export from `projects/index.ts`
+3. **Export a `components` object** from each module file
+4. Import and register all components in the project's `index.ts`
 5. Use `_context.ts` for shared configuration (e.g., `production` flag, dimensions)
 
 **Example:**
 
 ```typescript
-// projects/myproject/mypart.ts
+// projects/myproject/mypart.ts - Define components
 import { Body } from '$lib/3d/Body';
 import { BodySet } from '$lib/3d/BodySet';
-import { addToComponentStore } from '$stores/componentStore.svelte';
+import type { ComponentsMap } from '$stores/componentStore.svelte';
 
 export const myPart = (): BodySet => {
 	const base = Body.fromCube(10, 10, 2, 'blue');
 	const hole = Body.fromCylinder(2, 3, 'red').setNegative(true);
-
-	// Use combined transformation for better performance
 	return new BodySet(base, hole).d(5, 0, 0);
 };
 
-// Register component with clean syntax
-addToComponentStore({
+// Export components object with explicit type (no direct registration needed)
+export const components: ComponentsMap = {
 	'My Part': () => myPart()
-});
+};
+```
 
-// Or register multiple components at once
+```typescript
+// projects/myproject/index.ts - Register all components
+import { addToComponentStore } from '$stores/componentStore.svelte';
+
+import { components as myComponents } from './mypart';
+import { components as otherComponents } from './otherpart';
+
+// Single registration point for the entire project
 addToComponentStore({
-	'Part A': () => partA(),
-	'Part B': () => partB()
+	...myComponents,
+	...otherComponents
 });
 ```
 
