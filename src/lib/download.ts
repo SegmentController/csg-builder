@@ -3,7 +3,7 @@ export const virtualDownload = (filename: string, data: Uint8Array) => {
 	try {
 		document.body.append(a);
 		a.download = filename;
-		a.href = URL.createObjectURL(new Blob([data]));
+		a.href = URL.createObjectURL(new Blob([data as BlobPart]));
 		a.click();
 	} finally {
 		a.remove();

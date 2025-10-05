@@ -18,7 +18,7 @@
 	<OrbitControls />
 </T.PerspectiveCamera>
 
-<T.PointLight position={[0 * volume, 2 * volume, 2 * volume]} color="white" decay={1 / 10} />
+<T.PointLight color="white" decay={1 / 10} position={[0 * volume, 2 * volume, 2 * volume]} />
 <T.AmbientLight intensity={1 / 3} />
 
 {#each bodyset.getBodies() as body}
@@ -31,19 +31,12 @@
 		rotation.z={body.brush.rotation.z}
 	>
 		<T.BufferGeometry>
-			<T.BufferAttribute
-				args={[body.getVertices(), 3]}
-				attach={(parent, self) => {
-					parent.setAttribute('position', self);
-					parent.computeVertexNormals();
-					return () => {};
-				}}
-			/>
+			<T.BufferAttribute args={[body.getVertices(), 3]} attach="attributes.position" />
 		</T.BufferGeometry>
 		<T.MeshStandardMaterial
 			color={body.color}
-			transparent
 			opacity={body.negative ? 0.25 : 1}
+			transparent
 			{wireframe}
 		/>
 	</T.Mesh>

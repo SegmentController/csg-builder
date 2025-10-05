@@ -7,7 +7,7 @@ import { defineConfig } from 'vite';
 export default defineConfig({
 	plugins: [svelte()],
 	build: {
-		target: 'modules',
+		target: 'esnext',
 		sourcemap: false,
 		minify: true,
 		cssMinify: true,

@@ -45,7 +45,7 @@
 <Navbar class="bg-gray-100">
 	<NavContainer class="border w-3/5 px-5 py-2 rounded-lg bg-white">
 		<NavBrand href="#">
-			<img src="/favicon.png" class="me-3 h-6 sm:h-9" alt="CSG Builder" />
+			<img class="me-3 h-6 sm:h-9" alt="CSG Builder" src="/favicon.png" />
 			<span class="self-center whitespace-nowrap text-xl font-semibold">CSG Builder</span>
 		</NavBrand>
 		<NavUl>
@@ -57,14 +57,14 @@
 				</span>
 				<Toggle id="wireframe" bind:checked={wireframe}>Wireframe</Toggle>
 				<Select
-					placeholder="Select model part..."
-					size="lg"
 					class="w-72"
 					items={getComponentStoreValue().map((c) => ({ value: c.name, name: c.name }))}
+					onchange={change}
+					placeholder="Select model part..."
+					size="lg"
 					bind:value={selected}
-					on:change={change}
 				/>
-				<Button on:click={() => dispatch('download')}>Download</Button>
+				<Button onclick={() => dispatch('download')}>Download</Button>
 			{/if}
 		</NavUl>
 	</NavContainer>
