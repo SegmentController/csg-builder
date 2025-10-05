@@ -4,11 +4,15 @@
 	import { onMount } from 'svelte';
 
 	import type { BodySet } from '$lib/3d/BodySet';
-	import { getComponentStoreValue } from '$stores/componentStore';
+	import { getComponentStoreValue } from '$stores/componentStore.svelte';
 
-	export let wireframe: boolean;
-	export let onselect: ((name: string, data: BodySet) => void) | undefined;
-	export let ondownload: (() => void) | undefined;
+	type Properties = {
+		wireframe: boolean;
+		onselect?: (name: string, data: BodySet) => void;
+		ondownload?: () => void;
+	};
+
+	let { wireframe = $bindable(), onselect, ondownload }: Properties = $props();
 
 	onMount(() => {
 		let hash = window.location.hash;
@@ -22,9 +26,9 @@
 		}
 	});
 
-	let selected: string;
-	let generateTimeMs = 0;
-	let vertexCount = 0;
+	let selected = $state<string>();
+	let generateTimeMs = $state(0);
+	let vertexCount = $state(0);
 	const change = () => {
 		const sel = getComponentStoreValue().find((c) => c.name === selected);
 		if (sel) {
@@ -41,7 +45,7 @@
 </script>
 
 <Navbar class="bg-gray-100">
-	<NavContainer class="border w-3/5 px-5 py-2 rounded-lg bg-white">
+	<NavContainer class="border w-3/5 px-5 py-2 rounded-lg bg-white border-gray-200">
 		<NavBrand href="#">
 			<img class="me-3 h-6 sm:h-9" alt="CSG Builder" src="/favicon.png" />
 			<span class="self-center whitespace-nowrap text-xl font-semibold">CSG Builder</span>
@@ -53,16 +57,16 @@
 					<br />
 					{vertexCount} tr.
 				</span>
-				<Toggle id="wireframe" bind:checked={wireframe}>Wireframe</Toggle>
+				<Toggle id="wireframe" class="ml-4" bind:checked={wireframe}>Wireframe</Toggle>
 				<Select
-					class="w-72"
+					class="w-72 ml-4"
 					items={getComponentStoreValue().map((c) => ({ value: c.name, name: c.name }))}
 					onchange={change}
 					placeholder="Select model part..."
 					size="lg"
 					bind:value={selected}
 				/>
-				<Button onclick={() => ondownload?.()}>Download</Button>
+				<Button class="ml-4" onclick={() => ondownload?.()}>Download</Button>
 			{/if}
 		</NavUl>
 	</NavContainer>

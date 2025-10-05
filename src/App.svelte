@@ -12,9 +12,9 @@
 	import App3DScene from './App3DScene.svelte';
 	import AppNavigation from './AppNavigation.svelte';
 
-	let volume: number;
-	let name: string;
-	let bodyset: BodySet | undefined;
+	let volume = $state(0);
+	let name = $state('');
+	let bodyset = $state<BodySet | undefined>();
 	const setBodySet = (recentName: string, bs: BodySet) => {
 		name = recentName;
 		bodyset = bs;
@@ -30,7 +30,7 @@
 		virtualDownload(name + '.stl', stlData);
 	};
 
-	let wireframe: boolean = false;
+	let wireframe = $state(false);
 </script>
 
 <AppNavigation ondownload={download} onselect={setBodySet} bind:wireframe />

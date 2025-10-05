@@ -1,6 +1,6 @@
 import { Body } from '$lib/3d/Body';
 import { BodySet } from '$lib/3d/BodySet';
-import { addToComponentStore } from '$stores/componentStore';
+import { addToComponentStore } from '$stores/componentStore.svelte';
 
 import { context } from './_context';
 
@@ -40,10 +40,6 @@ export const brickWall = (cx: number, cy: number): BodySet => {
 };
 
 addToComponentStore({
-	name: 'BrickItem',
-	receiveData: () => brickItem(6, 2, 1)
-});
-addToComponentStore({
-	name: 'BrickWall',
-	receiveData: () => brickWall(4, 4)
+	BrickItem: () => brickItem(6, 2, 1),
+	BrickWall: () => brickWall(4, 4)
 });

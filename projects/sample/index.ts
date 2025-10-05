@@ -1,5 +1,5 @@
 // import { BodySet } from '$lib/3d/BodySet';
-import { addToComponentStore } from '$stores/componentStore';
+import { addToComponentStore } from '$stores/componentStore.svelte';
 
 // import { brickWall } from './brickWall';
 // import { sideWindow } from './sideWindow';
@@ -21,11 +21,9 @@ import { box } from './box';
 // };
 
 // addToComponentStore({
-// 	name: '[Composed]',
-// 	receiveData: () => house()
+// 	'[Composed]': () => house()
 // });
 
 addToComponentStore({
-	name: 'Box',
-	receiveData: () => box()
+	Box: () => box()
 });

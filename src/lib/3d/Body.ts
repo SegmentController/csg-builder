@@ -1,10 +1,10 @@
 import { BoxGeometry, BufferGeometry, CylinderGeometry } from 'three';
-import { ADDITION, Brush, Evaluator, SUBTRACTION } from 'three-bvh-csg';
+import { ADDITION, Brush, Evaluator } from 'three-bvh-csg';
 
 import { MathMinMax } from '$lib/Math';
 
 export class Body {
-	private static evaluator: Evaluator = new Evaluator();
+	public static evaluator: Evaluator = new Evaluator();
 
 	public brush: Brush;
 	public negative: boolean = false;
@@ -26,11 +26,6 @@ export class Body {
 	}
 	private static fakeAddition(brush: Brush): Brush {
 		return brush;
-		return this.evaluator.evaluate(
-			brush,
-			this.geometryToBrush(new BoxGeometry(0, 0, 0)),
-			SUBTRACTION
-		);
 	}
 
 	static fromCube = (width: number, height: number, depth: number, color: string): Body =>
@@ -47,7 +42,7 @@ export class Body {
 		);
 
 	public merge = (body: Body): Body => {
-		this.brush = new Evaluator().evaluate(this.brush, body.brush, ADDITION);
+		this.brush = Body.evaluator.evaluate(this.brush, body.brush, ADDITION);
 		return this;
 	};
 
@@ -67,6 +62,14 @@ export class Body {
 		return this;
 	}
 
+	public d(x: number, y: number, z: number): Body {
+		this.brush.position.x += x;
+		this.brush.position.y += y;
+		this.brush.position.z += z;
+		this.brush.updateMatrixWorld();
+		return this;
+	}
+
 	private angleToRadian = (degree: number) => degree * (Math.PI / 180);
 	public rotateX(angle: number): Body {
 		this.brush.rotation.x += this.angleToRadian(angle);
@@ -80,6 +83,14 @@ export class Body {
 	}
 	public rotateZ(angle: number): Body {
 		this.brush.rotation.z += this.angleToRadian(angle);
+		this.brush.updateMatrixWorld();
+		return this;
+	}
+
+	public rotate(x: number, y: number, z: number): Body {
+		this.brush.rotation.x += this.angleToRadian(x);
+		this.brush.rotation.y += this.angleToRadian(y);
+		this.brush.rotation.z += this.angleToRadian(z);
 		this.brush.updateMatrixWorld();
 		return this;
 	}

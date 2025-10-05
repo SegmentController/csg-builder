@@ -1,9 +1,8 @@
-import { ADDITION, Evaluator, SUBTRACTION } from 'three-bvh-csg';
+import { ADDITION, SUBTRACTION } from 'three-bvh-csg';
 
 import { Body } from './Body';
 
 export class BodySet {
-	private evaluator = new Evaluator();
 	private bodies: Body[] = [];
 
 	public constructor(...body: (Body | BodySet)[]) {
@@ -22,7 +21,7 @@ export class BodySet {
 			let brush = this.bodies[0].brush;
 			const color = this.bodies[0].color;
 			for (let c = 1; c < this.bodies.length; c++)
-				brush = this.evaluator.evaluate(
+				brush = Body.evaluator.evaluate(
 					brush,
 					this.bodies[c].brush,
 					this.bodies[c].negative ? SUBTRACTION : ADDITION
@@ -45,6 +44,11 @@ export class BodySet {
 		return this;
 	}
 
+	public d(x: number, y: number, z: number): BodySet {
+		for (const body of this.bodies) body.d(x, y, z);
+		return this;
+	}
+
 	public rotateX(angle: number): BodySet {
 		for (const body of this.bodies) body.rotateX(angle);
 		return this;
@@ -55,6 +59,11 @@ export class BodySet {
 	}
 	public rotateZ(angle: number): BodySet {
 		for (const body of this.bodies) body.rotateZ(angle);
+		return this;
+	}
+
+	public rotate(x: number, y: number, z: number): BodySet {
+		for (const body of this.bodies) body.rotate(x, y, z);
 		return this;
 	}
 

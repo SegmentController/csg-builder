@@ -4,11 +4,23 @@
 
 	import type { BodySet } from '$lib/3d/BodySet';
 
-	export let bodyset: BodySet;
-	export let volume: number;
-	export let wireframe: boolean;
+	type Properties = {
+		bodyset: BodySet;
+		volume: number;
+		wireframe: boolean;
+	};
+
+	let { bodyset, volume, wireframe }: Properties = $props();
 
 	const CAMERA_FAR = 2;
+
+	// Cache vertices to avoid re-creating Float32Array on every render
+	const bodiesWithVertices = $derived(
+		bodyset.getBodies().map((body) => ({
+			body,
+			vertices: body.getVertices()
+		}))
+	);
 </script>
 
 <T.PerspectiveCamera
@@ -21,7 +33,7 @@
 <T.PointLight color="white" decay={1 / 10} position={[0 * volume, 2 * volume, 2 * volume]} />
 <T.AmbientLight intensity={1 / 3} />
 
-{#each bodyset.getBodies() as body}
+{#each bodiesWithVertices as { body, vertices }}
 	<T.Mesh
 		position.x={body.brush.position.x}
 		position.y={body.brush.position.z}
@@ -31,7 +43,7 @@
 		rotation.z={body.brush.rotation.z}
 	>
 		<T.BufferGeometry>
-			<T.BufferAttribute args={[body.getVertices(), 3]} attach="attributes.position" />
+			<T.BufferAttribute args={[vertices, 3]} attach="attributes.position" />
 		</T.BufferGeometry>
 		<T.MeshStandardMaterial
 			color={body.color}

@@ -1,6 +1,6 @@
 import { Body } from '$lib/3d/Body';
 import { BodySet } from '$lib/3d/BodySet';
-import { addToComponentStore } from '$stores/componentStore';
+import { addToComponentStore } from '$stores/componentStore.svelte';
 
 const BORDER = 2;
 
@@ -25,6 +25,5 @@ export const sideWindow = (width: number, height: number, depth: number): BodySe
 };
 
 addToComponentStore({
-	name: 'SideWindow',
-	receiveData: () => sideWindow(15, 30, 3)
+	SideWindow: () => sideWindow(15, 30, 3)
 });
