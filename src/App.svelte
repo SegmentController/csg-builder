@@ -7,7 +7,7 @@
 	import { generateBinaryStlFromVertices } from '$lib/3d/stl';
 	import { virtualDownload } from '$lib/download';
 	import { MathMax } from '$lib/Math';
-	import {} from '$projects/sample';
+	import {} from '$projects';
 
 	import App3DScene from './App3DScene.svelte';
 	import AppNavigation from './AppNavigation.svelte';

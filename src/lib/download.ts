@@ -1,4 +1,4 @@
-export const virtualDownload = (filename: string, data: string | Uint8Array) => {
+export const virtualDownload = (filename: string, data: Uint8Array) => {
 	const a = document.createElement('a');
 	try {
 		document.body.append(a);

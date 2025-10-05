@@ -12,7 +12,7 @@
 			"$lib/*": ["./src/lib/*"],
 			"$stores/*": ["./src/stores/*"],
 			"$types/*": ["./src/types/*"],
-			"$projects/*": ["./projects/*"]
+			"$projects": ["./projects"]
 		}
 	},
 	"include": ["src/**/*.ts", "projects/**/*.ts", "src/**/*.svelte"],
