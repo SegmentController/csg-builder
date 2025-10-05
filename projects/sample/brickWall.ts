@@ -3,6 +3,7 @@ import { BodySet } from '$lib/3d/BodySet';
 import type { ComponentsMap } from '$stores/componentStore.svelte';
 
 import { context } from './_context';
+import { sideWindow } from './sideWindow';
 
 const BW = 3;
 const BH = 1;
@@ -36,7 +37,12 @@ export const brickWall = (cx: number, cy: number): BodySet => {
 	return BodySet.array(brickItem(BW * 2, BH * 2, 1).getBodies()[0], cx, cy);
 };
 
+export const brickWallWithWindow = (): BodySet => {
+	return new BodySet(brickWall(4, 16), sideWindow(15, 30, 3).d(8, 15, 1));
+};
+
 export const components: ComponentsMap = {
 	BrickItem: () => brickItem(6, 2, 1),
-	BrickWall: () => brickWall(4, 4)
+	BrickWall: () => brickWall(4, 4),
+	BrickWallWithWindow: () => brickWallWithWindow()
 };
