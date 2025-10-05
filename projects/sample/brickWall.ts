@@ -17,15 +17,12 @@ export const brickItem = (width: number, height: number, depth: number): BodySet
 		for (let h = -height / 2; h < height / 2; h += BH) {
 			const lh = Body.fromCube(width, SEP_WIDTH, SEP_DEPTH, 'blue')
 				.setNegative()
-				.dY(h)
-				.dZ(depth / 2 - SEP_DEPTH / 2);
+				.d(0, h, depth / 2 - SEP_DEPTH / 2);
 			result.merge(lh);
 			for (let w = -width / 2; w < width / 2; w += BW) {
 				const lw = Body.fromCube(SEP_WIDTH, BH, SEP_DEPTH, 'green')
 					.setNegative()
-					.dX(oddRow ? w : w + BW / 2)
-					.dY(h + BH / 2)
-					.dZ(depth / 2 - SEP_DEPTH / 2);
+					.d(oddRow ? w : w + BW / 2, h + BH / 2, depth / 2 - SEP_DEPTH / 2);
 				result.merge(lw);
 			}
 			oddRow = !oddRow;

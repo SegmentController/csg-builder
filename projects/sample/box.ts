@@ -5,7 +5,7 @@ import type { ComponentsMap } from '$stores/componentStore.svelte';
 export const box = (): BodySet => {
 	const result = new BodySet(Body.fromCube(10, 10, 10, 'blue'));
 
-	const cyl = Body.fromCylinder(3, 20, 'red').setNegative(false).rotateX(0).rotateY(0).rotateZ(0);
+	const cyl = Body.fromCylinder(3, 20, 'red').setNegative(false).rotate(0, 0, 0);
 	//result.merge(cyl);
 	result.append(cyl);
 
