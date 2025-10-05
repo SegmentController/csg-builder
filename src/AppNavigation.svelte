@@ -1,16 +1,14 @@
 <script lang="ts">
 	import { Button, Navbar, NavBrand, NavUl, Select, Toggle } from 'flowbite-svelte';
 	import NavContainer from 'flowbite-svelte/NavContainer.svelte';
-	import { createEventDispatcher, onMount } from 'svelte';
+	import { onMount } from 'svelte';
 
 	import type { BodySet } from '$lib/3d/BodySet';
 	import { getComponentStoreValue } from '$stores/componentStore';
 
-	const dispatch = createEventDispatcher<{
-		select: BodySet;
-		download: void;
-	}>();
 	export let wireframe: boolean;
+	export let onselect: ((name: string, data: BodySet) => void) | undefined;
+	export let ondownload: (() => void) | undefined;
 
 	onMount(() => {
 		let hash = window.location.hash;
@@ -37,7 +35,7 @@
 			generateTimeMs = Date.now() - startTime;
 
 			window.location.href = `/#${sel.name}`;
-			dispatch('select', data);
+			onselect?.(sel.name, data);
 		}
 	};
 </script>
@@ -64,7 +62,7 @@
 					size="lg"
 					bind:value={selected}
 				/>
-				<Button onclick={() => dispatch('download')}>Download</Button>
+				<Button onclick={() => ondownload?.()}>Download</Button>
 			{/if}
 		</NavUl>
 	</NavContainer>

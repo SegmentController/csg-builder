@@ -13,8 +13,10 @@
 	import AppNavigation from './AppNavigation.svelte';
 
 	let volume: number;
+	let name: string;
 	let bodyset: BodySet | undefined;
-	const setBodySet = (bs: BodySet) => {
+	const setBodySet = (recentName: string, bs: BodySet) => {
+		name = recentName;
 		bodyset = bs;
 		volume = MathMax(bs.getBodies().map((b) => MathMax([...b.getVertices()])));
 	};
@@ -25,17 +27,13 @@
 		const vertices = bodyset.getBodies()[0].getVertices();
 		const stlData = generateBinaryStlFromVertices(vertices);
 
-		virtualDownload('a.stl', stlData);
+		virtualDownload(name + '.stl', stlData);
 	};
 
 	let wireframe: boolean = false;
 </script>
 
-<AppNavigation
-	on:select={(event) => setBodySet(event.detail)}
-	on:download={download}
-	bind:wireframe
-/>
+<AppNavigation ondownload={download} onselect={setBodySet} bind:wireframe />
 <div class="canvasContainer">
 	{#if bodyset}
 		{#key bodyset}
