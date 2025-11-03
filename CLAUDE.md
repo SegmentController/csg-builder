@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-CSG Builder is a TypeScript-based 3D mesh creation tool using a component-based architecture. Users write TypeScript code to define 3D components (similar to React components) that are composed of primitive shapes (cubes, cylinders). The system uses Constructive Solid Geometry (CSG) operations to perform boolean operations (union, subtraction) and exports the final mesh as binary STL files.
+CSG Builder is a TypeScript-based 3D mesh creation tool using a component-based architecture. Users write TypeScript code to define 3D components (similar to React components) that are composed of primitive shapes (cubes, cylinders, spheres, cones, and polygon prisms). The system uses Constructive Solid Geometry (CSG) operations to perform boolean operations (union, subtraction) and exports the final mesh as binary STL files.
 
 ## Build and Development Commands
 
@@ -35,7 +35,7 @@ npm run all              # Run format:fix, lint:fix, ts:check, and build
 
 1. **Primitive Layer** (`Solid` class in `src/lib/3d/Solid.ts`)
    - Wraps Three.js `Brush` objects from `three-bvh-csg` library
-   - Factory methods: `cube()`, `cylinder()`
+   - Factory methods: `cube()`, `cylinder()`, `sphere()`, `cone()`, `prism()`, `trianglePrism()`
    - Provides fluent API for transformations (all methods return `this`)
    - Explicit CSG methods: `subtract()`, `union()`, `intersect()`
    - Supports both **absolute** (`at()`) and **relative** (`move()`) positioning
@@ -121,8 +121,44 @@ projects/
 - **Relative transforms**: `move({ x?, y?, z? })` and `rotate({ x?, y?, z? })` with optional properties
 - All transformations are **incremental**: `.move({ x: 5 }).move({ x: 3 })` moves 8 units total
 - Rotations use **degrees** (converted to radians internally)
+- **Scaling**: `scale({ x?, y?, z? })` with optional properties - all values are **multiplicative**
+  - `.scale({ x: 2 })` doubles the size on X-axis
+  - Scaling is **cumulative**: `.scale({ x: 2 }).scale({ x: 1.5 })` results in 3x scale on X-axis
 - Grid pattern (`Mesh.grid`) accepts configurable spacing parameter
 - **Transform order matters**: Apply transforms before CSG operations for predictable results
+
+### Geometry Normalization
+
+Some primitives automatically call `normalize()` after creation to ensure clean CSG operations and prevent rendering artifacts:
+
+**Auto-normalized primitives:**
+
+- `cylinder()` - fixes seam issues
+- `sphere()` - ensures smooth CSG intersections
+- `cone()` - prevents tip artifacts
+- `prism()` / `trianglePrism()` - ensures clean edge handling
+
+**What normalize() does:**
+
+- Performs a union operation with an empty cube (`Solid.emptyCube`)
+- Forces the CSG evaluator to completely rebuild geometry buffers
+- Ensures consistent geometry state for CSG operations
+- Prevents rendering artifacts (holes, missing faces, internal triangles)
+- Called automatically by affected primitives - you don't need to call it manually
+
+**When to use manually:**
+
+- After complex transform chains that cause geometry issues
+- When experiencing CSG operation failures with custom geometries
+- After importing or modifying brush geometry directly
+
+```typescript
+// Automatic normalization (built into certain primitives)
+const sphere = Solid.sphere(5, 'blue'); // normalize() called internally
+
+// Manual normalization (rarely needed)
+const custom = Solid.cube(10, 10, 10, 'red').scale({ x: 2, y: 0.5 }).normalize(); // Fix potential issues from extreme scaling
+```
 
 ### Centering & Alignment
 
@@ -309,20 +345,112 @@ const wall2 = Mesh.array(brick, 10, 5).toSolid();
 // Grid internally uses: .move({ x: col * spacingX, y: row * spacingY, z: 0 })
 ```
 
-## Adding New Primitives
+## Available Primitives
 
-To add a new shape (e.g., sphere):
+The `Solid` class provides the following primitive shapes:
 
-1. Add to `Solid.ts`:
+### Basic Shapes
+
+**Cube:**
 
 ```typescript
-static sphere = (radius: number, color: string = 'gray'): Solid =>
-  new Solid(this.geometryToBrush(new SphereGeometry(radius, 32, 32)), color);
+Solid.cube(width: number, height: number, depth: number, color?: string)
+// Example: Solid.cube(10, 20, 5, 'red')
 ```
 
-2. Import geometry: `import { SphereGeometry } from 'three';`
+**Cylinder:**
 
-3. Use in components: `Solid.sphere(5, 'green')`
+```typescript
+Solid.cylinder(radius: number, height: number, color?: string)
+// Example: Solid.cylinder(5, 10, 'blue')
+// Radial segments scale with radius (16-48 segments)
+```
+
+**Sphere:**
+
+```typescript
+Solid.sphere(radius: number, color?: string)
+// Example: Solid.sphere(8, 'green')
+// Segments scale with radius (16-48 segments for both width and height)
+```
+
+**Cone:**
+
+```typescript
+Solid.cone(radius: number, height: number, color?: string)
+// Example: Solid.cone(6, 12, 'yellow')
+// Radial segments scale with radius (16-48 segments)
+// Height segments set to 1 for clean CSG operations
+```
+
+### Polygon Prisms
+
+**N-gon Prism (custom sided):**
+
+```typescript
+Solid.prism(sides: number, radius: number, height: number, color?: string)
+// Example: Solid.prism(6, 5, 10, 'purple') // Hexagonal prism
+// Example: Solid.prism(8, 4, 8, 'orange')  // Octagonal prism
+```
+
+**Triangle Prism (3-sided):**
+
+```typescript
+Solid.trianglePrism(radius: number, height: number, color?: string)
+// Example: Solid.trianglePrism(5, 10, 'cyan')
+// Shorthand for Solid.prism(3, radius, height, color)
+```
+
+### Usage Examples
+
+```typescript
+// Rounded corners using sphere subtraction
+const roundedCube = Solid.cube(20, 20, 20, 'red').subtract(
+	Solid.sphere(3, 'red').move({ x: 10, y: 10, z: 10 })
+);
+
+// Chamfered edge using cone
+const chamferedBlock = Solid.cube(15, 15, 15, 'blue').subtract(
+	Solid.cone(4, 8, 'blue').rotate({ x: 90 })
+);
+
+// Hexagonal nut
+const nut = Solid.prism(6, 10, 5, 'gray').subtract(Solid.cylinder(4, 6, 'gray'));
+
+// Triangular roof
+const roof = Solid.trianglePrism(8, 20, 'brown').rotate({ z: 90 });
+```
+
+## Adding New Primitives
+
+To add additional shapes beyond the built-in primitives:
+
+1. Import the Three.js geometry in `Solid.ts`:
+
+```typescript
+import { TorusGeometry } from 'three';
+```
+
+2. Update the `geometryToBrush()` type signature to include the new geometry type
+
+3. Add factory method to `Solid.ts`:
+
+```typescript
+static torus = (radius: number, tubeRadius: number, color: string = 'gray'): Solid =>
+  new Solid(
+    this.geometryToBrush(
+      new TorusGeometry(
+        radius,
+        tubeRadius,
+        MathMinMax(tubeRadius * 8, 16, 32), // radialSegments
+        MathMinMax(radius * 4, 16, 48)      // tubularSegments
+      )
+    ),
+    color
+  );
+```
+
+4. Use in components: `Solid.torus(10, 2, 'green')`
 
 ## Common Issues & Critical Patterns
 

@@ -1,4 +1,12 @@
-import { Box3, BoxGeometry, BufferGeometry, CylinderGeometry, Vector3 } from 'three';
+import {
+	Box3,
+	BoxGeometry,
+	BufferGeometry,
+	ConeGeometry,
+	CylinderGeometry,
+	SphereGeometry,
+	Vector3
+} from 'three';
 import { ADDITION, Brush, Evaluator, INTERSECTION, SUBTRACTION } from 'three-bvh-csg';
 
 import { MathMinMax } from '$lib/Math';
@@ -27,7 +35,9 @@ export class Solid {
 
 	public clone = (): Solid => new Solid(this.brush.clone(true), this._color, this._isNegative);
 
-	private static geometryToBrush(geometry: BoxGeometry | CylinderGeometry | BufferGeometry): Brush {
+	private static geometryToBrush(
+		geometry: BoxGeometry | CylinderGeometry | SphereGeometry | ConeGeometry | BufferGeometry
+	): Brush {
 		const result = new Brush(geometry.translate(0, 0, 0));
 		result.updateMatrixWorld();
 		return result;
@@ -42,7 +52,40 @@ export class Solid {
 				new CylinderGeometry(radius, radius, height, MathMinMax(radius * 8, 16, 48))
 			),
 			color
-		);
+		).normalize();
+
+	static sphere = (radius: number, color: string = 'gray'): Solid =>
+		new Solid(
+			this.geometryToBrush(
+				new SphereGeometry(
+					radius,
+					MathMinMax(radius * 8, 16, 48), // widthSegments
+					MathMinMax(radius * 8, 16, 48) // heightSegments
+				)
+			),
+			color
+		).normalize();
+
+	static cone = (radius: number, height: number, color: string = 'gray'): Solid =>
+		new Solid(
+			this.geometryToBrush(
+				new ConeGeometry(
+					radius,
+					height,
+					MathMinMax(radius * 8, 16, 48) // radialSegments
+				)
+			),
+			color
+		).normalize();
+
+	static prism = (sides: number, radius: number, height: number, color: string = 'gray'): Solid =>
+		new Solid(
+			this.geometryToBrush(new CylinderGeometry(radius, radius, height, sides)),
+			color
+		).normalize();
+
+	static trianglePrism = (radius: number, height: number, color: string = 'gray'): Solid =>
+		this.prism(3, radius, height, color);
 
 	// Absolute positioning
 	public at(x: number, y: number, z: number): Solid {
@@ -158,6 +201,12 @@ export class Solid {
 	public intersect(other: Solid): Solid {
 		const resultBrush = Solid.evaluator.evaluate(this.brush, other.brush, INTERSECTION);
 		return new Solid(resultBrush, this._color, this._isNegative);
+	}
+
+	// Geometry normalization
+	static emptyCube = this.cube(0, 0, 0, 'white');
+	public normalize(): Solid {
+		return this.union(Solid.emptyCube);
 	}
 
 	// Negative flag for composition

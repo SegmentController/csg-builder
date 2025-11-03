@@ -4,14 +4,14 @@ A TypeScript-based 3D mesh creation tool using a component-based architecture. B
 
 ## Overview
 
-CSG Builder allows you to create 3D meshes using TypeScript code with a React-like component pattern. It leverages Constructive Solid Geometry (CSG) operations to combine, subtract, and transform primitive shapes into complex geometries.
+CSG Builder allows you to create 3D meshes using TypeScript code with a React-like component pattern. It leverages Constructive Solid Geometry (CSG) operations to combine, subtract, and transform primitive shapes (cubes, cylinders, spheres, cones, and polygon prisms) into complex geometries.
 
 ## Features
 
 - **Component-Based Architecture** - Define reusable 3D components as TypeScript functions
-- **Primitive Shapes** - Cubes and cylinders with customizable dimensions
+- **Primitive Shapes** - Cubes, cylinders, spheres, cones, and polygon prisms with customizable dimensions
 - **CSG Operations** - Union and subtraction for complex geometries
-- **Transformations** - Translate and rotate objects with chainable methods
+- **Transformations** - Translate, rotate, and scale objects with chainable methods
 - **Real-Time Preview** - Interactive 3D viewport with orbit controls
 - **STL Export** - Export models in binary STL format for 3D printing
 - **Hot Reload** - Instant updates during development
@@ -139,14 +139,62 @@ export const wallWithWindow = (): Solid => {
 };
 ```
 
+### Example: Using New Primitive Shapes
+
+```typescript
+import { Solid } from '$lib/3d/Solid';
+import { Mesh } from '$lib/3d/Mesh';
+
+// Sphere - perfect for rounded features
+export const roundedCorner = (): Solid => {
+	const cube = Solid.cube(20, 20, 20, 'red');
+	const corner = Solid.sphere(3, 'red').move({ x: 10, y: 10, z: 10 });
+	return cube.subtract(corner); // Rounded corner via subtraction
+};
+
+// Cone - great for tapers and chamfers
+export const chamferedEdge = (): Solid => {
+	const block = Solid.cube(15, 15, 15, 'blue');
+	const chamfer = Solid.cone(4, 8, 'blue').rotate({ x: 90 }).move({ z: 7.5 });
+	return block.subtract(chamfer);
+};
+
+// Prism - N-sided shapes (hexagon, octagon, etc.)
+export const hexNut = (): Solid => {
+	const outer = Solid.prism(6, 10, 5, 'gray'); // 6 sides = hexagon
+	const hole = Solid.cylinder(4, 6, 'gray');
+	return outer.subtract(hole).center();
+};
+
+// Triangle Prism - 3-sided prism
+export const roof = (): Solid => {
+	return Solid.trianglePrism(8, 20, 'brown').rotate({ z: 90 }).align('bottom');
+};
+
+// Combining multiple new primitives
+export const shapesComposition = (): Solid => {
+	const base = Solid.cube(20, 4, 20, 'teal').align('bottom');
+	const sphere = Solid.sphere(8, 'teal').move({ y: 10 });
+	const cone = Solid.cone(5, 10, 'teal').move({ y: 18 });
+
+	return Mesh.union(base, sphere, cone).toSolid().center({ x: true, z: true });
+};
+```
+
 ### API Reference
 
 #### Solid Class
 
 **Factory Methods:**
 
-- `Solid.cube(width, height, depth, color?)` - Create a cube
+- `Solid.cube(width, height, depth, color?)` - Create a rectangular box
 - `Solid.cylinder(radius, height, color?)` - Create a cylinder
+- `Solid.sphere(radius, color?)` - Create a sphere
+- `Solid.cone(radius, height, color?)` - Create a cone
+- `Solid.prism(sides, radius, height, color?)` - Create an N-sided prism (hexagon, octagon, etc.)
+- `Solid.trianglePrism(radius, height, color?)` - Create a triangular prism (3-sided)
+
+**Note:** Sphere, cylinder, cone, and prism use adaptive segment counts based on radius for optimal quality and performance.
 
 **Positioning (chainable):**
 
@@ -156,6 +204,10 @@ export const wallWithWindow = (): Solid => {
 **Rotation Methods (chainable, angles in degrees):**
 
 - `rotate({ x?, y?, z? })` - Rotate with optional axis parameters
+
+**Scaling Methods (chainable, multiplicative):**
+
+- `scale({ x?, y?, z? })` - Scale with optional axis parameters (values are multipliers)
 
 **CSG Methods (return new Solid):**
 
@@ -307,6 +359,7 @@ Check out the `projects/sample/` directory for working examples:
 - **box.ts** - Simple cube with cylinder
 - **brickWall.ts** - Parametric brick wall with pattern
 - **sideWindow.ts** - Window component with frame and pane
+- **shapes.ts** - Showcase of all primitive shapes (sphere, cone, prism, etc.) with practical examples
 
 ## Troubleshooting
 
