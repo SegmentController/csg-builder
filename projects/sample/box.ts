@@ -9,6 +9,15 @@ export const box = (): Solid => {
 	return Mesh.union(cube, cyl).toSolid();
 };
 
+export const alignedBox = (): Solid => {
+	const cube = Solid.cube(10, 10, 10, 'blue');
+	const cyl = Solid.cylinder(3, 20, 'red');
+
+	// Align to bottom (sitting on Y=0 plane)
+	return Mesh.union(cube, cyl).toSolid().align('bottom');
+};
+
 export const components: ComponentsMap = {
-	Box: () => box()
+	Box: () => box(),
+	BoxAligned: () => alignedBox()
 };

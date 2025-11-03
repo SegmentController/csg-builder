@@ -21,7 +21,13 @@ npm run format:fix       # Auto-format with Prettier
 npm run all              # Run format:fix, lint:fix, ts:check, and build
 ```
 
-**Note:** Build output goes to `./docs` directory (configured for GitHub Pages deployment at `/pcb-tht-holder` base path in production).
+**Note:** Build output goes to `./docs` directory (configured for GitHub Pages deployment).
+
+**IMPORTANT GitHub Pages Configuration:**
+
+- Production builds use base path `/pcb-tht-holder` (configured in `vite.config.ts:20`)
+- If deploying to a different URL or root domain, update the `base` property in vite.config.ts
+- Development server runs at root (`/`) by default
 
 ## High-Level Architecture
 
@@ -48,6 +54,8 @@ npm run all              # Run format:fix, lint:fix, ts:check, and build
    - Components auto-register via `addToComponentStore()`
    - Alphabetically sorted by name
    - UI (`AppNavigation.svelte`) generates dropdown from this registry
+   - **Type safety**: `ComponentsMap` type enforces functions returning `Solid | Mesh`
+   - Components can return either `Solid` or `Mesh` - renderer extracts vertices automatically
 
 ### Data Flow
 
@@ -64,13 +72,15 @@ projects/*.ts (component definitions)
 
 ### Path Aliases (Vite + TypeScript)
 
-All imports use aliases defined in `vite.config.ts` and `tsconfig.json`:
+All imports use aliases defined in `vite.config.ts` and `tsconfig.json`. **ALWAYS use these aliases, never relative paths**:
 
-- `$lib/*` → `src/lib/*`
-- `$stores/*` → `src/stores/*`
+- `$lib/*` → `src/lib/*` (e.g., `import { Solid } from '$lib/3d/Solid'`)
+- `$stores/*` → `src/stores/*` (e.g., `import { addToComponentStore } from '$stores/componentStore.svelte'`)
 - `$types/*` → `src/types/*`
 - `$components/*` → `src/components/*`
 - `$projects` → `projects/index.ts`
+
+These aliases work both in TypeScript files and Svelte components.
 
 ### Component Registration Pattern
 
@@ -96,19 +106,109 @@ projects/
 - Each CSG operation creates a **new** Solid with new Brush - immutable pattern
 - `Mesh.toSolid()` performs final merge when multiple solids need to be combined
 - **Negative Solids**: `setNegative()` marks a solid for subtraction during Mesh merge
-  - Mesh separates positive/negative solids
-  - Unions all positives first
-  - Then subtracts all negatives
+  - **IMPORTANT**: Mesh processes solids in **declaration order** (not by grouping positive/negative)
+  - First solid cannot be negative (throws error)
+  - Each subsequent solid is either added (positive) or subtracted (negative) from the accumulated result
+  - Example: `new Mesh(base, positive1, negative1, positive2)` → `((base + positive1) - negative1) + positive2`
 - `updateMatrixWorld()` must be called after transforms (handled automatically by methods)
 
 ### Coordinate System & Transforms
 
 - Three.js right-handed: X-right, Y-up, Z-toward camera
 - **Absolute positioning**: `at(x, y, z)` sets position directly (all params required)
+  - `Solid.at()` sets the solid's position
+  - `Mesh.at()` applies the same position to **all solids** in the mesh (they move together)
 - **Relative transforms**: `move({ x?, y?, z? })` and `rotate({ x?, y?, z? })` with optional properties
 - All transformations are **incremental**: `.move({ x: 5 }).move({ x: 3 })` moves 8 units total
 - Rotations use **degrees** (converted to radians internally)
 - Grid pattern (`Mesh.grid`) accepts configurable spacing parameter
+- **Transform order matters**: Apply transforms before CSG operations for predictable results
+
+### Centering & Alignment
+
+Both `Solid` and `Mesh` support automatic centering and alignment operations:
+
+**Bounding Box Utility:**
+
+```typescript
+const bounds = solid.getBounds();
+// Returns: { width, height, depth, min: Vector3, max: Vector3, center: Vector3 }
+
+// Example: Get dimensions for calculations
+const box = Solid.cube(10, 20, 5, 'blue');
+const { width, height, depth } = box.getBounds();
+console.log(`Box dimensions: ${width} × ${height} × ${depth}`);
+```
+
+**Centering Method:**
+
+```typescript
+// Center on all axes at origin (0, 0, 0)
+solid.center();
+
+// Center on specific axes only using optional parameter
+solid.center({ x: true, y: true }); // Center on X and Y axes only
+solid.center({ z: true }); // Center on Z-axis only
+solid.center({ x: true }); // Center on X-axis only
+
+// Example: Center a complex shape
+const myShape = Solid.cube(10, 20, 5, 'red')
+	.subtract(Solid.cylinder(3, 25, 'red').rotate({ x: 90 }))
+	.center(); // Centers the result at origin
+```
+
+**Edge Alignment Method:**
+
+Align specific edges to coordinate planes (origin = 0):
+
+```typescript
+solid.align('bottom'); // Bottom face at Y=0
+solid.align('top'); // Top face at Y=0
+solid.align('left'); // Left face at X=0
+solid.align('right'); // Right face at X=0
+solid.align('front'); // Front face at Z=0
+solid.align('back'); // Back face at Z=0
+
+// Example: Build from the ground up
+const tower = Solid.cube(10, 50, 10, 'gray')
+	.align('bottom') // Place on Y=0 plane
+	.center({ x: true, z: true }); // Center horizontally and depth
+```
+
+**Chaining with Other Transforms:**
+
+All methods follow fluent API pattern and can be chained:
+
+```typescript
+const piece = Solid.cube(20, 10, 5, 'blue')
+	.center() // Center at origin first
+	.move({ x: 50 }) // Then move to final position
+	.rotate({ z: 45 }); // And rotate
+```
+
+**Mesh Centering:**
+
+`Mesh` methods work on the combined bounding box of all contained solids:
+
+```typescript
+const mesh = new Mesh(
+	Solid.cube(10, 10, 10, 'red').move({ x: 20 }),
+	Solid.cylinder(5, 15, 'blue').move({ x: -20 })
+);
+
+// Centers the entire composition, not individual pieces
+mesh.center();
+
+// For grid arrays
+const array = Mesh.grid(brick, { cols: 5, rows: 3 }).center(); // Centers the entire array at origin
+```
+
+**Use Cases:**
+
+- **Centered exports:** Ensure STL files are centered for 3D printing
+- **Alignment:** Stack objects or align to edges without manual calculations
+- **Composition:** Position complex assemblies relative to their centers
+- **Symmetry:** Create symmetric patterns easily
 
 ### STL Export Format
 
@@ -224,7 +324,7 @@ static sphere = (radius: number, color: string = 'gray'): Solid =>
 
 3. Use in components: `Solid.sphere(5, 'green')`
 
-## Common Issues
+## Common Issues & Critical Patterns
 
 ### Component Not Appearing in UI
 
@@ -242,7 +342,7 @@ static sphere = (radius: number, color: string = 'gray'): Solid =>
 
 ### Slow CSG Operations
 
-- Cylinder segment counts scale with radius: `MathMinMax(radius * 8, 16, 48)`
+- Cylinder segment counts scale with radius: `MathMinMax(radius * 8, 16, 48)` (see `Solid.ts:42`)
 - Multiple CSG operations are expensive - chain operations efficiently
 - Each `subtract()`, `union()`, `intersect()` creates new geometry
 
@@ -251,4 +351,20 @@ static sphere = (radius: number, color: string = 'gray'): Solid =>
 - Use path aliases (`$lib/`, not relative `../../lib/`)
 - Run `npm run ts:check` to see full error context
 - Check `tsconfig.json` paths match `vite.config.ts` aliases
-- Ensure components return `Solid` (not `Mesh` or `BodySet`)
+- Ensure components return `Solid` or `Mesh` (not other types)
+
+### Critical Errors to Avoid
+
+**"First solid in Mesh cannot be negative"** error:
+
+- Thrown when first solid in `new Mesh(...)` has `.setNegative()` applied
+- Fix: Ensure first solid is always positive (base geometry)
+- Example wrong: `new Mesh(hole.setNegative(), box)` ❌
+- Example correct: `new Mesh(box, hole.setNegative())` ✅
+
+**Position vs. Move confusion**:
+
+- `at(x, y, z)` is **absolute** - requires all 3 parameters
+- `move({ x?, y?, z? })` is **relative** - parameters are optional
+- Don't chain `.at()` calls - only the last one takes effect
+- Chain `.move()` calls - they accumulate

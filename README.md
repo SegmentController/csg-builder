@@ -47,6 +47,12 @@ npm run dev
 
 The application will be available at `http://localhost:5173`
 
+**Note on Deployment:**
+
+- Production builds are configured for GitHub Pages with base path `/pcb-tht-holder`
+- If deploying to a different URL, update the `base` property in `vite.config.ts:20`
+- Build output goes to `./docs` directory
+
 ## Usage
 
 ### Quick Start
@@ -114,20 +120,21 @@ export const components: ComponentsMap = {
 export const window = (width: number, height: number, depth: number): Mesh => {
 	const frame = Solid.cube(width, height, depth, 'brown');
 
-	// Mark opening as negative - it will cut through whatever this is placed in
+	// Mark opening as negative - it will be subtracted during merge
 	const opening = Solid.cube(width - 4, height - 4, depth * 4, 'gray').setNegative();
 
 	const bar = Solid.cube(2, height, depth - 1, 'brown').move({ z: -0.5 });
 
-	return new Mesh(frame, opening, bar); // Returns Mesh with negative solid
+	// First solid (frame) is positive, opening will be subtracted, then bar added
+	return new Mesh(frame, opening, bar);
 };
 
 // Usage in wall
 export const wallWithWindow = (): Solid => {
 	const wall = Solid.cube(20, 20, 1, 'gray');
-	const win = window(5, 8, 3).at(10, 5, 0);
+	const win = window(5, 8, 3).move({ x: 10, y: 5 }); // Use move for relative positioning
 
-	// Window's negative opening automatically cuts the wall!
+	// Window's negative opening is processed when merged
 	return Mesh.compose(wall, win).toSolid();
 };
 ```
@@ -161,6 +168,12 @@ export const wallWithWindow = (): Solid => {
 - `setNegative(negative?)` - Mark solid as negative (for Mesh composition)
 - `isNegative` - Getter to check if solid is marked negative
 
+**Alignment Methods (chainable):**
+
+- `center(axes?)` - Center on all axes or specific: `center({ x: true, y: true })`
+- `align(direction)` - Align edge to origin: 'bottom', 'top', 'left', 'right', 'front', 'back'
+- `getBounds()` - Get bounding box with width, height, depth, min, max, center
+
 **Other Methods:**
 
 - `setColor(color)` - Set color
@@ -185,11 +198,16 @@ export const wallWithWindow = (): Solid => {
 - `toSolid()` - Convert to single merged Solid
 - `getSolids()` - Get array of all solids in mesh
 
-**Transformation Methods:**
+**Transformation Methods (applied to all solids in the mesh):**
 
-- Same as Solid class, applied to all solids in the mesh
+- `at(x, y, z)` - Set absolute position for all solids
+- `move({ x?, y?, z? })` - Move relative with optional axis parameters
+- `rotate({ x?, y?, z? })` - Rotate with optional axis parameters
+- `center(axes?)` - Center the entire mesh on all axes or specific axes
+- `align(direction)` - Align mesh edge to origin
+- `getBounds()` - Get combined bounding box of all solids
 
-**Note on Negative Solids:** When a Mesh is merged, it separates positive and negative solids. All positive solids are unioned together first, then all negative solids are subtracted from the result.
+**Note on Negative Solids:** When a Mesh is merged, solids are processed in **declaration order**. The first solid cannot be negative (base geometry). Each subsequent solid is either added (positive) or subtracted (negative) from the accumulated result. Example: `new Mesh(base, positive1, negative1, positive2)` processes as `((base + positive1) - negative1) + positive2`.
 
 ### Project Structure
 
@@ -272,11 +290,15 @@ csg-builder/
 2. **Use Descriptive Names** - Component names appear in the UI dropdown
 3. **Chain Transformations** - Methods return `this` for fluent API usage
 4. **Explicit CSG Operations** - Use `subtract()`, `union()`, `intersect()` methods
-5. **Return Solid** - Components must return `Solid` (call `toSolid()` on `Mesh`)
+5. **Return Solid or Mesh** - Components can return either type (renderer extracts vertices)
 6. **Use Parameters** - Make components flexible with function parameters
 7. **Test Incrementally** - Build complex models step by step
-8. **Absolute vs Relative** - Use `at(x, y, z)` for absolute, `move({ x?, y?, z? })` for relative
+8. **Absolute vs Relative Positioning**:
+   - `at(x, y, z)` - Absolute position (requires all 3 params, don't chain)
+   - `move({ x?, y?, z? })` - Relative movement (optional params, accumulates when chained)
 9. **Optional Properties** - Only specify axes you want to transform: `.move({ z: -0.5 })`
+10. **First Solid Must Be Positive** - In `new Mesh()`, the first solid cannot have `.setNegative()`
+11. **Use Path Aliases** - Always import with `$lib/`, `$stores/`, etc. (never relative paths)
 
 ## Examples
 
@@ -290,21 +312,37 @@ Check out the `projects/sample/` directory for working examples:
 
 **Problem:** Component doesn't appear in dropdown
 
-- Ensure it's registered in `projects/[project]/index.ts`
+- Ensure it's registered in `projects/[project]/index.ts` with `addToComponentStore()`
 - Check that project is exported in `projects/index.ts`
+- Verify component name in `ComponentsMap` is unique
 - Restart dev server
 
 **Problem:** Mesh appears black or invisible
 
 - Verify color is a valid CSS color string
-- Ensure component returns `Solid` (call `toSolid()` on `Mesh` if needed)
+- Ensure component returns `Solid` or `Mesh` (call `toSolid()` on `Mesh` if needed)
 - Check geometry isn't degenerate (zero volume)
+- Check browser console for geometry errors
+
+**Problem:** "First solid in Mesh cannot be negative" error
+
+- The first solid in `new Mesh(...)` cannot have `.setNegative()` applied
+- Fix: Ensure first solid is always positive (base geometry)
+- Wrong: `new Mesh(hole.setNegative(), box)` ❌
+- Correct: `new Mesh(box, hole.setNegative())` ✅
 
 **Problem:** CSG operation is slow
 
-- Reduce polygon count (cylinder segments)
+- Reduce polygon count (cylinder segments scale with radius)
 - Simplify geometry before complex operations
-- Merge incrementally rather than all at once
+- Chain operations efficiently - each CSG operation creates new geometry
+
+**Problem:** Positioning not working as expected
+
+- `at(x, y, z)` requires all 3 parameters and sets absolute position
+- `move({ x?, y?, z? })` uses optional parameters for relative movement
+- Don't chain `.at()` calls - only the last one takes effect
+- `.move()` calls accumulate when chained
 
 **Problem:** STL export fails
 

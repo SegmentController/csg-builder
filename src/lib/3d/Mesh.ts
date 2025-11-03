@@ -1,3 +1,4 @@
+import { Vector3 } from 'three';
 import { ADDITION, SUBTRACTION } from 'three-bvh-csg';
 
 import { Solid } from './Solid';
@@ -86,6 +87,111 @@ export class Mesh {
 
 	public rotate(angles: { x?: number; y?: number; z?: number }): Mesh {
 		for (const solid of this.solids) solid.rotate(angles);
+		return this;
+	}
+
+	// Bounding box utility
+	public getBounds(): {
+		width: number;
+		height: number;
+		depth: number;
+		min: Vector3;
+		max: Vector3;
+		center: Vector3;
+	} {
+		if (this.solids.length === 0) {
+			throw new Error('Cannot get bounds of empty Mesh');
+		}
+
+		// Get bounds of first solid to initialize min/max
+		const firstBounds = this.solids[0].getBounds();
+		const min = firstBounds.min.clone();
+		const max = firstBounds.max.clone();
+
+		// Expand to include all other solids
+		for (let index = 1; index < this.solids.length; index++) {
+			const bounds = this.solids[index].getBounds();
+			min.min(bounds.min);
+			max.max(bounds.max);
+		}
+
+		const center = new Vector3();
+		center.addVectors(min, max).multiplyScalar(0.5);
+
+		return {
+			width: max.x - min.x,
+			height: max.y - min.y,
+			depth: max.z - min.z,
+			min,
+			max,
+			center
+		};
+	}
+
+	// Centering method
+	public center(axes?: { x?: boolean; y?: boolean; z?: boolean }): Mesh {
+		const bounds = this.getBounds();
+
+		// Default to all axes if no parameter provided
+		const centerX = axes?.x ?? axes === undefined;
+		const centerY = axes?.y ?? axes === undefined;
+		const centerZ = axes?.z ?? axes === undefined;
+
+		const translateX = centerX ? -bounds.center.x : 0;
+		const translateY = centerY ? -bounds.center.y : 0;
+		const translateZ = centerZ ? -bounds.center.z : 0;
+
+		for (const solid of this.solids) {
+			solid.brush.geometry.translate(translateX, translateY, translateZ);
+
+			if (centerX) solid.brush.position.x = 0;
+			if (centerY) solid.brush.position.y = 0;
+			if (centerZ) solid.brush.position.z = 0;
+
+			solid.brush.updateMatrixWorld();
+		}
+		return this;
+	}
+
+	// Edge alignment method
+	public align(direction: 'bottom' | 'top' | 'left' | 'right' | 'front' | 'back'): Mesh {
+		const bounds = this.getBounds();
+
+		for (const solid of this.solids) {
+			switch (direction) {
+				case 'bottom': {
+					solid.brush.geometry.translate(0, -bounds.min.y, 0);
+					solid.brush.position.y = 0;
+					break;
+				}
+				case 'top': {
+					solid.brush.geometry.translate(0, -bounds.max.y, 0);
+					solid.brush.position.y = 0;
+					break;
+				}
+				case 'left': {
+					solid.brush.geometry.translate(-bounds.min.x, 0, 0);
+					solid.brush.position.x = 0;
+					break;
+				}
+				case 'right': {
+					solid.brush.geometry.translate(-bounds.max.x, 0, 0);
+					solid.brush.position.x = 0;
+					break;
+				}
+				case 'front': {
+					solid.brush.geometry.translate(0, 0, -bounds.min.z);
+					solid.brush.position.z = 0;
+					break;
+				}
+				case 'back': {
+					solid.brush.geometry.translate(0, 0, -bounds.max.z);
+					solid.brush.position.z = 0;
+					break;
+				}
+			}
+			solid.brush.updateMatrixWorld();
+		}
 		return this;
 	}
 

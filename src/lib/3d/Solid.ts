@@ -1,4 +1,4 @@
-import { BoxGeometry, BufferGeometry, CylinderGeometry } from 'three';
+import { Box3, BoxGeometry, BufferGeometry, CylinderGeometry, Vector3 } from 'three';
 import { ADDITION, Brush, Evaluator, INTERSECTION, SUBTRACTION } from 'three-bvh-csg';
 
 import { MathMinMax } from '$lib/Math';
@@ -71,6 +71,70 @@ export class Solid {
 		return this;
 	}
 
+	// Centering method
+	public center(axes?: { x?: boolean; y?: boolean; z?: boolean }): Solid {
+		const bounds = this.getBounds();
+
+		// Default to all axes if no parameter provided
+		const centerX = axes?.x ?? axes === undefined;
+		const centerY = axes?.y ?? axes === undefined;
+		const centerZ = axes?.z ?? axes === undefined;
+
+		const translateX = centerX ? -bounds.center.x : 0;
+		const translateY = centerY ? -bounds.center.y : 0;
+		const translateZ = centerZ ? -bounds.center.z : 0;
+
+		this.brush.geometry.translate(translateX, translateY, translateZ);
+
+		if (centerX) this.brush.position.x = 0;
+		if (centerY) this.brush.position.y = 0;
+		if (centerZ) this.brush.position.z = 0;
+
+		this.brush.updateMatrixWorld();
+		return this;
+	}
+
+	// Edge alignment method
+	public align(direction: 'bottom' | 'top' | 'left' | 'right' | 'front' | 'back'): Solid {
+		const bounds = this.getBounds();
+
+		switch (direction) {
+			case 'bottom': {
+				this.brush.geometry.translate(0, -bounds.min.y, 0);
+				this.brush.position.y = 0;
+				break;
+			}
+			case 'top': {
+				this.brush.geometry.translate(0, -bounds.max.y, 0);
+				this.brush.position.y = 0;
+				break;
+			}
+			case 'left': {
+				this.brush.geometry.translate(-bounds.min.x, 0, 0);
+				this.brush.position.x = 0;
+				break;
+			}
+			case 'right': {
+				this.brush.geometry.translate(-bounds.max.x, 0, 0);
+				this.brush.position.x = 0;
+				break;
+			}
+			case 'front': {
+				this.brush.geometry.translate(0, 0, -bounds.min.z);
+				this.brush.position.z = 0;
+				break;
+			}
+			case 'back': {
+				this.brush.geometry.translate(0, 0, -bounds.max.z);
+				this.brush.position.z = 0;
+				break;
+			}
+		}
+
+		this.brush.updateMatrixWorld();
+		return this;
+	}
+
 	// Explicit CSG operations
 	public subtract(other: Solid): Solid {
 		const resultBrush = Solid.evaluator.evaluate(this.brush, other.brush, SUBTRACTION);
@@ -101,4 +165,34 @@ export class Solid {
 	// Utility methods
 	public getVertices = (): Float32Array =>
 		new Float32Array(this.brush.geometry.attributes['position'].array);
+
+	public getBounds(): {
+		width: number;
+		height: number;
+		depth: number;
+		min: Vector3;
+		max: Vector3;
+		center: Vector3;
+	} {
+		this.brush.geometry.computeBoundingBox();
+		const localBox = this.brush.geometry.boundingBox || new Box3();
+
+		// Transform bounding box to world space using brush's matrix
+		const worldBox = localBox.clone();
+		worldBox.applyMatrix4(this.brush.matrixWorld);
+
+		const min = worldBox.min.clone();
+		const max = worldBox.max.clone();
+		const center = new Vector3();
+		worldBox.getCenter(center);
+
+		return {
+			width: max.x - min.x,
+			height: max.y - min.y,
+			depth: max.z - min.z,
+			min,
+			max,
+			center
+		};
+	}
 }
