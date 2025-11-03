@@ -1,11 +1,12 @@
-import type { BodySet } from '$lib/3d/BodySet';
+import type { Mesh } from '$lib/3d/Mesh';
+import type { Solid } from '$lib/3d/Solid';
 
 export type Component = {
 	name: string;
-	receiveData: () => BodySet;
+	receiveData: () => Solid | Mesh;
 };
 
-export type ComponentsMap = Record<string, () => BodySet>;
+export type ComponentsMap = Record<string, () => Solid | Mesh>;
 
 // Module-level reactive state (Svelte 5 runes)
 const components = $state<Component[]>([]);

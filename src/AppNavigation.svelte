@@ -3,12 +3,13 @@
 	import NavContainer from 'flowbite-svelte/NavContainer.svelte';
 	import { onMount } from 'svelte';
 
-	import type { BodySet } from '$lib/3d/BodySet';
+	import { Mesh } from '$lib/3d/Mesh';
+	import type { Solid } from '$lib/3d/Solid';
 	import { getComponentStoreValue } from '$stores/componentStore.svelte';
 
 	type Properties = {
 		wireframe: boolean;
-		onselect?: (name: string, data: BodySet) => void;
+		onselect?: (name: string, data: Solid | Mesh) => void;
 		ondownload?: () => void;
 	};
 
@@ -34,8 +35,9 @@
 		if (sel) {
 			const startTime = Date.now();
 			const data = sel.receiveData();
-			data.merge();
-			vertexCount = data.getBodies()[0].getVertices().length / 9;
+			// Handle both Solid and Mesh
+			const solid = data instanceof Mesh ? data.toSolid() : data;
+			vertexCount = solid.getVertices().length / 9;
 			generateTimeMs = Date.now() - startTime;
 
 			window.location.href = `/#${sel.name}`;

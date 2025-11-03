@@ -4,15 +4,15 @@
 	import { onMount } from 'svelte';
 	import type { BufferGeometry, NormalOrGLBufferAttributes } from 'three';
 
-	import type { Body } from '$lib/3d/Body';
+	import type { Solid } from '$lib/3d/Solid';
 
 	type Properties = {
-		body: Body;
+		solid: Solid;
 		volume: number;
 		wireframe: boolean;
 	};
 
-	let { body, volume, wireframe }: Properties = $props();
+	let { solid, volume, wireframe }: Properties = $props();
 
 	const CAMERA_FAR = 2;
 
@@ -34,7 +34,7 @@
 
 <T.Mesh>
 	<T.BufferGeometry bind:ref={bufferGeometry}>
-		<T.BufferAttribute args={[body.getVertices(), 3]} attach="attributes.position" />
+		<T.BufferAttribute args={[solid.getVertices(), 3]} attach="attributes.position" />
 	</T.BufferGeometry>
-	<T.MeshPhongMaterial color={body.color} {wireframe} />
+	<T.MeshPhongMaterial color={solid.color} {wireframe} />
 </T.Mesh>

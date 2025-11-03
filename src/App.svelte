@@ -3,8 +3,8 @@
 
 	import { Canvas } from '@threlte/core';
 
-	import type { Body } from '$lib/3d/Body';
-	import type { BodySet } from '$lib/3d/BodySet';
+	import { Mesh } from '$lib/3d/Mesh';
+	import type { Solid } from '$lib/3d/Solid';
 	import { generateBinaryStlFromVertices } from '$lib/3d/stl';
 	import { virtualDownload } from '$lib/download';
 	import { MathMax } from '$lib/Math';
@@ -15,16 +15,17 @@
 
 	let volume = $state(0);
 	let name = $state('');
-	let body = $state<Body | undefined>();
-	const setBodySet = (recentName: string, bs: BodySet) => {
+	let solid = $state<Solid | undefined>();
+	const setSolid = (recentName: string, s: Solid | Mesh) => {
 		name = recentName;
-		body = bs.merge().getBodies()[0];
-		volume = MathMax([...body.getVertices()]);
+		// Convert Mesh to Solid if needed
+		solid = s instanceof Mesh ? s.toSolid() : s;
+		volume = MathMax([...solid.getVertices()]);
 	};
 	const download = () => {
-		if (!body) return;
+		if (!solid) return;
 
-		const vertices = body.getVertices();
+		const vertices = solid.getVertices();
 		const stlData = generateBinaryStlFromVertices(vertices);
 
 		virtualDownload(name + '.stl', stlData);
@@ -33,12 +34,12 @@
 	let wireframe = $state(false);
 </script>
 
-<AppNavigation ondownload={download} onselect={setBodySet} bind:wireframe />
+<AppNavigation ondownload={download} onselect={setSolid} bind:wireframe />
 <div class="canvasContainer">
-	{#if body}
-		{#key body}
+	{#if solid}
+		{#key solid}
 			<Canvas>
-				<App3DScene {body} {volume} {wireframe} />
+				<App3DScene {solid} {volume} {wireframe} />
 			</Canvas>
 		{/key}
 	{/if}
