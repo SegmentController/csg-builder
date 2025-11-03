@@ -490,6 +490,65 @@ Solid.trianglePrism(
 // Shorthand for Solid.prism(3, radius, height, color)
 ```
 
+### Custom Profile Prisms
+
+For complex 2D profiles that need to be extruded into 3D shapes, use the profile prism methods:
+
+**Profile Prism with Shape Builder:**
+
+```typescript
+Solid.profilePrism(
+  height: number,
+  profileBuilder: (shape: Shape) => void,
+  color?: string
+)
+
+// Example: L-bracket
+const bracket = Solid.profilePrism(10, (shape) => {
+  shape.moveTo(0, 0);
+  shape.lineTo(20, 0);
+  shape.lineTo(20, 5);
+  shape.lineTo(5, 5);
+  shape.lineTo(5, 20);
+  shape.lineTo(0, 20);
+  shape.lineTo(0, 0);
+}, 'blue');
+
+// Full Shape API available: lineTo, bezierCurveTo, quadraticCurveTo, arc, etc.
+```
+
+**Profile Prism from Points (Simplified):**
+
+```typescript
+Solid.profilePrismFromPoints(
+  height: number,
+  points: [number, number][],
+  color?: string
+)
+
+// Example: Trapezoid
+const trapezoid = Solid.profilePrismFromPoints(
+  8,
+  [[0, 0], [10, 0], [8, 5], [2, 5]],
+  'red'
+); // Automatically closes back to [0, 0]
+
+// Example: Custom housing profile
+const housing = Solid.profilePrismFromPoints(
+  15,
+  [[0, 0], [30, 0], [30, 10], [25, 15], [5, 15], [0, 10]],
+  'gray'
+);
+```
+
+**Key Features:**
+
+- `profilePrism()` provides full Three.js Shape API (curves, arcs, beziers)
+- `profilePrismFromPoints()` is simpler, takes point array and auto-closes the path
+- Both methods automatically normalize geometry for clean CSG operations
+- Extrudes along Z-axis with configurable height
+- Bevel is disabled for clean CSG operations
+
 ### Usage Examples
 
 ```typescript
@@ -565,6 +624,81 @@ static torus = (radius: number, tubeRadius: number, color: string = 'gray'): Sol
 ```
 
 4. Use in components: `Solid.torus(10, 2, 'green')`
+
+## Performance Optimization
+
+### Caching Functions
+
+For expensive component computations that are called repeatedly with the same parameters, use the caching utilities (`src/lib/cacheFunction.ts`):
+
+**Named Function Caching:**
+
+```typescript
+import { cacheFunction } from '$lib/cacheFunction';
+
+// Original function
+const expensiveComponent = (width: number, height: number): Solid => {
+	// Complex CSG operations...
+	return result;
+};
+
+// Wrap with cache
+const cachedComponent = cacheFunction(expensiveComponent);
+
+// Usage: First call computes, subsequent calls with same params return cached result
+const part1 = cachedComponent(10, 20); // Computes
+const part2 = cachedComponent(10, 20); // Returns cached result (instant)
+const part3 = cachedComponent(15, 25); // Different params - computes new result
+```
+
+**Inline Function Caching:**
+
+```typescript
+import { cacheInlineFunction } from '$lib/cacheFunction';
+
+// For arrow functions or when function.name isn't available
+const cachedPart = cacheInlineFunction('myPart', (size: number) => {
+	return Solid.cube(size, size, size, 'red').subtract(
+		Solid.cylinder(size / 2, size * 2, { color: 'red' })
+	);
+});
+```
+
+**How it works:**
+
+- Cache key generated from function name and serialized arguments: `${functionName}:${JSON.stringify(args)}`
+- Returns cached `Solid` instance if key exists in cache
+- Otherwise computes result, caches it, and returns it
+- Cache persists for the session (not cleared automatically)
+- **Important**: Only caches functions returning `Solid` (not `Mesh`)
+
+**When to use:**
+
+- Component functions called multiple times with same parameters
+- Expensive CSG operations in reusable parts
+- Grid/array patterns where same base shape is used repeatedly
+- **Don't use** for functions with side effects or non-serializable parameters
+
+**Example: Cached grid components:**
+
+```typescript
+import { cacheFunction } from '$lib/cacheFunction';
+import { Solid } from '$lib/3d/Solid';
+import { Mesh } from '$lib/3d/Mesh';
+
+// Cache the expensive base brick
+const brick = cacheFunction((width: number, height: number, depth: number) => {
+	return Solid.cube(width, height, depth, 'red')
+		.subtract(Solid.cylinder(0.5, height * 2, { color: 'red' }))
+		.subtract(Solid.cylinder(0.5, height * 2, { color: 'red' }).move({ x: width - 1 }));
+});
+
+// Use cached brick in grid
+export const brickWall = (): Solid => {
+	const b = brick(3, 1, 1.5); // Computed once
+	return Mesh.grid(b, { cols: 10, rows: 8 }).toSolid();
+};
+```
 
 ## Common Issues & Critical Patterns
 
