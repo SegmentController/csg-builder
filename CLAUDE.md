@@ -154,7 +154,7 @@ Some primitives automatically call `normalize()` after creation to ensure clean 
 
 ```typescript
 // Automatic normalization (built into certain primitives)
-const sphere = Solid.sphere(5, 'blue'); // normalize() called internally
+const sphere = Solid.sphere(5, { color: 'blue' }); // normalize() called internally
 
 // Manual normalization (rarely needed)
 const custom = Solid.cube(10, 10, 10, 'red').scale({ x: 2, y: 0.5 }).normalize(); // Fix potential issues from extreme scaling
@@ -189,7 +189,7 @@ solid.center({ x: true }); // Center on X-axis only
 
 // Example: Center a complex shape
 const myShape = Solid.cube(10, 20, 5, 'red')
-	.subtract(Solid.cylinder(3, 25, 'red').rotate({ x: 90 }))
+	.subtract(Solid.cylinder(3, 25, { color: 'red' }).rotate({ x: 90 }))
 	.center(); // Centers the result at origin
 ```
 
@@ -285,7 +285,7 @@ import type { ComponentsMap } from '$stores/componentStore.svelte';
 
 export const myPart = (width: number, height: number): Solid => {
 	const base = Solid.cube(width, height, 1, 'blue');
-	const hole = Solid.cylinder(2, 5, 'blue').rotate({ x: 90 });
+	const hole = Solid.cylinder(2, 5, { color: 'blue' }).rotate({ x: 90 });
 
 	return base.subtract(hole);
 };
@@ -349,6 +349,20 @@ const wall2 = Mesh.array(brick, 10, 5).toSolid();
 
 The `Solid` class provides the following primitive shapes:
 
+### Angle Constants
+
+The `Solid` class provides predefined angle constants in degrees for convenient use with circular geometries:
+
+```typescript
+Solid.DEG_45 = 45; // Quarter of a right angle
+Solid.DEG_90 = 90; // Right angle (quarter circle)
+Solid.DEG_180 = 180; // Half circle
+Solid.DEG_270 = 270; // Three-quarter circle
+Solid.DEG_360 = 360; // Full circle (default)
+```
+
+These constants can be used with the `thetaStart` and `thetaLength` parameters of circular geometries (cylinder, cone, sphere, prism).
+
 ### Basic Shapes
 
 **Cube:**
@@ -361,26 +375,76 @@ Solid.cube(width: number, height: number, depth: number, color?: string)
 **Cylinder:**
 
 ```typescript
-Solid.cylinder(radius: number, height: number, color?: string)
-// Example: Solid.cylinder(5, 10, 'blue')
+Solid.cylinder(
+  radius: number,
+  height: number,
+  options?: {
+    color?: string;
+    thetaStart?: number;  // Start angle in degrees (default: 0)
+    thetaLength?: number; // Angular extent in degrees (default: 360)
+  }
+)
+
+// Full cylinder (default)
+Solid.cylinder(5, 10, { color: 'blue' })
+
+// Partial cylinders using theta parameters
+Solid.cylinder(8, 10, { color: 'red', thetaLength: Solid.DEG_90 })   // Quarter cylinder (pie slice)
+Solid.cylinder(8, 10, { color: 'blue', thetaLength: Solid.DEG_180 }) // Half cylinder
+Solid.cylinder(8, 10, { color: 'green', thetaStart: 45, thetaLength: 90 }) // Custom segment
+
 // Radial segments scale with radius (16-48 segments)
+// Faces are automatically closed (openEnded: false)
 ```
 
 **Sphere:**
 
 ```typescript
-Solid.sphere(radius: number, color?: string)
-// Example: Solid.sphere(8, 'green')
+Solid.sphere(
+  radius: number,
+  options?: {
+    color?: string;
+    thetaStart?: number;  // Horizontal start angle in degrees (default: 0)
+    thetaLength?: number; // Horizontal sweep in degrees (default: 360)
+  }
+)
+
+// Full sphere (default)
+Solid.sphere(8, { color: 'green' })
+
+// Partial spheres using theta parameters (horizontal sweep only)
+Solid.sphere(8, { color: 'cyan', thetaLength: Solid.DEG_180 })  // Hemisphere (half sphere)
+Solid.sphere(8, { color: 'magenta', thetaLength: Solid.DEG_90 }) // Quarter sphere
+Solid.sphere(8, { color: 'yellow', thetaStart: 90, thetaLength: 180 }) // Custom segment
+
 // Segments scale with radius (16-48 segments for both width and height)
+// Note: Only horizontal sweep (phi) is exposed. Vertical range is always full (theta: 0 to 180°)
 ```
 
 **Cone:**
 
 ```typescript
-Solid.cone(radius: number, height: number, color?: string)
-// Example: Solid.cone(6, 12, 'yellow')
+Solid.cone(
+  radius: number,
+  height: number,
+  options?: {
+    color?: string;
+    thetaStart?: number;  // Start angle in degrees (default: 0)
+    thetaLength?: number; // Angular extent in degrees (default: 360)
+  }
+)
+
+// Full cone (default)
+Solid.cone(6, 12, { color: 'yellow' })
+
+// Partial cones using theta parameters
+Solid.cone(8, 12, { color: 'orange', thetaLength: Solid.DEG_180 }) // Half cone (wedge)
+Solid.cone(8, 12, { color: 'purple', thetaLength: Solid.DEG_90 })  // Quarter cone
+Solid.cone(6, 10, { color: 'red', thetaStart: 45, thetaLength: 90 }) // Custom wedge
+
 // Radial segments scale with radius (16-48 segments)
 // Height segments set to 1 for clean CSG operations
+// Faces are automatically closed (openEnded: false)
 ```
 
 ### Polygon Prisms
@@ -388,15 +452,40 @@ Solid.cone(radius: number, height: number, color?: string)
 **N-gon Prism (custom sided):**
 
 ```typescript
-Solid.prism(sides: number, radius: number, height: number, color?: string)
-// Example: Solid.prism(6, 5, 10, 'purple') // Hexagonal prism
-// Example: Solid.prism(8, 4, 8, 'orange')  // Octagonal prism
+Solid.prism(
+  sides: number,
+  radius: number,
+  height: number,
+  options?: {
+    color?: string;
+    thetaStart?: number;  // Start angle in degrees (default: 0)
+    thetaLength?: number; // Angular extent in degrees (default: 360)
+  }
+)
+
+// Full prisms (default)
+Solid.prism(6, 5, 10, { color: 'purple' }) // Hexagonal prism
+Solid.prism(8, 4, 8, { color: 'orange' })  // Octagonal prism
+
+// Partial prisms using theta parameters
+Solid.prism(6, 8, 10, { color: 'teal', thetaLength: Solid.DEG_180 }) // Half hexagonal prism
+Solid.prism(8, 10, 4, { color: 'silver', thetaLength: Solid.DEG_270 }) // Partial gear shape
+
+// Faces are automatically closed (openEnded: false)
 ```
 
 **Triangle Prism (3-sided):**
 
 ```typescript
-Solid.trianglePrism(radius: number, height: number, color?: string)
+Solid.trianglePrism(
+  radius: number,
+  height: number,
+  options?: {
+    color?: string;
+    thetaStart?: number;  // Start angle in degrees (default: 0)
+    thetaLength?: number; // Angular extent in degrees (default: 360)
+  }
+)
 // Example: Solid.trianglePrism(5, 10, 'cyan')
 // Shorthand for Solid.prism(3, radius, height, color)
 ```
@@ -406,19 +495,44 @@ Solid.trianglePrism(radius: number, height: number, color?: string)
 ```typescript
 // Rounded corners using sphere subtraction
 const roundedCube = Solid.cube(20, 20, 20, 'red').subtract(
-	Solid.sphere(3, 'red').move({ x: 10, y: 10, z: 10 })
+	Solid.sphere(3, { color: 'red' }).move({ x: 10, y: 10, z: 10 })
 );
 
 // Chamfered edge using cone
 const chamferedBlock = Solid.cube(15, 15, 15, 'blue').subtract(
-	Solid.cone(4, 8, 'blue').rotate({ x: 90 })
+	Solid.cone(4, 8, { color: 'blue' }).rotate({ x: 90 })
 );
 
 // Hexagonal nut
-const nut = Solid.prism(6, 10, 5, 'gray').subtract(Solid.cylinder(4, 6, 'gray'));
+const nut = Solid.prism(6, 10, 5, { color: 'gray' }).subtract(
+	Solid.cylinder(4, 6, { color: 'gray' })
+);
 
 // Triangular roof
-const roof = Solid.trianglePrism(8, 20, 'brown').rotate({ z: 90 });
+const roof = Solid.trianglePrism(8, 20, { color: 'brown' }).rotate({ z: 90 });
+
+// Partial geometry examples
+const pieSlice = Solid.cylinder(10, 2, {
+	color: 'red',
+	thetaLength: Solid.DEG_90
+});
+
+const hemisphere = Solid.sphere(8, {
+	color: 'cyan',
+	thetaLength: Solid.DEG_180
+});
+
+const wedge = Solid.cone(8, 12, {
+	color: 'orange',
+	thetaStart: 0,
+	thetaLength: Solid.DEG_180
+});
+
+// Pie chart with multiple slices
+const slice1 = Solid.cylinder(10, 2, { color: 'red', thetaStart: 0, thetaLength: 120 });
+const slice2 = Solid.cylinder(10, 2, { color: 'blue', thetaStart: 120, thetaLength: 120 });
+const slice3 = Solid.cylinder(10, 2, { color: 'green', thetaStart: 240, thetaLength: 120 });
+const pieChart = Mesh.union(slice1, slice2, slice3).toSolid();
 ```
 
 ## Adding New Primitives

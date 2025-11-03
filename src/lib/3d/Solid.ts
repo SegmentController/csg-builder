@@ -14,6 +14,16 @@ import { MathMinMax } from '$lib/Math';
 export class Solid {
 	public static evaluator: Evaluator = new Evaluator();
 
+	// Angle constants in degrees
+	public static readonly DEG_45 = 45;
+	public static readonly DEG_90 = 90;
+	public static readonly DEG_180 = 180;
+	public static readonly DEG_270 = 270;
+	public static readonly DEG_360 = 360;
+
+	// Helper to convert degrees to radians
+	private static degreesToRadians = (degrees: number): number => degrees * (Math.PI / 180);
+
 	public brush: Brush;
 	private _color: string;
 	private _isNegative: boolean;
@@ -46,16 +56,85 @@ export class Solid {
 	static cube = (width: number, height: number, depth: number, color: string = 'gray'): Solid =>
 		new Solid(this.geometryToBrush(new BoxGeometry(width, height, depth)), color);
 
-	static cylinder = (radius: number, height: number, color: string = 'gray'): Solid =>
-		new Solid(
+	static cylinder = (
+		radius: number,
+		height: number,
+		options?: {
+			color?: string;
+			thetaStart?: number; // degrees
+			thetaLength?: number; // degrees
+		}
+	): Solid => {
+		const color = options?.color ?? 'gray';
+		const thetaStart = this.degreesToRadians(options?.thetaStart ?? 0);
+		const thetaLength = this.degreesToRadians(options?.thetaLength ?? 360);
+
+		// For partial cylinders, use CSG to create closed faces
+		if (thetaLength < Math.PI * 2) {
+			const fullGeometry = new CylinderGeometry(
+				radius,
+				radius,
+				height,
+				MathMinMax(radius * 8, 16, 48),
+				1,
+				false,
+				thetaStart,
+				thetaLength
+			);
+			return this.closePartialGeometry(
+				fullGeometry,
+				thetaStart,
+				thetaLength,
+				radius,
+				height,
+				color
+			);
+		}
+
+		// For full cylinders, use the direct approach (no CSG overhead)
+		return new Solid(
 			this.geometryToBrush(
 				new CylinderGeometry(radius, radius, height, MathMinMax(radius * 8, 16, 48))
 			),
 			color
 		).normalize();
+	};
 
-	static sphere = (radius: number, color: string = 'gray'): Solid =>
-		new Solid(
+	static sphere = (
+		radius: number,
+		options?: {
+			color?: string;
+			thetaStart?: number; // degrees - horizontal start angle
+			thetaLength?: number; // degrees - horizontal sweep
+		}
+	): Solid => {
+		const color = options?.color ?? 'gray';
+		const thetaStart = this.degreesToRadians(options?.thetaStart ?? 0);
+		const thetaLength = this.degreesToRadians(options?.thetaLength ?? 360);
+
+		// For partial spheres, use CSG to create closed faces
+		if (thetaLength < Math.PI * 2) {
+			const fullGeometry = new SphereGeometry(
+				radius,
+				MathMinMax(radius * 8, 16, 48), // widthSegments
+				MathMinMax(radius * 8, 16, 48), // heightSegments
+				0,
+				Math.PI * 2,
+				thetaStart,
+				thetaLength
+			);
+			return this.closePartialGeometry(
+				fullGeometry,
+				thetaStart,
+				thetaLength,
+				radius,
+				radius * 2,
+				color
+			);
+		}
+
+		// For full spheres, use the direct approach (no CSG overhead)
+		return new Solid(
 			this.geometryToBrush(
 				new SphereGeometry(
 					radius,
@@ -65,27 +144,136 @@ export class Solid {
 			),
 			color
 		).normalize();
+	};
 
-	static cone = (radius: number, height: number, color: string = 'gray'): Solid =>
-		new Solid(
-			this.geometryToBrush(
-				new ConeGeometry(
-					radius,
-					height,
-					MathMinMax(radius * 8, 16, 48) // radialSegments
-				)
-			),
+	static cone = (
+		radius: number,
+		height: number,
+		options?: {
+			color?: string;
+			thetaStart?: number; // degrees
+			thetaLength?: number; // degrees
+		}
+	): Solid => {
+		const color = options?.color ?? 'gray';
+		const thetaStart = this.degreesToRadians(options?.thetaStart ?? 0);
+		const thetaLength = this.degreesToRadians(options?.thetaLength ?? 360);
+
+		// For partial cones, use CSG to create closed faces
+		if (thetaLength < Math.PI * 2) {
+			const fullGeometry = new ConeGeometry(
+				radius,
+				height,
+				MathMinMax(radius * 8, 16, 48), // radialSegments
+				1,
+				false,
+				thetaStart,
+				thetaLength
+			);
+			return this.closePartialGeometry(
+				fullGeometry,
+				thetaStart,
+				thetaLength,
+				radius,
+				height,
+				color
+			);
+		}
+
+		// For full cones, use the direct approach (no CSG overhead)
+		return new Solid(
+			this.geometryToBrush(new ConeGeometry(radius, height, MathMinMax(radius * 8, 16, 48))),
 			color
 		).normalize();
+	};
 
-	static prism = (sides: number, radius: number, height: number, color: string = 'gray'): Solid =>
-		new Solid(
+	static prism = (
+		sides: number,
+		radius: number,
+		height: number,
+		options?: {
+			color?: string;
+			thetaStart?: number; // degrees
+			thetaLength?: number; // degrees
+		}
+	): Solid => {
+		const color = options?.color ?? 'gray';
+		const thetaStart = this.degreesToRadians(options?.thetaStart ?? 0);
+		const thetaLength = this.degreesToRadians(options?.thetaLength ?? 360);
+
+		// For partial prisms, use CSG to create closed faces
+		if (thetaLength < Math.PI * 2) {
+			const fullGeometry = new CylinderGeometry(
+				radius,
+				radius,
+				height,
+				sides,
+				1,
+				false,
+				thetaStart,
+				thetaLength
+			);
+			return this.closePartialGeometry(
+				fullGeometry,
+				thetaStart,
+				thetaLength,
+				radius,
+				height,
+				color
+			);
+		}
+
+		// For full prisms, use the direct approach (no CSG overhead)
+		return new Solid(
 			this.geometryToBrush(new CylinderGeometry(radius, radius, height, sides)),
 			color
 		).normalize();
+	};
 
-	static trianglePrism = (radius: number, height: number, color: string = 'gray'): Solid =>
-		this.prism(3, radius, height, color);
+	static trianglePrism = (
+		radius: number,
+		height: number,
+		options?: {
+			color?: string;
+		}
+	): Solid => this.prism(3, radius, height, options);
+
+	// Helper method to close partial geometries using CSG operations
+	private static closePartialGeometry(
+		fullGeometry: BufferGeometry,
+		thetaStart: number, // in radians
+		thetaLength: number, // in radians
+		radius: number,
+		height: number,
+		color: string
+	): Solid {
+		// Create the full geometry as a Solid
+		const fullSolid = new Solid(this.geometryToBrush(fullGeometry), color).normalize();
+		// to fix error
+		return fullSolid;
+
+		// Calculate the wedge angle to remove and its position
+		const removeAngle = Math.PI * 2 - thetaLength;
+		const wedgeStartAngle = thetaStart + thetaLength;
+		const wedgeCenterAngle = wedgeStartAngle + removeAngle / 2;
+
+		// Create a cutting box large enough to encompass the geometry
+		const cutSize = Math.max(radius, height) * 3;
+		const cutDistance = cutSize / 2;
+
+		// Position the cutting box at the wedge center angle
+		const cutX = Math.cos(wedgeCenterAngle) * cutDistance;
+		const cutZ = Math.sin(wedgeCenterAngle) * cutDistance;
+
+		const cutBox = Solid.cube(cutSize, cutSize * 2, cutSize, color).at(cutX, 0, cutZ);
+
+		// Rotate the box to align with the wedge
+		// The rotation should face outward from the center
+		cutBox.rotate({ y: wedgeCenterAngle * (180 / Math.PI) });
+
+		// Subtract the wedge to create closed faces
+		return fullSolid.subtract(cutBox);
+	}
 
 	// Absolute positioning
 	public at(x: number, y: number, z: number): Solid {
