@@ -104,9 +104,9 @@ projects/
 ### Coordinate System & Transforms
 
 - Three.js right-handed: X-right, Y-up, Z-toward camera
-- **Absolute positioning**: `at(x, y, z)` sets position directly
-- **Relative transforms**: `move(dx, dy, dz)`, `moveX/Y/Z()` are incremental
-- All transformations are **incremental**: `moveX(5).moveX(3)` moves 8 units total
+- **Absolute positioning**: `at(x, y, z)` sets position directly (all params required)
+- **Relative transforms**: `move({ x?, y?, z? })` and `rotate({ x?, y?, z? })` with optional properties
+- All transformations are **incremental**: `.move({ x: 5 }).move({ x: 3 })` moves 8 units total
 - Rotations use **degrees** (converted to radians internally)
 - Grid pattern (`Mesh.grid`) accepts configurable spacing parameter
 
@@ -149,7 +149,7 @@ import type { ComponentsMap } from '$stores/componentStore.svelte';
 
 export const myPart = (width: number, height: number): Solid => {
 	const base = Solid.cube(width, height, 1, 'blue');
-	const hole = Solid.cylinder(2, 5, 'blue').rotateX(90);
+	const hole = Solid.cylinder(2, 5, 'blue').rotate({ x: 90 });
 
 	return base.subtract(hole);
 };
@@ -203,8 +203,10 @@ const brick = Solid.cube(3, 1, 1, 'red');
 // With configurable spacing
 const wall = Mesh.grid(brick, { cols: 10, rows: 5, spacing: [6, 2] }).toSolid();
 
-// Or with default spacing
-const wall2 = Mesh.array(brick, 10, 5).toSolid(); // Uses default spacing [6, 2]
+// Or with default spacing [6, 2]
+const wall2 = Mesh.array(brick, 10, 5).toSolid();
+
+// Grid internally uses: .move({ x: col * spacingX, y: row * spacingY, z: 0 })
 ```
 
 ## Adding New Primitives

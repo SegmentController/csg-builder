@@ -20,8 +20,8 @@ export const sideWindow = (width: number, height: number, depth: number): Mesh =
 	).setNegative();
 
 	// Bars are added AFTER the negative hole
-	const verticalBar = Solid.cube(BORDER, height, depth - 1, 'brown').moveZ(-0.5);
-	const horizontalBar = Solid.cube(width, BORDER, depth - 1, 'brown').moveZ(-0.5);
+	const verticalBar = Solid.cube(BORDER, height, depth - 1, 'brown').move({ z: -0.5 });
+	const horizontalBar = Solid.cube(width, BORDER, depth - 1, 'brown').move({ z: -0.5 });
 
 	// CRITICAL ORDER: hollow frame, negative hole, then bars
 	// This way bars are unioned AFTER the negative is processed

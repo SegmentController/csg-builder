@@ -51,58 +51,22 @@ export class Solid {
 		return this;
 	}
 
-	// Relative movement (renamed from dX, dY, dZ, d)
-	public moveX(dx: number): Solid {
-		this.brush.position.x += dx;
+	// Relative movement with object parameters
+	public move(delta: { x?: number; y?: number; z?: number }): Solid {
+		if (delta.x !== undefined) this.brush.position.x += delta.x;
+		if (delta.y !== undefined) this.brush.position.y += delta.y;
+		if (delta.z !== undefined) this.brush.position.z += delta.z;
 		this.brush.updateMatrixWorld();
 		return this;
 	}
 
-	public moveY(dy: number): Solid {
-		this.brush.position.y += dy;
-		this.brush.updateMatrixWorld();
-		return this;
-	}
-
-	public moveZ(dz: number): Solid {
-		this.brush.position.z += dz;
-		this.brush.updateMatrixWorld();
-		return this;
-	}
-
-	public move(dx: number, dy: number, dz: number): Solid {
-		this.brush.position.x += dx;
-		this.brush.position.y += dy;
-		this.brush.position.z += dz;
-		this.brush.updateMatrixWorld();
-		return this;
-	}
-
-	// Rotation methods (keep existing names)
+	// Rotation with object parameters (angles in degrees)
 	private angleToRadian = (degree: number) => degree * (Math.PI / 180);
 
-	public rotateX(angle: number): Solid {
-		this.brush.rotation.x += this.angleToRadian(angle);
-		this.brush.updateMatrixWorld();
-		return this;
-	}
-
-	public rotateY(angle: number): Solid {
-		this.brush.rotation.y += this.angleToRadian(angle);
-		this.brush.updateMatrixWorld();
-		return this;
-	}
-
-	public rotateZ(angle: number): Solid {
-		this.brush.rotation.z += this.angleToRadian(angle);
-		this.brush.updateMatrixWorld();
-		return this;
-	}
-
-	public rotate(x: number, y: number, z: number): Solid {
-		this.brush.rotation.x += this.angleToRadian(x);
-		this.brush.rotation.y += this.angleToRadian(y);
-		this.brush.rotation.z += this.angleToRadian(z);
+	public rotate(angles: { x?: number; y?: number; z?: number }): Solid {
+		if (angles.x !== undefined) this.brush.rotation.x += this.angleToRadian(angles.x);
+		if (angles.y !== undefined) this.brush.rotation.y += this.angleToRadian(angles.y);
+		if (angles.z !== undefined) this.brush.rotation.z += this.angleToRadian(angles.z);
 		this.brush.updateMatrixWorld();
 		return this;
 	}

@@ -94,9 +94,9 @@ export const boxWithHoles = (): Solid => {
 	const box = Solid.cube(20, 20, 20, 'blue');
 
 	// Create holes using explicit subtract
-	const holeX = Solid.cylinder(3, 25, 'blue').rotateZ(90);
+	const holeX = Solid.cylinder(3, 25, 'blue').rotate({ z: 90 });
 	const holeY = Solid.cylinder(3, 25, 'blue');
-	const holeZ = Solid.cylinder(3, 25, 'blue').rotateX(90);
+	const holeZ = Solid.cylinder(3, 25, 'blue').rotate({ x: 90 });
 
 	return box.subtract(holeX).subtract(holeY).subtract(holeZ);
 };
@@ -117,7 +117,7 @@ export const window = (width: number, height: number, depth: number): Mesh => {
 	// Mark opening as negative - it will cut through whatever this is placed in
 	const opening = Solid.cube(width - 4, height - 4, depth * 4, 'gray').setNegative();
 
-	const bar = Solid.cube(2, height, depth - 1, 'brown');
+	const bar = Solid.cube(2, height, depth - 1, 'brown').move({ z: -0.5 });
 
 	return new Mesh(frame, opening, bar); // Returns Mesh with negative solid
 };
@@ -143,18 +143,12 @@ export const wallWithWindow = (): Solid => {
 
 **Positioning (chainable):**
 
-- `at(x, y, z)` - Set absolute position
-- `moveX(dx)` - Move relative along X axis
-- `moveY(dy)` - Move relative along Y axis
-- `moveZ(dz)` - Move relative along Z axis
-- `move(dx, dy, dz)` - Move relative along all axes
+- `at(x, y, z)` - Set absolute position (all parameters required)
+- `move({ x?, y?, z? })` - Move relative with optional axis parameters
 
 **Rotation Methods (chainable, angles in degrees):**
 
-- `rotateX(angle)` - Rotate around X axis
-- `rotateY(angle)` - Rotate around Y axis
-- `rotateZ(angle)` - Rotate around Z axis
-- `rotate(x, y, z)` - Rotate around all axes
+- `rotate({ x?, y?, z? })` - Rotate with optional axis parameters
 
 **CSG Methods (return new Solid):**
 
@@ -281,7 +275,8 @@ csg-builder/
 5. **Return Solid** - Components must return `Solid` (call `toSolid()` on `Mesh`)
 6. **Use Parameters** - Make components flexible with function parameters
 7. **Test Incrementally** - Build complex models step by step
-8. **Absolute vs Relative** - Use `at()` for absolute positioning, `move()` for relative
+8. **Absolute vs Relative** - Use `at(x, y, z)` for absolute, `move({ x?, y?, z? })` for relative
+9. **Optional Properties** - Only specify axes you want to transform: `.move({ z: -0.5 })`
 
 ## Examples
 

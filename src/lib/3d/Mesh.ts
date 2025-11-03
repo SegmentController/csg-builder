@@ -74,23 +74,8 @@ export class Mesh {
 	}
 
 	// Transformation methods
-	public moveX(dx: number): Mesh {
-		for (const solid of this.solids) solid.moveX(dx);
-		return this;
-	}
-
-	public moveY(dy: number): Mesh {
-		for (const solid of this.solids) solid.moveY(dy);
-		return this;
-	}
-
-	public moveZ(dz: number): Mesh {
-		for (const solid of this.solids) solid.moveZ(dz);
-		return this;
-	}
-
-	public move(dx: number, dy: number, dz: number): Mesh {
-		for (const solid of this.solids) solid.move(dx, dy, dz);
+	public move(delta: { x?: number; y?: number; z?: number }): Mesh {
+		for (const solid of this.solids) solid.move(delta);
 		return this;
 	}
 
@@ -99,23 +84,8 @@ export class Mesh {
 		return this;
 	}
 
-	public rotateX(angle: number): Mesh {
-		for (const solid of this.solids) solid.rotateX(angle);
-		return this;
-	}
-
-	public rotateY(angle: number): Mesh {
-		for (const solid of this.solids) solid.rotateY(angle);
-		return this;
-	}
-
-	public rotateZ(angle: number): Mesh {
-		for (const solid of this.solids) solid.rotateZ(angle);
-		return this;
-	}
-
-	public rotate(x: number, y: number, z: number): Mesh {
-		for (const solid of this.solids) solid.rotate(x, y, z);
+	public rotate(angles: { x?: number; y?: number; z?: number }): Mesh {
+		for (const solid of this.solids) solid.rotate(angles);
 		return this;
 	}
 
@@ -129,7 +99,7 @@ export class Mesh {
 
 		for (let x = 0; x < options.cols; x++) {
 			for (let y = 0; y < options.rows; y++) {
-				result.append(solid.clone().move(x * spacingX, y * spacingY, 0));
+				result.append(solid.clone().move({ x: x * spacingX, y: y * spacingY, z: 0 }));
 			}
 		}
 		return result;
