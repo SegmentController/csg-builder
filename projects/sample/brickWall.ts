@@ -45,7 +45,7 @@ export const centeredBrickWall = (cx: number, cy: number): Solid => brickWall(cx
 export const brickWallWithWindow = (): Solid => {
 	const wall = centeredBrickWall(4, 16);
 	// Window is now a Mesh with negative opening that will cut the wall
-	const window = sideWindow(15, 30, 3).move({ z: -1 }).center();
+	const window = sideWindow(15, 30, 3).move({ z: -1 }).center().scale({ x: 0.5, y: 0.3 });
 	// Compose uses the new pattern: window's negative parts will subtract from wall
 	return Mesh.compose(wall, window).toSolid();
 };

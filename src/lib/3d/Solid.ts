@@ -71,6 +71,15 @@ export class Solid {
 		return this;
 	}
 
+	// Scaling with object parameters (multiplicative)
+	public scale(factors: { x?: number; y?: number; z?: number }): Solid {
+		if (factors.x !== undefined) this.brush.scale.x *= factors.x;
+		if (factors.y !== undefined) this.brush.scale.y *= factors.y;
+		if (factors.z !== undefined) this.brush.scale.z *= factors.z;
+		this.brush.updateMatrixWorld();
+		return this;
+	}
+
 	// Centering method
 	public center(axes?: { x?: boolean; y?: boolean; z?: boolean }): Solid {
 		const bounds = this.getBounds();

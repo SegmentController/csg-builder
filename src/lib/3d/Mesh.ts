@@ -90,6 +90,11 @@ export class Mesh {
 		return this;
 	}
 
+	public scale(factors: { x?: number; y?: number; z?: number }): Mesh {
+		for (const solid of this.solids) solid.scale(factors);
+		return this;
+	}
+
 	// Bounding box utility
 	public getBounds(): {
 		width: number;
