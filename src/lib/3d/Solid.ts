@@ -4,6 +4,8 @@ import {
 	BufferGeometry,
 	ConeGeometry,
 	CylinderGeometry,
+	ExtrudeGeometry,
+	Shape,
 	SphereGeometry,
 	Vector3
 } from 'three';
@@ -46,7 +48,13 @@ export class Solid {
 	public clone = (): Solid => new Solid(this.brush.clone(true), this._color, this._isNegative);
 
 	private static geometryToBrush(
-		geometry: BoxGeometry | CylinderGeometry | SphereGeometry | ConeGeometry | BufferGeometry
+		geometry:
+			| BoxGeometry
+			| CylinderGeometry
+			| SphereGeometry
+			| ConeGeometry
+			| ExtrudeGeometry
+			| BufferGeometry
 	): Brush {
 		const result = new Brush(geometry.translate(0, 0, 0));
 		result.updateMatrixWorld();
@@ -237,6 +245,91 @@ export class Solid {
 			color?: string;
 		}
 	): Solid => this.prism(3, radius, height, options);
+
+	/**
+	 * Creates a custom profile prism by extruding a 2D shape along the Z-axis.
+	 * Provides flexible Shape API for defining complex profiles with curves, arcs, etc.
+	 *
+	 * @param height - Extrusion height (depth along Z-axis)
+	 * @param profileBuilder - Function that receives a Shape instance to define the 2D profile
+	 * @param color - Material color (default: 'gray')
+	 * @returns Solid with extruded geometry
+	 *
+	 * @example
+	 * // L-bracket
+	 * const bracket = Solid.profilePrism(10, (shape) => {
+	 *   shape.moveTo(0, 0);
+	 *   shape.lineTo(20, 0);
+	 *   shape.lineTo(20, 5);
+	 *   shape.lineTo(5, 5);
+	 *   shape.lineTo(5, 20);
+	 *   shape.lineTo(0, 20);
+	 *   shape.lineTo(0, 0);
+	 * }, 'blue');
+	 */
+	static profilePrism = (
+		height: number,
+		profileBuilder: (shape: Shape) => void,
+		color: string = 'gray'
+	): Solid => {
+		const shape = new Shape();
+		profileBuilder(shape);
+
+		const geometry = new ExtrudeGeometry(shape, {
+			depth: height,
+			bevelEnabled: false, // Critical for clean CSG operations
+			curveSegments: 12,
+			steps: 1
+		});
+
+		return new Solid(this.geometryToBrush(geometry), color).normalize();
+	};
+
+	/**
+	 * Creates a custom profile prism from an array of 2D coordinate points.
+	 * The path is automatically closed (last point connects back to first).
+	 *
+	 * @param height - Extrusion height (depth along Z-axis)
+	 * @param points - Array of [x, y] coordinate pairs defining the 2D profile
+	 * @param color - Material color (default: 'gray')
+	 * @returns Solid with extruded geometry
+	 *
+	 * @example
+	 * // Trapezoid
+	 * const trapezoid = Solid.profilePrismFromPoints(
+	 *   8,
+	 *   [[0, 0], [10, 0], [8, 5], [2, 5]],
+	 *   'red'
+	 * ); // Automatically closes back to [0, 0]
+	 */
+	static profilePrismFromPoints = (
+		height: number,
+		points: [number, number][],
+		color: string = 'gray'
+	): Solid => {
+		if (points.length < 3) {
+			throw new Error('profilePrismFromPoints requires at least 3 points');
+		}
+
+		return this.profilePrism(
+			height,
+			(shape) => {
+				// Start at first point
+				const [startX, startY] = points[0];
+				shape.moveTo(startX, startY);
+
+				// Draw lines to remaining points
+				for (let index = 1; index < points.length; index++) {
+					const [x, y] = points[index];
+					shape.lineTo(x, y);
+				}
+
+				// Auto-close: connect back to start
+				shape.lineTo(startX, startY);
+			},
+			color
+		);
+	};
 
 	// Helper method to close partial geometries using CSG operations
 	private static closePartialGeometry(

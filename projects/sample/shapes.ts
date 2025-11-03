@@ -167,6 +167,132 @@ export const partialGear = (): Solid => {
 	return outer.subtract(innerHole).align('bottom');
 };
 
+// NEW: Custom profile prism demos
+
+export const lBracket = (): Solid => {
+	// L-shaped bracket using profilePrism with Shape builder API
+	return Solid.profilePrism(
+		3,
+		(shape) => {
+			shape.moveTo(0, 0);
+			shape.lineTo(20, 0);
+			shape.lineTo(20, 5);
+			shape.lineTo(5, 5);
+			shape.lineTo(5, 20);
+			shape.lineTo(0, 20);
+		},
+		'blue'
+	).align('bottom');
+};
+
+export const trapezoidPrism = (): Solid => {
+	// Trapezoid using profilePrismFromPoints with coordinate array
+	// Demonstrates auto-close feature: no need to repeat first point
+	return Solid.profilePrismFromPoints(
+		8,
+		[
+			[0, 0], // Start point
+			[10, 0], // Bottom right
+			[8, 5], // Top right
+			[2, 5] // Top left
+			// Auto-closes back to [0, 0]
+		],
+		'red'
+	).align('bottom');
+};
+
+export const arrowShape = (): Solid => {
+	// Arrow shape using profilePrismFromPoints
+	return Solid.profilePrismFromPoints(
+		4,
+		[
+			[0, 5], // Left middle (arrow tail start)
+			[10, 5], // Arrow shaft top
+			[10, 8], // Arrow head top
+			[15, 4], // Arrow point
+			[10, 0], // Arrow head bottom
+			[10, 3], // Arrow shaft bottom
+			[0, 3] // Left bottom (arrow tail end)
+			// Auto-closes back to [0, 5]
+		],
+		'orange'
+	)
+		.align('bottom')
+		.center({ x: true, z: true });
+};
+
+export const starPrism = (): Solid => {
+	// 5-pointed star using profilePrism with Shape API
+	// Demonstrates complex custom profiles
+	return Solid.profilePrism(
+		3,
+		(shape) => {
+			const outerRadius = 10;
+			const innerRadius = 4;
+			const points = 5;
+
+			// Start at first outer point
+			shape.moveTo(outerRadius * Math.cos(0), outerRadius * Math.sin(0));
+
+			// Draw star by alternating between outer and inner points
+			for (let index = 1; index <= points * 2; index++) {
+				const angle = (index * Math.PI) / points;
+				const radius = index % 2 === 0 ? outerRadius : innerRadius;
+				shape.lineTo(radius * Math.cos(angle), radius * Math.sin(angle));
+			}
+		},
+		'gold'
+	)
+		.align('bottom')
+		.center({ x: true, z: true });
+};
+
+export const tShapedBeam = (): Solid => {
+	// T-shaped I-beam profile
+	return Solid.profilePrismFromPoints(
+		15,
+		[
+			[0, 0], // Bottom left of base
+			[12, 0], // Bottom right of base
+			[12, 2], // Top right of base
+			[8, 2], // Right side of vertical section bottom
+			[8, 10], // Right side of vertical section top
+			[4, 10], // Left side of vertical section top
+			[4, 2], // Left side of vertical section bottom
+			[0, 2] // Top left of base
+		],
+		'gray'
+	)
+		.align('bottom')
+		.center({ x: true, z: true });
+};
+
+export const customProfileWithHole = (): Solid => {
+	// L-bracket with mounting hole
+	const bracket = Solid.profilePrismFromPoints(
+		5,
+		[
+			[0, 0],
+			[25, 0],
+			[25, 6],
+			[6, 6],
+			[6, 25],
+			[0, 25]
+		],
+		'teal'
+	)
+		.align('bottom')
+		.center({ x: true, z: true });
+
+	// Add mounting holes
+	const hole1 = Solid.cylinder(2, 7, { color: 'teal' })
+		.move({ x: -9.5, y: 21.5 })
+		.rotate({ x: 90 });
+	const hole2 = Solid.cylinder(2, 7, { color: 'teal' }).move({ x: 9, y: 3 }).rotate({ x: 90 });
+
+	return bracket.subtract(hole1).subtract(hole2);
+};
+
 export const components: ComponentsMap = {
 	'New: Sphere': () => sphereDemo(),
 	'New: Cone': () => coneDemo(),
@@ -188,5 +314,12 @@ export const components: ComponentsMap = {
 	'Partial: Sphere Quarter (90°)': () => sphereQuarter(),
 	'Partial: Hexagonal Prism (180°)': () => prismPartial(),
 	'Partial: Pie Chart (3 slices)': () => pieChart(),
-	'Partial: Gear Section (270°)': () => partialGear()
+	'Partial: Gear Section (270°)': () => partialGear(),
+	// Custom profile prism demos
+	'Custom: L-Bracket': () => lBracket(),
+	'Custom: Trapezoid': () => trapezoidPrism(),
+	'Custom: Arrow Shape': () => arrowShape(),
+	'Custom: Star Prism': () => starPrism(),
+	'Custom: T-Beam': () => tShapedBeam(),
+	'Custom: Profile with Holes': () => customProfileWithHole()
 };
