@@ -49,8 +49,6 @@ The application will be available at `http://localhost:5173`
 
 **Note on Deployment:**
 
-- Production builds are configured for GitHub Pages with base path `/pcb-tht-holder`
-- If deploying to a different URL, update the `base` property in `vite.config.ts:20`
 - Build output goes to `./docs` directory
 
 ## Usage

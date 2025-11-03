@@ -25,8 +25,6 @@ npm run all              # Run format:fix, lint:fix, ts:check, and build
 
 **IMPORTANT GitHub Pages Configuration:**
 
-- Production builds use base path `/pcb-tht-holder` (configured in `vite.config.ts:20`)
-- If deploying to a different URL or root domain, update the `base` property in vite.config.ts
 - Development server runs at root (`/`) by default
 
 ## High-Level Architecture
