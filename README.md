@@ -60,12 +60,11 @@ The application will be available at `http://localhost:5173`
 ### Example: Simple Box
 
 ```typescript
-import { Body } from '$lib/3d/Body';
-import { BodySet } from '$lib/3d/BodySet';
+import { Solid } from '$lib/3d/Solid';
 import type { ComponentsMap } from '$stores/componentStore.svelte';
 
-export const simpleBox = (): BodySet => {
-	return new BodySet(Body.fromCube(10, 10, 10, 'blue'));
+export const simpleBox = (): Solid => {
+	return Solid.cube(10, 10, 10, 'blue');
 };
 
 export const components: ComponentsMap = {
@@ -76,32 +75,30 @@ export const components: ComponentsMap = {
 ### Example: Complex Component
 
 ```typescript
-import { Body } from '$lib/3d/Body';
-import { BodySet } from '$lib/3d/BodySet';
+import { Solid } from '$lib/3d/Solid';
+import { Mesh } from '$lib/3d/Mesh';
 import type { ComponentsMap } from '$stores/componentStore.svelte';
 
-export const hollowBox = (): BodySet => {
+export const hollowBox = (): Solid => {
 	// Create outer box
-	const outer = Body.fromCube(20, 20, 20, 'red');
+	const outer = Solid.cube(20, 20, 20, 'red');
 
-	// Create inner box (to be subtracted)
-	const inner = Body.fromCube(16, 16, 16, 'red').setNegative();
+	// Create inner box and subtract it
+	const inner = Solid.cube(16, 16, 16, 'red');
 
-	// Combine with CSG subtraction
-	return new BodySet(outer, inner).merge();
+	// Explicit CSG subtraction
+	return outer.subtract(inner);
 };
 
-export const boxWithHoles = (): BodySet => {
-	const box = Body.fromCube(20, 20, 20, 'blue');
+export const boxWithHoles = (): Solid => {
+	const box = Solid.cube(20, 20, 20, 'blue');
 
-	// Create holes using negative cylinders
-	const holeX = Body.fromCylinder(3, 25, 'blue').setNegative().rotateZ(90);
+	// Create holes using explicit subtract
+	const holeX = Solid.cylinder(3, 25, 'blue').rotateZ(90);
+	const holeY = Solid.cylinder(3, 25, 'blue');
+	const holeZ = Solid.cylinder(3, 25, 'blue').rotateX(90);
 
-	const holeY = Body.fromCylinder(3, 25, 'blue').setNegative();
-
-	const holeZ = Body.fromCylinder(3, 25, 'blue').setNegative().rotateX(90);
-
-	return new BodySet(box, holeX, holeY, holeZ).merge();
+	return box.subtract(holeX).subtract(holeY).subtract(holeZ);
 };
 
 export const components: ComponentsMap = {
@@ -110,21 +107,47 @@ export const components: ComponentsMap = {
 };
 ```
 
+### Example: Reusable Component with Negative Solids
+
+```typescript
+// Window that can be placed in any wall and will cut through it
+export const window = (width: number, height: number, depth: number): Mesh => {
+	const frame = Solid.cube(width, height, depth, 'brown');
+
+	// Mark opening as negative - it will cut through whatever this is placed in
+	const opening = Solid.cube(width - 4, height - 4, depth * 4, 'gray').setNegative();
+
+	const bar = Solid.cube(2, height, depth - 1, 'brown');
+
+	return new Mesh(frame, opening, bar); // Returns Mesh with negative solid
+};
+
+// Usage in wall
+export const wallWithWindow = (): Solid => {
+	const wall = Solid.cube(20, 20, 1, 'gray');
+	const win = window(5, 8, 3).at(10, 5, 0);
+
+	// Window's negative opening automatically cuts the wall!
+	return Mesh.compose(wall, win).toSolid();
+};
+```
+
 ### API Reference
 
-#### Body Class
+#### Solid Class
 
 **Factory Methods:**
 
-- `Body.fromCube(width, height, depth, color)` - Create a cube
-- `Body.fromCylinder(radius, height, color)` - Create a cylinder
+- `Solid.cube(width, height, depth, color?)` - Create a cube
+- `Solid.cylinder(radius, height, color?)` - Create a cylinder
 
-**Translation Methods (chainable):**
+**Positioning (chainable):**
 
-- `dX(x)` - Translate along X axis
-- `dY(y)` - Translate along Y axis
-- `dZ(z)` - Translate along Z axis
-- `d(x, y, z)` - Translate along all axes
+- `at(x, y, z)` - Set absolute position
+- `moveX(dx)` - Move relative along X axis
+- `moveY(dy)` - Move relative along Y axis
+- `moveZ(dz)` - Move relative along Z axis
+- `move(dx, dy, dz)` - Move relative along all axes
 
 **Rotation Methods (chainable, angles in degrees):**
 
@@ -133,30 +156,46 @@ export const components: ComponentsMap = {
 - `rotateZ(angle)` - Rotate around Z axis
 - `rotate(x, y, z)` - Rotate around all axes
 
-**CSG Methods:**
+**CSG Methods (return new Solid):**
 
-- `setNegative(negative = true)` - Mark for subtraction
-- `merge(body)` - Merge with another body
+- `subtract(other)` - Boolean subtraction
+- `union(other)` - Boolean union
+- `intersect(other)` - Boolean intersection
+
+**Composition Methods:**
+
+- `setNegative(negative?)` - Mark solid as negative (for Mesh composition)
+- `isNegative` - Getter to check if solid is marked negative
+
+**Other Methods:**
+
+- `setColor(color)` - Set color
 - `clone()` - Create a copy
+- `getVertices()` - Get vertex array for rendering/export
 
-#### BodySet Class
+#### Mesh Class
 
-**Constructor:**
+**Static Constructors:**
 
-- `new BodySet(...bodies)` - Create set from bodies
+- `Mesh.union(...solids)` - Create mesh with union operation
+- `Mesh.difference(base, ...subtract)` - Create mesh with subtraction
+- `Mesh.intersection(...solids)` - Create mesh with intersection
+- `Mesh.compose(...items)` - Compose solids/meshes (respects negative flags)
+- `Mesh.grid(solid, { cols, rows, spacing? })` - Create grid array
+- `Mesh.array(solid, cols, rows)` - Create array with default spacing
 
-**Management:**
+**Instance Methods:**
 
-- `append(...bodies)` - Add bodies without merging
-- `merge(...bodies)` - Add and perform CSG merge
+- `append(...solids)` - Add solids without merging
+- `merge(...solids)` - Add and perform CSG merge (respects negative solids)
+- `toSolid()` - Convert to single merged Solid
+- `getSolids()` - Get array of all solids in mesh
 
 **Transformation Methods:**
 
-- Same as Body class, applied to all bodies in the set
+- Same as Solid class, applied to all solids in the mesh
 
-**Static Methods:**
-
-- `BodySet.array(body, cx, cy)` - Create a grid array
+**Note on Negative Solids:** When a Mesh is merged, it separates positive and negative solids. All positive solids are unioned together first, then all negative solids are subtracted from the result.
 
 ### Project Structure
 
@@ -165,8 +204,8 @@ csg-builder/
 ├── src/
 │   ├── lib/
 │   │   ├── 3d/
-│   │   │   ├── Body.ts          # Core 3D primitive class
-│   │   │   ├── BodySet.ts       # Body collection manager
+│   │   │   ├── Solid.ts         # Core 3D primitive class
+│   │   │   ├── Mesh.ts          # Solid collection manager
 │   │   │   └── stl.ts           # STL export functionality
 │   │   ├── Math.ts              # Math utilities
 │   │   ├── buffer.ts            # Buffer utilities
@@ -238,10 +277,11 @@ csg-builder/
 1. **Keep Components Pure** - Component functions should return new instances
 2. **Use Descriptive Names** - Component names appear in the UI dropdown
 3. **Chain Transformations** - Methods return `this` for fluent API usage
-4. **Negative for Subtraction** - Call `setNegative()` before merging to subtract
-5. **Merge When Done** - Call `.merge()` on BodySet before rendering
+4. **Explicit CSG Operations** - Use `subtract()`, `union()`, `intersect()` methods
+5. **Return Solid** - Components must return `Solid` (call `toSolid()` on `Mesh`)
 6. **Use Parameters** - Make components flexible with function parameters
 7. **Test Incrementally** - Build complex models step by step
+8. **Absolute vs Relative** - Use `at()` for absolute positioning, `move()` for relative
 
 ## Examples
 
@@ -262,8 +302,8 @@ Check out the `projects/sample/` directory for working examples:
 **Problem:** Mesh appears black or invisible
 
 - Verify color is a valid CSS color string
-- Check that `.merge()` is called on BodySet
-- Ensure geometry isn't degenerate (zero volume)
+- Ensure component returns `Solid` (call `toSolid()` on `Mesh` if needed)
+- Check geometry isn't degenerate (zero volume)
 
 **Problem:** CSG operation is slow
 

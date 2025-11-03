@@ -27,20 +27,21 @@ npm run all              # Run format:fix, lint:fix, ts:check, and build
 
 ### Three-Layer Component System
 
-1. **Primitive Layer** (`Body` class in `src/lib/3d/Body.ts`)
+1. **Primitive Layer** (`Solid` class in `src/lib/3d/Solid.ts`)
    - Wraps Three.js `Brush` objects from `three-bvh-csg` library
-   - Factory methods: `fromCube()`, `fromCylinder()`
+   - Factory methods: `cube()`, `cylinder()`
    - Provides fluent API for transformations (all methods return `this`)
-   - Maintains `negative` flag for CSG subtraction operations
-   - All transforms are **relative/incremental** (not absolute)
+   - Explicit CSG methods: `subtract()`, `union()`, `intersect()`
+   - Supports both **absolute** (`at()`) and **relative** (`move()`) positioning
 
-2. **Composition Layer** (`BodySet` class in `src/lib/3d/BodySet.ts`)
-   - Manages collections of `Body` objects
-   - Performs CSG operations via static `Body.evaluator` (from `three-bvh-csg`)
-   - `append()` adds bodies without merging
-   - `merge()` performs actual CSG operations (ADDITION for positive bodies, SUBTRACTION for negative)
-   - Transforms apply to all contained bodies
-   - Grid utility: `BodySet.array(body, cx, cy)` creates 2D arrays
+2. **Composition Layer** (`Mesh` class in `src/lib/3d/Mesh.ts`)
+   - Manages collections of `Solid` objects
+   - Performs CSG operations via static `Solid.evaluator` (from `three-bvh-csg`)
+   - `append()` adds solids without merging
+   - `merge()` performs actual CSG operations
+   - `toSolid()` returns final merged solid
+   - Transforms apply to all contained solids
+   - Grid utility: `Mesh.grid(solid, { cols, rows, spacing })` creates 2D arrays
 
 3. **Component Registry** (`src/stores/componentStore.svelte.ts`)
    - Uses Svelte 5 runes (`$state`) for reactivity
@@ -52,11 +53,11 @@ npm run all              # Run format:fix, lint:fix, ts:check, and build
 
 ```
 projects/*.ts (component definitions)
-  → export ComponentsMap { "Name": () => BodySet }
+  → export ComponentsMap { "Name": () => Solid }
   → addToComponentStore() on module load
   → componentStore (Svelte 5 $state reactive)
   → AppNavigation.svelte (dropdown + selection)
-  → App.svelte (calls merge(), extracts vertices)
+  → App.svelte (extracts vertices from Solid)
   → App3DScene.svelte (Three.js rendering via Threlte)
   → STL export (generateBinaryStlFromVertices)
 ```
@@ -90,18 +91,24 @@ projects/
 
 ### CSG Operation Mechanics
 
-- CSG merge happens **only** when `BodySet.merge()` is called
-- The `Body.evaluator` (static, single instance) performs all boolean operations
-- Negative bodies are subtracted via `SUBTRACTION` constant from `three-bvh-csg`
-- Each CSG operation creates a **new** Brush - the old geometry is replaced
+- CSG operations use explicit methods: `subtract()`, `union()`, `intersect()`
+- The `Solid.evaluator` (static, single instance) performs all boolean operations
+- Each CSG operation creates a **new** Solid with new Brush - immutable pattern
+- `Mesh.toSolid()` performs final merge when multiple solids need to be combined
+- **Negative Solids**: `setNegative()` marks a solid for subtraction during Mesh merge
+  - Mesh separates positive/negative solids
+  - Unions all positives first
+  - Then subtracts all negatives
 - `updateMatrixWorld()` must be called after transforms (handled automatically by methods)
 
 ### Coordinate System & Transforms
 
 - Three.js right-handed: X-right, Y-up, Z-toward camera
-- All transformations are **incremental**: `dX(5).dX(3)` moves 8 units total
+- **Absolute positioning**: `at(x, y, z)` sets position directly
+- **Relative transforms**: `move(dx, dy, dz)`, `moveX/Y/Z()` are incremental
+- All transformations are **incremental**: `moveX(5).moveX(3)` moves 8 units total
 - Rotations use **degrees** (converted to radians internally)
-- Grid pattern (`BodySet.array`) uses hardcoded spacing: `x * 6, y * 2` (see `BodySet.ts:73`)
+- Grid pattern (`Mesh.grid`) accepts configurable spacing parameter
 
 ### STL Export Format
 
@@ -136,15 +143,15 @@ Scene setup in `App3DScene.svelte`:
 ### Basic Component Structure
 
 ```typescript
-import { Body } from '$lib/3d/Body';
-import { BodySet } from '$lib/3d/BodySet';
+import { Solid } from '$lib/3d/Solid';
+import { Mesh } from '$lib/3d/Mesh';
 import type { ComponentsMap } from '$stores/componentStore.svelte';
 
-export const myPart = (width: number, height: number): BodySet => {
-	const base = Body.fromCube(width, height, 1, 'blue');
-	const hole = Body.fromCylinder(2, 5, 'blue').setNegative().rotateX(90);
+export const myPart = (width: number, height: number): Solid => {
+	const base = Solid.cube(width, height, 1, 'blue');
+	const hole = Solid.cylinder(2, 5, 'blue').rotateX(90);
 
-	return new BodySet(base, hole).merge();
+	return base.subtract(hole);
 };
 
 export const components: ComponentsMap = {
@@ -152,13 +159,33 @@ export const components: ComponentsMap = {
 };
 ```
 
-### Subtraction Pattern
+### Subtraction Patterns
+
+**Direct Subtraction (for simple cases):**
 
 ```typescript
-// Hollow box example
-const outer = Body.fromCube(20, 20, 20, 'red');
-const inner = Body.fromCube(16, 16, 16, 'red').setNegative();
-new BodySet(outer, inner).merge(); // Subtraction occurs here
+// Hollow box example - explicit subtract method
+const outer = Solid.cube(20, 20, 20, 'red');
+const inner = Solid.cube(16, 16, 16, 'red');
+const result = outer.subtract(inner); // Explicit subtraction
+```
+
+**Negative Solids (for reusable components):**
+
+```typescript
+// Window component with negative opening that cuts through walls
+export const window = (width: number, height: number): Mesh => {
+	const frame = Solid.cube(width, height, 3, 'brown');
+	const opening = Solid.cube(width - 4, height - 4, 10, 'gray').setNegative(); // Marks as negative
+	const bar = Solid.cube(1, height, 2, 'brown');
+
+	return new Mesh(frame, opening, bar); // Mesh tracks negative solids
+};
+
+// Usage: Window's negative opening cuts into wall automatically
+const wall = Solid.cube(20, 20, 1, 'gray');
+const win = window(5, 8).at(10, 5, 0);
+return Mesh.compose(wall, win).toSolid(); // Opening subtracts from wall!
 ```
 
 ### Reusable Components with Context
@@ -172,25 +199,28 @@ See `projects/sample/_context.ts`:
 ### Grid Arrays
 
 ```typescript
-const brick = Body.fromCube(3, 1, 1, 'red');
-const wall = BodySet.array(brick, 10, 5); // 10 columns, 5 rows
-// Spacing is hardcoded: cx * 6 horizontal, cy * 2 vertical
+const brick = Solid.cube(3, 1, 1, 'red');
+// With configurable spacing
+const wall = Mesh.grid(brick, { cols: 10, rows: 5, spacing: [6, 2] }).toSolid();
+
+// Or with default spacing
+const wall2 = Mesh.array(brick, 10, 5).toSolid(); // Uses default spacing [6, 2]
 ```
 
 ## Adding New Primitives
 
 To add a new shape (e.g., sphere):
 
-1. Add to `Body.ts`:
+1. Add to `Solid.ts`:
 
 ```typescript
-static fromSphere = (radius: number, color: string): Body =>
-  new Body(this.geometryToBrush(new SphereGeometry(radius, 32, 32)), color);
+static sphere = (radius: number, color: string = 'gray'): Solid =>
+  new Solid(this.geometryToBrush(new SphereGeometry(radius, 32, 32)), color);
 ```
 
 2. Import geometry: `import { SphereGeometry } from 'three';`
 
-3. Use in components: `Body.fromSphere(5, 'green')`
+3. Use in components: `Solid.sphere(5, 'green')`
 
 ## Common Issues
 
@@ -203,7 +233,7 @@ static fromSphere = (radius: number, color: string): Body =>
 
 ### Mesh Renders Black/Wrong
 
-- Missing `merge()` call on BodySet before rendering
+- Missing final merge - ensure component returns a `Solid`, call `toSolid()` on `Mesh` if needed
 - Invalid color string (must be CSS color: 'red', '#ff0000', etc.)
 - Degenerate geometry (zero-volume shapes)
 - Normals not computed (should auto-compute in `App3DScene.svelte:21`)
@@ -211,11 +241,12 @@ static fromSphere = (radius: number, color: string): Body =>
 ### Slow CSG Operations
 
 - Cylinder segment counts scale with radius: `MathMinMax(radius * 8, 16, 48)`
-- Complex nested merges are expensive - consider simplifying
-- Merge incrementally instead of all at once
+- Multiple CSG operations are expensive - chain operations efficiently
+- Each `subtract()`, `union()`, `intersect()` creates new geometry
 
 ### Type Errors with Imports
 
 - Use path aliases (`$lib/`, not relative `../../lib/`)
 - Run `npm run ts:check` to see full error context
 - Check `tsconfig.json` paths match `vite.config.ts` aliases
+- Ensure components return `Solid` (not `Mesh` or `BodySet`)

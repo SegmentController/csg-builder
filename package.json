@@ -13,11 +13,11 @@
 		"preview": "vite preview",
 		"ts:check": "svelte-check --tsconfig ./tsconfig.json",
 		"format:check": "prettier --check .",
-		"format:fix": "prettier --write .",
+		"format:fix": "prettier --write . | grep -v 'unchanged' | sed G",
 		"lint:check": "eslint .",
 		"lint:fix": "eslint --fix .",
 		"npm:reinstall": "rm -rf ./node_modules && rm -f ./package-lock.json && npm i && npm i",
-		"all": "npm run format:fix && npm run lint:fix && npm run ts:check && npm run build"
+		"all": "node --run format:fix && node --run lint:fix && node --run ts:check && node --run build"
 	},
 	"devDependencies": {
 		"@sveltejs/vite-plugin-svelte": "^6.2.1",
