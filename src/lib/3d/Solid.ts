@@ -1,3 +1,4 @@
+/* eslint-disable unicorn/no-array-reduce */
 import {
 	Box3,
 	BoxGeometry,
@@ -62,7 +63,7 @@ export class Solid {
 	}
 
 	static cube = (width: number, height: number, depth: number, color: string = 'gray'): Solid =>
-		new Solid(this.geometryToBrush(new BoxGeometry(width, height, depth)), color);
+		new Solid(this.geometryToBrush(new BoxGeometry(width, height, depth)), color).normalize();
 
 	static cylinder = (
 		radius: number,
@@ -469,23 +470,29 @@ export class Solid {
 	}
 
 	// Explicit CSG operations
-	public subtract(other: Solid): Solid {
-		const resultBrush = Solid.evaluator.evaluate(this.brush, other.brush, SUBTRACTION);
-		return new Solid(resultBrush, this._color, this._isNegative);
+	public subtract(...others: Solid[]): Solid {
+		return others.reduce((accumulator, solid) => {
+			const resultBrush = Solid.evaluator.evaluate(accumulator.brush, solid.brush, SUBTRACTION);
+			return new Solid(resultBrush, accumulator._color, accumulator._isNegative);
+		}, this);
 	}
 
-	public union(other: Solid): Solid {
-		const resultBrush = Solid.evaluator.evaluate(this.brush, other.brush, ADDITION);
-		return new Solid(resultBrush, this._color, this._isNegative);
+	public union(...others: Solid[]): Solid {
+		return others.reduce((accumulator, solid) => {
+			const resultBrush = Solid.evaluator.evaluate(accumulator.brush, solid.brush, ADDITION);
+			return new Solid(resultBrush, accumulator._color, accumulator._isNegative);
+		}, this);
 	}
 
-	public intersect(other: Solid): Solid {
-		const resultBrush = Solid.evaluator.evaluate(this.brush, other.brush, INTERSECTION);
-		return new Solid(resultBrush, this._color, this._isNegative);
+	public intersect(...others: Solid[]): Solid {
+		return others.reduce((accumulator, solid) => {
+			const resultBrush = Solid.evaluator.evaluate(accumulator.brush, solid.brush, INTERSECTION);
+			return new Solid(resultBrush, accumulator._color, accumulator._isNegative);
+		}, this);
 	}
 
 	// Geometry normalization
-	static emptyCube = this.cube(0, 0, 0, 'white');
+	static emptyCube = new Solid(this.geometryToBrush(new BoxGeometry(0, 0, 0)), 'white');
 	public normalize(): Solid {
 		return this.union(Solid.emptyCube);
 	}
@@ -504,6 +511,9 @@ export class Solid {
 	// Utility methods
 	public getVertices = (): Float32Array =>
 		new Float32Array(this.brush.geometry.attributes['position'].array);
+
+	// Helper to round to 2 decimal places
+	private roundTo2 = (n: number) => Math.round(n * 100) / 100;
 
 	public getBounds(): {
 		width: number;
@@ -525,10 +535,15 @@ export class Solid {
 		const center = new Vector3();
 		worldBox.getCenter(center);
 
+		// Round all Vector3 components
+		min.set(this.roundTo2(min.x), this.roundTo2(min.y), this.roundTo2(min.z));
+		max.set(this.roundTo2(max.x), this.roundTo2(max.y), this.roundTo2(max.z));
+		center.set(this.roundTo2(center.x), this.roundTo2(center.y), this.roundTo2(center.z));
+
 		return {
-			width: max.x - min.x,
-			height: max.y - min.y,
-			depth: max.z - min.z,
+			width: this.roundTo2(max.x - min.x),
+			height: this.roundTo2(max.y - min.y),
+			depth: this.roundTo2(max.z - min.z),
 			min,
 			max,
 			center

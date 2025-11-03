@@ -200,25 +200,38 @@ export class Mesh {
 		return this;
 	}
 
-	// Grid utility with configurable spacing
 	public static grid(
 		solid: Solid,
-		options: { cols: number; rows: number; spacing?: [number, number] }
+		options: { cols: number; rows: number; levels: number; spacing?: [number, number, number] }
 	): Mesh {
 		const result = new Mesh();
-		const [spacingX, spacingY] = options.spacing ?? [6, 2]; // Default spacing
+		const { width, height, depth } = solid.getBounds();
+		const [spacingX, spacingY, spacingZ] = options.spacing ?? [0, 0, 0];
 
-		for (let x = 0; x < options.cols; x++) {
-			for (let y = 0; y < options.rows; y++) {
-				result.append(solid.clone().move({ x: x * spacingX, y: y * spacingY, z: 0 }));
-			}
-		}
+		for (let x = 0; x < options.cols; x++)
+			for (let y = 0; y < options.rows; y++)
+				for (let z = 0; z < options.levels; z++)
+					result.append(
+						solid.clone().move({
+							x: x * (width + spacingX),
+							y: y * (height + spacingY),
+							z: z * (depth + spacingZ)
+						})
+					);
+
 		return result;
 	}
 
-	// Array utility (kept for compatibility, delegates to grid)
-	public static array(source: Solid, cx: number, cy: number): Mesh {
-		return Mesh.grid(source, { cols: cx, rows: cy, spacing: [6, 2] });
+	public static gridXY(
+		solid: Solid,
+		options: { cols: number; rows: number; spacing?: [number, number] }
+	): Mesh {
+		return Mesh.grid(solid, {
+			cols: options.cols,
+			rows: options.rows,
+			levels: 1,
+			spacing: options.spacing ? [options.spacing[0], options.spacing[1], 0] : undefined
+		});
 	}
 
 	// Get all solids

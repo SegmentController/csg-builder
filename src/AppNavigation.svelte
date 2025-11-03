@@ -29,7 +29,8 @@
 
 	let selected = $state<string>();
 	let generateTimeMs = $state(0);
-	let vertexCount = $state(0);
+	let faceCount = $state(0);
+	let dimension = $state({ width: 0, height: 0, depth: 0 });
 	const change = () => {
 		const sel = getComponentStoreValue().find((c) => c.name === selected);
 		if (sel) {
@@ -37,7 +38,8 @@
 			const data = sel.receiveData();
 			// Handle both Solid and Mesh
 			const solid = data instanceof Mesh ? data.toSolid() : data;
-			vertexCount = solid.getVertices().length / 9;
+			faceCount = solid.getVertices().length / 9;
+			dimension = solid.getBounds();
 			generateTimeMs = Date.now() - startTime;
 
 			window.location.href = `/#${sel.name}`;
@@ -54,10 +56,12 @@
 		</NavBrand>
 		<NavUl>
 			{#if getComponentStoreValue().length}
-				<span class="my-auto text-xs"
-					>{generateTimeMs} ms
+				<span class="my-auto text-xs">
+					{faceCount.toLocaleString()} faces
 					<br />
-					{vertexCount} tr.
+					{dimension.width} x {dimension.height} x {dimension.depth} mm
+					<br />
+					{generateTimeMs} ms
 				</span>
 				<Toggle id="wireframe" class="ml-4" bind:checked={wireframe}>Wireframe</Toggle>
 				<Select

@@ -6,43 +6,62 @@ import type { ComponentsMap } from '$stores/componentStore.svelte';
 import { context } from './_context';
 import { sideWindow } from './sideWindow';
 
-const BW = 3;
-const BH = 1;
-const SEP_WIDTH = 0.2;
-const SEP_DEPTH = 0.2;
+const BRICK_WIDTH = 3;
+const BRICK_HEIGHT = 1;
+const BRICK_DEPTH = 2;
+const BRICK_GAP_WIDTH = 0.2;
+const BRICK_GAP_DEPTH = 0.2;
 
-export const brickItem = cacheInlineFunction(
-	'brickItem',
-	(width: number, height: number, depth: number): Solid => {
-		let result = Solid.cube(width, height, depth, 'red');
+const brickItem = cacheInlineFunction('brickItem', (): Solid => {
+	let result = Solid.cube(
+		2 * BRICK_WIDTH + 2 * BRICK_GAP_WIDTH,
+		2 * BRICK_HEIGHT + 2 * BRICK_GAP_WIDTH,
+		BRICK_DEPTH - BRICK_GAP_DEPTH,
+		'red'
+	);
 
-		if (context.production) {
-			let oddRow = false;
-			for (let h = -height / 2; h < height / 2; h += BH) {
-				const lh = Solid.cube(width, SEP_WIDTH, SEP_DEPTH, 'blue').move({
-					y: h,
-					z: depth / 2 - SEP_DEPTH / 2
-				});
-				result = result.subtract(lh);
-				for (let w = -width / 2; w < width / 2; w += BW) {
-					const lw = Solid.cube(SEP_WIDTH, BH, SEP_DEPTH, 'green').move({
-						x: oddRow ? w : w + BW / 2,
-						y: h + BH / 2,
-						z: depth / 2 - SEP_DEPTH / 2
-					});
-					result = result.subtract(lw);
-				}
-				oddRow = !oddRow;
-			}
-		}
+	if (context.production) {
+		const ROW_A_Y = BRICK_HEIGHT / 2 + BRICK_GAP_WIDTH;
+		const ROW_B_Y = -BRICK_HEIGHT / 2;
 
-		return result;
+		const full = Solid.cube(BRICK_WIDTH, BRICK_HEIGHT, BRICK_GAP_DEPTH).move({
+			z: BRICK_DEPTH / 2
+		});
+		const half = Solid.cube(BRICK_WIDTH / 2, BRICK_HEIGHT, BRICK_GAP_DEPTH).move({
+			z: BRICK_DEPTH / 2
+		});
+
+		const a1 = full.clone().move({
+			x: -BRICK_WIDTH / 2,
+			y: ROW_A_Y
+		});
+		const a2 = full.clone().move({
+			x: BRICK_WIDTH / 2 + BRICK_GAP_WIDTH,
+			y: ROW_A_Y
+		});
+
+		const b1 = half.clone().move({
+			x: -BRICK_WIDTH / 2 - BRICK_WIDTH / 4 - BRICK_GAP_WIDTH,
+			y: ROW_B_Y
+		});
+		const b2 = full.clone().move({
+			x: 0,
+			y: ROW_B_Y
+		});
+		const b3 = half.clone().move({
+			x: BRICK_WIDTH / 2 + BRICK_WIDTH / 4 + BRICK_GAP_WIDTH,
+			y: ROW_B_Y
+		});
+
+		result = result.union(a1, a2, b1, b2, b3);
 	}
-);
+
+	return result;
+});
 
 export const brickWall = cacheInlineFunction(
 	'brickWall',
-	(cx: number, cy: number): Solid => Mesh.array(brickItem(BW * 2, BH * 2, 1), cx, cy).toSolid()
+	(cx: number, cy: number): Solid => Mesh.gridXY(brickItem(), { cols: cx, rows: cy }).toSolid()
 );
 
 export const centeredBrickWall = cacheInlineFunction(
@@ -51,13 +70,13 @@ export const centeredBrickWall = cacheInlineFunction(
 );
 
 export const brickWallWithWindow = cacheInlineFunction('brickWallWithWindow', (): Solid => {
-	const wall = centeredBrickWall(4, 16);
-	const window = sideWindow(15, 30, 3).move({ z: -1 }).center().scale({ x: 0.5, y: 0.3 });
+	const wall = centeredBrickWall(6, 12);
+	const window = sideWindow(15, 30, 3).move({ z: 0 }).center().scale({ x: 1.5, y: 0.3 });
 	return Mesh.compose(wall, window).toSolid();
 });
 
 export const components: ComponentsMap = {
-	BrickItem: () => brickItem(6, 2, 1),
+	BrickItem: () => brickItem(),
 	BrickWall: () => brickWall(4, 4),
 	BrickWallCentered: () => centeredBrickWall(4, 4),
 	BrickWallWithWindow: () => brickWallWithWindow()
