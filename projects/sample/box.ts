@@ -1,15 +1,12 @@
-import { Body } from '$lib/3d/Body';
-import { BodySet } from '$lib/3d/BodySet';
+import { Mesh } from '$lib/3d/Mesh';
+import { Solid } from '$lib/3d/Solid';
 import type { ComponentsMap } from '$stores/componentStore.svelte';
 
-export const box = (): BodySet => {
-	const result = new BodySet(Body.fromCube(10, 10, 10, 'blue'));
+export const box = (): Solid => {
+	const cube = Solid.cube(10, 10, 10, 'blue');
+	const cyl = Solid.cylinder(3, 20, 'red').rotate(0, 0, 0);
 
-	const cyl = Body.fromCylinder(3, 20, 'red').setNegative(false).rotate(0, 0, 0);
-	//result.merge(cyl);
-	result.append(cyl);
-
-	return result;
+	return Mesh.union(cube, cyl).toSolid();
 };
 
 export const components: ComponentsMap = {

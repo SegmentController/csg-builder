@@ -1,5 +1,5 @@
-import { Body } from '$lib/3d/Body';
-import { BodySet } from '$lib/3d/BodySet';
+import { Mesh } from '$lib/3d/Mesh';
+import { Solid } from '$lib/3d/Solid';
 import type { ComponentsMap } from '$stores/componentStore.svelte';
 
 import { context } from './_context';
@@ -10,21 +10,25 @@ const BH = 1;
 const SEP_WIDTH = 0.2;
 const SEP_DEPTH = 0.2;
 
-export const brickItem = (width: number, height: number, depth: number): BodySet => {
-	const result = new BodySet(Body.fromCube(width, height, depth, 'red'));
+export const brickItem = (width: number, height: number, depth: number): Solid => {
+	let result = Solid.cube(width, height, depth, 'red');
 
 	if (context.production) {
 		let oddRow = false;
 		for (let h = -height / 2; h < height / 2; h += BH) {
-			const lh = Body.fromCube(width, SEP_WIDTH, SEP_DEPTH, 'blue')
-				.setNegative()
-				.d(0, h, depth / 2 - SEP_DEPTH / 2);
-			result.merge(lh);
+			const lh = Solid.cube(width, SEP_WIDTH, SEP_DEPTH, 'blue').move(
+				0,
+				h,
+				depth / 2 - SEP_DEPTH / 2
+			);
+			result = result.subtract(lh);
 			for (let w = -width / 2; w < width / 2; w += BW) {
-				const lw = Body.fromCube(SEP_WIDTH, BH, SEP_DEPTH, 'green')
-					.setNegative()
-					.d(oddRow ? w : w + BW / 2, h + BH / 2, depth / 2 - SEP_DEPTH / 2);
-				result.merge(lw);
+				const lw = Solid.cube(SEP_WIDTH, BH, SEP_DEPTH, 'green').move(
+					oddRow ? w : w + BW / 2,
+					h + BH / 2,
+					depth / 2 - SEP_DEPTH / 2
+				);
+				result = result.subtract(lw);
 			}
 			oddRow = !oddRow;
 		}
@@ -33,12 +37,16 @@ export const brickItem = (width: number, height: number, depth: number): BodySet
 	return result;
 };
 
-export const brickWall = (cx: number, cy: number): BodySet => {
-	return BodySet.array(brickItem(BW * 2, BH * 2, 1).getBodies()[0], cx, cy);
+export const brickWall = (cx: number, cy: number): Solid => {
+	return Mesh.array(brickItem(BW * 2, BH * 2, 1), cx, cy).toSolid();
 };
 
-export const brickWallWithWindow = (): BodySet => {
-	return new BodySet(brickWall(4, 16), sideWindow(15, 30, 3).d(8, 15, 1));
+export const brickWallWithWindow = (): Solid => {
+	const wall = brickWall(4, 16);
+	// Window is now a Mesh with negative opening that will cut the wall
+	const window = sideWindow(15, 30, 3).move(8, 15, 1);
+	// Compose uses the new pattern: window's negative parts will subtract from wall
+	return Mesh.compose(wall, window).toSolid();
 };
 
 export const components: ComponentsMap = {
