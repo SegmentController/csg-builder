@@ -111,7 +111,8 @@ export class Solid {
 		height: number,
 		options?: {
 			color?: string;
-			angle?: number; // degrees
+			angle?: number;
+			topRadius?: number;
 		}
 	): Solid => {
 		const color = options?.color ?? 'gray';
@@ -121,7 +122,7 @@ export class Solid {
 		const fullCylinder = new Solid(
 			this.geometryToBrush(
 				new CylinderGeometry(
-					radius,
+					options?.topRadius ?? radius,
 					radius,
 					height,
 					MathMinMax(radius * 8, 16, 48),
@@ -229,7 +230,8 @@ export class Solid {
 		height: number,
 		options?: {
 			color?: string;
-			angle?: number; // degrees
+			angle?: number;
+			topRadius?: number;
 		}
 	): Solid => {
 		const color = options?.color ?? 'gray';
@@ -239,7 +241,7 @@ export class Solid {
 		const fullPrism = new Solid(
 			this.geometryToBrush(
 				new CylinderGeometry(
-					radius,
+					options?.topRadius ?? radius,
 					radius,
 					height,
 					sides,

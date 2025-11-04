@@ -8,12 +8,18 @@ export const coneDemo = (): Solid => Solid.cone(6, 12, { color: 'yellow' }).alig
 
 export const cylinderDemo = (): Solid => Solid.cylinder(6, 12, { color: 'red' }).align('bottom');
 
+export const cylinder2Demo = (): Solid =>
+	Solid.cylinder(6, 12, { color: 'red', topRadius: 4 }).align('bottom');
+
 export const trianglePrismDemo = (): Solid => {
 	return Solid.trianglePrism(6, 10, { color: 'cyan' }).align('bottom');
 };
 
 export const hexagonalPrismDemo = (): Solid => {
 	return Solid.prism(6, 6, 10, { color: 'purple' }).align('bottom');
+};
+export const hexagonal2PrismDemo = (): Solid => {
+	return Solid.prism(6, 6, 10, { color: 'purple', topRadius: 4 }).align('bottom');
 };
 
 export const octagonalPrismDemo = (): Solid => {
@@ -64,6 +70,14 @@ export const cylinderPieSlice = (): Solid => {
 	return Solid.cylinder(8, 10, {
 		color: 'red',
 		angle: Solid.DEG_90
+	}).align('bottom');
+};
+export const cylinderPie2Slice = (): Solid => {
+	// 90-degree pie slice cylinder
+	return Solid.cylinder(8, 10, {
+		color: 'red',
+		angle: Solid.DEG_90,
+		topRadius: 5
 	}).align('bottom');
 };
 
@@ -285,8 +299,10 @@ export const components: ComponentsMap = {
 	'New: Sphere': () => sphereDemo(),
 	'New: Cone': () => coneDemo(),
 	'New: Cylinder': () => cylinderDemo(),
+	'New: Tapered Cylinder': () => cylinder2Demo(),
 	'New: Triangle Prism': () => trianglePrismDemo(),
 	'New: Hexagonal Prism': () => hexagonalPrismDemo(),
+	'New: Tapered Hexagonal Prism': () => hexagonal2PrismDemo(),
 	'New: Octagonal Prism': () => octagonalPrismDemo(),
 	'Example: Rounded Cube': () => roundedCube(),
 	'Example: Chamfered Block': () => chamferedBlock(),
@@ -294,6 +310,7 @@ export const components: ComponentsMap = {
 	'Example: Complex Shape': () => complexShape(),
 	// Partial geometry demos
 	'Partial: Cylinder Pie (90°)': () => cylinderPieSlice(),
+	'Partial: Cylinder Pie 2 (90°)': () => cylinderPie2Slice(),
 	'Partial: Cylinder Half (180°)': () => cylinderHalf(),
 	'Partial: Cylinder 3/4 (270°)': () => cylinderThreeQuarters(),
 	'Partial: Cone Wedge (180°)': () => coneWedge(),
