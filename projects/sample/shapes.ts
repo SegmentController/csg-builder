@@ -63,8 +63,7 @@ export const cylinderPieSlice = (): Solid => {
 	// 90-degree pie slice cylinder
 	return Solid.cylinder(8, 10, {
 		color: 'red',
-		thetaStart: 0,
-		thetaLength: Solid.DEG_90
+		angle: Solid.DEG_90
 	}).align('bottom');
 };
 
@@ -72,8 +71,7 @@ export const cylinderHalf = (): Solid => {
 	// Half cylinder (180 degrees)
 	return Solid.cylinder(8, 10, {
 		color: 'blue',
-		thetaStart: 0,
-		thetaLength: Solid.DEG_180
+		angle: Solid.DEG_180
 	}).align('bottom');
 };
 
@@ -81,8 +79,7 @@ export const cylinderThreeQuarters = (): Solid => {
 	// Three-quarter cylinder (270 degrees)
 	return Solid.cylinder(8, 10, {
 		color: 'green',
-		thetaStart: 0,
-		thetaLength: Solid.DEG_270
+		angle: Solid.DEG_270
 	}).align('bottom');
 };
 
@@ -90,8 +87,7 @@ export const coneWedge = (): Solid => {
 	// 180-degree cone wedge
 	return Solid.cone(8, 12, {
 		color: 'orange',
-		thetaStart: 0,
-		thetaLength: Solid.DEG_180
+		angle: Solid.DEG_180
 	}).align('bottom');
 };
 
@@ -99,8 +95,7 @@ export const coneQuarter = (): Solid => {
 	// 90-degree cone wedge
 	return Solid.cone(8, 12, {
 		color: 'purple',
-		thetaStart: 0,
-		thetaLength: Solid.DEG_90
+		angle: Solid.DEG_90
 	}).align('bottom');
 };
 
@@ -108,8 +103,7 @@ export const hemisphere = (): Solid => {
 	// Half sphere (180 degrees horizontal sweep)
 	return Solid.sphere(8, {
 		color: 'cyan',
-		thetaStart: 0,
-		thetaLength: Solid.DEG_180
+		angle: Solid.DEG_180
 	});
 };
 
@@ -117,8 +111,7 @@ export const sphereQuarter = (): Solid => {
 	// Quarter sphere (90 degrees)
 	return Solid.sphere(8, {
 		color: 'magenta',
-		thetaStart: 0,
-		thetaLength: 45
+		angle: Solid.DEG_90
 	});
 };
 
@@ -126,8 +119,7 @@ export const prismPartial = (): Solid => {
 	// Partial hexagonal prism (180 degrees)
 	return Solid.prism(6, 8, 10, {
 		color: 'teal',
-		thetaStart: Solid.DEG_90,
-		thetaLength: Solid.DEG_90
+		angle: Solid.DEG_90
 	}).align('bottom');
 };
 
@@ -135,31 +127,27 @@ export const pieChart = (): Solid => {
 	// Composite shape: pie chart with 3 slices
 	const slice1 = Solid.cylinder(10, 2, {
 		color: 'red',
-		//thetaStart: 0,
-		thetaLength: 180
+		angle: 90
 	});
 
-	// const slice2 = Solid.cylinder(10, 2, {
-	// 	color: 'blue',
-	// 	thetaStart: 120,
-	// 	thetaLength: 90
-	// });
+	const slice2 = Solid.cylinder(10, 2, {
+		color: 'blue',
+		angle: 90
+	}).rotate({ y: 120 });
 
-	// const slice3 = Solid.cylinder(10, 2, {
-	// 	color: 'green',
-	// 	thetaStart: 240,
-	// 	thetaLength: 90
-	// });
+	const slice3 = Solid.cylinder(10, 2, {
+		color: 'green',
+		angle: 90
+	}).rotate({ y: 240 });
 
-	return Mesh.union(slice1).toSolid().align('bottom');
+	return Mesh.union(slice1, slice2, slice3).toSolid().align('bottom');
 };
 
 export const partialGear = (): Solid => {
 	// Create a partial gear using octagonal prism
 	const outer = Solid.prism(8, 10, 4, {
 		color: 'silver',
-		thetaStart: 0,
-		thetaLength: Solid.DEG_270
+		angle: Solid.DEG_270
 	});
 
 	const innerHole = Solid.cylinder(5, 5, { color: 'silver' });

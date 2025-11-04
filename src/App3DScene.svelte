@@ -2,7 +2,7 @@
 	import { T } from '@threlte/core';
 	import { OrbitControls } from '@threlte/extras';
 	import { onMount } from 'svelte';
-	import type { BufferGeometry, NormalOrGLBufferAttributes } from 'three';
+	import { type BufferGeometry, DoubleSide, type NormalOrGLBufferAttributes } from 'three';
 
 	import type { Solid } from '$lib/3d/Solid';
 
@@ -36,5 +36,5 @@
 	<T.BufferGeometry bind:ref={bufferGeometry}>
 		<T.BufferAttribute args={[solid.getVertices(), 3]} attach="attributes.position" />
 	</T.BufferGeometry>
-	<T.MeshPhongMaterial color={solid.color} {wireframe} />
+	<T.MeshPhongMaterial color={solid.color} side={DoubleSide} {wireframe} />
 </T.Mesh>
