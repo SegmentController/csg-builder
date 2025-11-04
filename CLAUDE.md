@@ -109,6 +109,15 @@ projects/
   - Each subsequent solid is either added (positive) or subtracted (negative) from the accumulated result
   - Example: `new Mesh(base, positive1, negative1, positive2)` → `((base + positive1) - negative1) + positive2`
 - `updateMatrixWorld()` must be called after transforms (handled automatically by methods)
+- **Partial Geometries**: Cylinder, cone, sphere, and prism primitives with `angle` < 360° use CSG subtraction
+  - Creates full 360° geometry first
+  - Generates wedge-shaped cutter using `generateWedgePoints()` helper (calculates section to REMOVE: 360° - angle)
+  - Wedge sized at 2x radius to ensure complete cutting through geometry
+  - Arc segments calculated dynamically (1 segment per 15°, minimum 8) for smooth cuts
+  - Wedge cutter positioned and rotated to align with primitive's Y-axis
+  - Subtracts wedge from full geometry to create closed, manifold partial shapes
+  - Optimized: skips CSG operations entirely when angle >= 360° (returns full geometry)
+  - Result: reliable CSG operations without open edges or hollow sections
 
 ### Coordinate System & Transforms
 
@@ -359,7 +368,7 @@ Solid.DEG_270 = 270; // Three-quarter circle
 Solid.DEG_360 = 360; // Full circle (default)
 ```
 
-These constants can be used with the `thetaStart` and `thetaLength` parameters of circular geometries (cylinder, cone, sphere, prism).
+These constants can be used with the `angle` parameter of circular geometries (cylinder, cone, sphere, prism).
 
 ### Basic Shapes
 
@@ -378,21 +387,20 @@ Solid.cylinder(
   height: number,
   options?: {
     color?: string;
-    thetaStart?: number;  // Start angle in degrees (default: 0)
-    thetaLength?: number; // Angular extent in degrees (default: 360)
+    angle?: number;  // Angular extent in degrees (default: 360)
   }
 )
 
 // Full cylinder (default)
 Solid.cylinder(5, 10, { color: 'blue' })
 
-// Partial cylinders using theta parameters
-Solid.cylinder(8, 10, { color: 'red', thetaLength: Solid.DEG_90 })   // Quarter cylinder (pie slice)
-Solid.cylinder(8, 10, { color: 'blue', thetaLength: Solid.DEG_180 }) // Half cylinder
-Solid.cylinder(8, 10, { color: 'green', thetaStart: 45, thetaLength: 90 }) // Custom segment
+// Partial cylinders using angle parameter
+Solid.cylinder(8, 10, { color: 'red', angle: Solid.DEG_90 })   // Quarter cylinder (pie slice)
+Solid.cylinder(8, 10, { color: 'blue', angle: Solid.DEG_180 }) // Half cylinder
+Solid.cylinder(8, 10, { color: 'green', angle: Solid.DEG_270 }) // Three-quarter cylinder
 
 // Radial segments scale with radius (16-48 segments)
-// Faces are automatically closed (openEnded: false)
+// Partial geometries are created using CSG subtraction for closed, manifold shapes
 ```
 
 **Sphere:**
@@ -402,21 +410,20 @@ Solid.sphere(
   radius: number,
   options?: {
     color?: string;
-    thetaStart?: number;  // Horizontal start angle in degrees (default: 0)
-    thetaLength?: number; // Horizontal sweep in degrees (default: 360)
+    angle?: number;  // Angular extent in degrees (default: 360)
   }
 )
 
 // Full sphere (default)
 Solid.sphere(8, { color: 'green' })
 
-// Partial spheres using theta parameters (horizontal sweep only)
-Solid.sphere(8, { color: 'cyan', thetaLength: Solid.DEG_180 })  // Hemisphere (half sphere)
-Solid.sphere(8, { color: 'magenta', thetaLength: Solid.DEG_90 }) // Quarter sphere
-Solid.sphere(8, { color: 'yellow', thetaStart: 90, thetaLength: 180 }) // Custom segment
+// Partial spheres using angle parameter
+Solid.sphere(8, { color: 'cyan', angle: Solid.DEG_180 })  // Hemisphere (half sphere)
+Solid.sphere(8, { color: 'magenta', angle: Solid.DEG_90 }) // Quarter sphere
+Solid.sphere(8, { color: 'yellow', angle: Solid.DEG_270 }) // Three-quarter sphere
 
 // Segments scale with radius (16-48 segments for both width and height)
-// Note: Only horizontal sweep (phi) is exposed. Vertical range is always full (theta: 0 to 180°)
+// Partial geometries are created using CSG subtraction for closed, manifold shapes
 ```
 
 **Cone:**
@@ -427,22 +434,21 @@ Solid.cone(
   height: number,
   options?: {
     color?: string;
-    thetaStart?: number;  // Start angle in degrees (default: 0)
-    thetaLength?: number; // Angular extent in degrees (default: 360)
+    angle?: number;  // Angular extent in degrees (default: 360)
   }
 )
 
 // Full cone (default)
 Solid.cone(6, 12, { color: 'yellow' })
 
-// Partial cones using theta parameters
-Solid.cone(8, 12, { color: 'orange', thetaLength: Solid.DEG_180 }) // Half cone (wedge)
-Solid.cone(8, 12, { color: 'purple', thetaLength: Solid.DEG_90 })  // Quarter cone
-Solid.cone(6, 10, { color: 'red', thetaStart: 45, thetaLength: 90 }) // Custom wedge
+// Partial cones using angle parameter
+Solid.cone(8, 12, { color: 'orange', angle: Solid.DEG_180 }) // Half cone (wedge)
+Solid.cone(8, 12, { color: 'purple', angle: Solid.DEG_90 })  // Quarter cone
+Solid.cone(6, 10, { color: 'red', angle: Solid.DEG_270 }) // Three-quarter cone
 
 // Radial segments scale with radius (16-48 segments)
 // Height segments set to 1 for clean CSG operations
-// Faces are automatically closed (openEnded: false)
+// Partial geometries are created using CSG subtraction for closed, manifold shapes
 ```
 
 ### Polygon Prisms
@@ -456,8 +462,7 @@ Solid.prism(
   height: number,
   options?: {
     color?: string;
-    thetaStart?: number;  // Start angle in degrees (default: 0)
-    thetaLength?: number; // Angular extent in degrees (default: 360)
+    angle?: number;  // Angular extent in degrees (default: 360)
   }
 )
 
@@ -465,11 +470,11 @@ Solid.prism(
 Solid.prism(6, 5, 10, { color: 'purple' }) // Hexagonal prism
 Solid.prism(8, 4, 8, { color: 'orange' })  // Octagonal prism
 
-// Partial prisms using theta parameters
-Solid.prism(6, 8, 10, { color: 'teal', thetaLength: Solid.DEG_180 }) // Half hexagonal prism
-Solid.prism(8, 10, 4, { color: 'silver', thetaLength: Solid.DEG_270 }) // Partial gear shape
+// Partial prisms using angle parameter
+Solid.prism(6, 8, 10, { color: 'teal', angle: Solid.DEG_180 }) // Half hexagonal prism
+Solid.prism(8, 10, 4, { color: 'silver', angle: Solid.DEG_270 }) // Partial gear shape
 
-// Faces are automatically closed (openEnded: false)
+// Partial geometries are created using CSG subtraction for closed, manifold shapes
 ```
 
 **Triangle Prism (3-sided):**
@@ -480,12 +485,10 @@ Solid.trianglePrism(
   height: number,
   options?: {
     color?: string;
-    thetaStart?: number;  // Start angle in degrees (default: 0)
-    thetaLength?: number; // Angular extent in degrees (default: 360)
   }
 )
-// Example: Solid.trianglePrism(5, 10, 'cyan')
-// Shorthand for Solid.prism(3, radius, height, color)
+// Example: Solid.trianglePrism(5, 10, { color: 'cyan' })
+// Shorthand for Solid.prism(3, radius, height, options)
 ```
 
 ### Custom Profile Prisms
@@ -568,28 +571,26 @@ const nut = Solid.prism(6, 10, 5, { color: 'gray' }).subtract(
 // Triangular roof
 const roof = Solid.trianglePrism(8, 20, { color: 'brown' }).rotate({ z: 90 });
 
-// Partial geometry examples
+// Partial geometry examples (closed, manifold shapes via CSG cutting)
 const pieSlice = Solid.cylinder(10, 2, {
 	color: 'red',
-	thetaLength: Solid.DEG_90
+	angle: Solid.DEG_90
 });
 
 const hemisphere = Solid.sphere(8, {
 	color: 'cyan',
-	thetaLength: Solid.DEG_180
+	angle: Solid.DEG_180
 });
 
 const wedge = Solid.cone(8, 12, {
 	color: 'orange',
-	thetaStart: 0,
-	thetaLength: Solid.DEG_180
+	angle: Solid.DEG_180
 });
 
-// Pie chart with multiple slices
-const slice1 = Solid.cylinder(10, 2, { color: 'red', thetaStart: 0, thetaLength: 120 });
-const slice2 = Solid.cylinder(10, 2, { color: 'blue', thetaStart: 120, thetaLength: 120 });
-const slice3 = Solid.cylinder(10, 2, { color: 'green', thetaStart: 240, thetaLength: 120 });
-const pieChart = Mesh.union(slice1, slice2, slice3).toSolid();
+const threeQuarterCylinder = Solid.cylinder(10, 2, {
+	color: 'green',
+	angle: Solid.DEG_270
+});
 ```
 
 ## Adding New Primitives

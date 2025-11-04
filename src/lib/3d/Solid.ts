@@ -27,6 +27,47 @@ export class Solid {
 	// Helper to convert degrees to radians
 	private static degreesToRadians = (degrees: number): number => degrees * (Math.PI / 180);
 
+	/**
+	 * Generates points for a wedge-shaped profile to be used for CSG cutting operations.
+	 * Creates a pie-slice that represents the section to REMOVE from a full 360° geometry.
+	 *
+	 * @param radius - Outer radius of the wedge (should be larger than target geometry)
+	 * @param angle - Angular extent of the section to KEEP in degrees
+	 * @returns Array of [x, y] coordinate pairs forming a closed wedge profile
+	 */
+	private static generateWedgePoints(radius: number, angle: number): [number, number][] {
+		// Make wedge larger than geometry to ensure complete cutting
+		const cutRadius = radius * 2;
+
+		// Calculate the angular section to REMOVE (inverse of what we want to keep)
+		const removeAngle = 360 - angle;
+
+		// If angle is 360 or more, no cutting needed - return empty
+		if (removeAngle <= 0) return [];
+
+		// Start removing from the end of the kept section (so kept section starts at 0°)
+		const startRad = this.degreesToRadians(angle);
+		const endRad = this.degreesToRadians(360); // Complete the circle
+
+		// Calculate arc points (more points for smoother cuts on large angles)
+		const arcSegments = Math.max(8, Math.ceil(removeAngle / 15)); // 1 segment per 15°
+		const points: [number, number][] = [[0, 0]]; // Start at origin (center)
+
+		// Create arc from start to end angle
+		for (let index = 0; index <= arcSegments; index++) {
+			const t = index / arcSegments;
+			const currentAngle = startRad + (endRad - startRad) * t;
+			const x = Math.cos(currentAngle) * cutRadius;
+			const y = Math.sin(currentAngle) * cutRadius;
+			points[points.length] = [x, y];
+		}
+
+		// Close back to origin (creates pie-slice shape)
+		points[points.length] = [0, 0];
+
+		return points;
+	}
+
 	public brush: Brush;
 	private _color: string;
 	private _isNegative: boolean;
@@ -74,9 +115,10 @@ export class Solid {
 		}
 	): Solid => {
 		const color = options?.color ?? 'gray';
-		const angle = this.degreesToRadians(options?.angle ?? 360);
+		const angle = options?.angle ?? 360;
 
-		return new Solid(
+		// Create full 360° cylinder
+		const fullCylinder = new Solid(
 			this.geometryToBrush(
 				new CylinderGeometry(
 					radius,
@@ -84,13 +126,26 @@ export class Solid {
 					height,
 					MathMinMax(radius * 8, 16, 48),
 					1,
-					false,
-					0,
-					angle
+					false // openEnded
 				)
 			),
 			color
 		).normalize();
+
+		// If full circle, return as-is (optimization)
+		if (angle >= 360) return fullCylinder;
+
+		// Create wedge cutter for the section to remove
+		const wedgePoints = this.generateWedgePoints(radius, angle);
+		if (wedgePoints.length === 0) return fullCylinder;
+
+		// Create wedge prism (make it taller to ensure complete cut)
+		const wedgeCutter = this.profilePrismFromPoints(height * 1.5, wedgePoints, color)
+			.rotate({ x: 90 })
+			.move({ y: height * 0.75 }); // Center wedge on Y-axis
+
+		// Subtract wedge from cylinder to create closed partial geometry
+		return fullCylinder.subtract(wedgeCutter);
 	};
 
 	static sphere = (
@@ -101,22 +156,30 @@ export class Solid {
 		}
 	): Solid => {
 		const color = options?.color ?? 'gray';
-		const angle = this.degreesToRadians(options?.angle ?? 360);
+		const angle = options?.angle ?? 360;
 
-		return new Solid(
+		// Create full 360° sphere
+		const fullSphere = new Solid(
 			this.geometryToBrush(
-				new SphereGeometry(
-					radius,
-					MathMinMax(radius * 8, 16, 48),
-					MathMinMax(radius * 8, 16, 48),
-					0,
-					angle,
-					0,
-					Math.PI
-				)
+				new SphereGeometry(radius, MathMinMax(radius * 8, 16, 48), MathMinMax(radius * 8, 16, 48))
 			),
 			color
 		).normalize();
+
+		// If full circle, return as-is (optimization)
+		if (angle >= 360) return fullSphere;
+
+		// Create wedge cutter for the section to remove
+		const wedgePoints = this.generateWedgePoints(radius, angle);
+		if (wedgePoints.length === 0) return fullSphere;
+
+		// Create wedge prism tall enough to cut through entire sphere diameter
+		const wedgeCutter = this.profilePrismFromPoints(radius * 4, wedgePoints, color)
+			.rotate({ x: 90 }) // Rotate to align with sphere
+			.move({ y: radius * 2 }); // Center wedge on Y-axis
+
+		// Subtract wedge from sphere to create closed partial geometry
+		return fullSphere.subtract(wedgeCutter);
 	};
 
 	static cone = (
@@ -128,14 +191,36 @@ export class Solid {
 		}
 	): Solid => {
 		const color = options?.color ?? 'gray';
-		const angle = this.degreesToRadians(options?.angle ?? 360);
+		const angle = options?.angle ?? 360;
 
-		return new Solid(
+		// Create full 360° cone
+		const fullCone = new Solid(
 			this.geometryToBrush(
-				new ConeGeometry(radius, height, MathMinMax(radius * 8, 16, 48), 1, false, 0, angle)
+				new ConeGeometry(
+					radius,
+					height,
+					MathMinMax(radius * 8, 16, 48),
+					1, // heightSegments
+					false // openEnded
+				)
 			),
 			color
 		).normalize();
+
+		// If full circle, return as-is (optimization)
+		if (angle >= 360) return fullCone;
+
+		// Create wedge cutter for the section to remove
+		const wedgePoints = this.generateWedgePoints(radius, angle);
+		if (wedgePoints.length === 0) return fullCone;
+
+		// Create wedge prism (make it taller to ensure complete cut)
+		const wedgeCutter = this.profilePrismFromPoints(height * 1.5, wedgePoints, color)
+			.rotate({ x: 90 })
+			.move({ y: height * 0.75 }); // Center wedge on Y-axis
+
+		// Subtract wedge from cone to create closed partial geometry
+		return fullCone.subtract(wedgeCutter);
 	};
 
 	static prism = (
@@ -148,12 +233,37 @@ export class Solid {
 		}
 	): Solid => {
 		const color = options?.color ?? 'gray';
-		const angle = this.degreesToRadians(options?.angle ?? 360);
+		const angle = options?.angle ?? 360;
 
-		return new Solid(
-			this.geometryToBrush(new CylinderGeometry(radius, radius, height, sides, 1, false, 0, angle)),
+		// Create full 360° prism
+		const fullPrism = new Solid(
+			this.geometryToBrush(
+				new CylinderGeometry(
+					radius,
+					radius,
+					height,
+					sides,
+					1, // heightSegments
+					false // openEnded
+				)
+			),
 			color
 		).normalize();
+
+		// If full circle, return as-is (optimization)
+		if (angle >= 360) return fullPrism;
+
+		// Create wedge cutter for the section to remove
+		const wedgePoints = this.generateWedgePoints(radius, angle);
+		if (wedgePoints.length === 0) return fullPrism;
+
+		// Create wedge prism (make it taller to ensure complete cut)
+		const wedgeCutter = this.profilePrismFromPoints(height * 1.5, wedgePoints, color)
+			.rotate({ x: 90 })
+			.move({ y: height * 0.75 }); // Center wedge on Y-axis
+
+		// Subtract wedge from prism to create closed partial geometry
+		return fullPrism.subtract(wedgeCutter);
 	};
 
 	static trianglePrism = (

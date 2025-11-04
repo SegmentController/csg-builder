@@ -10,6 +10,7 @@ CSG Builder allows you to create 3D meshes using TypeScript code with a React-li
 
 - **Component-Based Architecture** - Define reusable 3D components as TypeScript functions
 - **Primitive Shapes** - Cubes, cylinders, spheres, cones, and polygon prisms with customizable dimensions
+- **Partial Geometries** - Create pie slices, hemispheres, and wedges with CSG-based angle cutting
 - **CSG Operations** - Union and subtraction for complex geometries
 - **Transformations** - Translate, rotate, and scale objects with chainable methods
 - **Real-Time Preview** - Interactive 3D viewport with orbit controls
@@ -98,9 +99,9 @@ export const boxWithHoles = (): Solid => {
 	const box = Solid.cube(20, 20, 20, 'blue');
 
 	// Create holes using explicit subtract
-	const holeX = Solid.cylinder(3, 25, 'blue').rotate({ z: 90 });
-	const holeY = Solid.cylinder(3, 25, 'blue');
-	const holeZ = Solid.cylinder(3, 25, 'blue').rotate({ x: 90 });
+	const holeX = Solid.cylinder(3, 25, { color: 'blue' }).rotate({ z: 90 });
+	const holeY = Solid.cylinder(3, 25, { color: 'blue' });
+	const holeZ = Solid.cylinder(3, 25, { color: 'blue' }).rotate({ x: 90 });
 
 	return box.subtract(holeX).subtract(holeY).subtract(holeZ);
 };
@@ -146,36 +147,81 @@ import { Mesh } from '$lib/3d/Mesh';
 // Sphere - perfect for rounded features
 export const roundedCorner = (): Solid => {
 	const cube = Solid.cube(20, 20, 20, 'red');
-	const corner = Solid.sphere(3, 'red').move({ x: 10, y: 10, z: 10 });
+	const corner = Solid.sphere(3, { color: 'red' }).move({ x: 10, y: 10, z: 10 });
 	return cube.subtract(corner); // Rounded corner via subtraction
 };
 
 // Cone - great for tapers and chamfers
 export const chamferedEdge = (): Solid => {
 	const block = Solid.cube(15, 15, 15, 'blue');
-	const chamfer = Solid.cone(4, 8, 'blue').rotate({ x: 90 }).move({ z: 7.5 });
+	const chamfer = Solid.cone(4, 8, { color: 'blue' }).rotate({ x: 90 }).move({ z: 7.5 });
 	return block.subtract(chamfer);
 };
 
 // Prism - N-sided shapes (hexagon, octagon, etc.)
 export const hexNut = (): Solid => {
-	const outer = Solid.prism(6, 10, 5, 'gray'); // 6 sides = hexagon
-	const hole = Solid.cylinder(4, 6, 'gray');
+	const outer = Solid.prism(6, 10, 5, { color: 'gray' }); // 6 sides = hexagon
+	const hole = Solid.cylinder(4, 6, { color: 'gray' });
 	return outer.subtract(hole).center();
 };
 
 // Triangle Prism - 3-sided prism
 export const roof = (): Solid => {
-	return Solid.trianglePrism(8, 20, 'brown').rotate({ z: 90 }).align('bottom');
+	return Solid.trianglePrism(8, 20, { color: 'brown' }).rotate({ z: 90 }).align('bottom');
 };
 
 // Combining multiple new primitives
 export const shapesComposition = (): Solid => {
 	const base = Solid.cube(20, 4, 20, 'teal').align('bottom');
-	const sphere = Solid.sphere(8, 'teal').move({ y: 10 });
-	const cone = Solid.cone(5, 10, 'teal').move({ y: 18 });
+	const sphere = Solid.sphere(8, { color: 'teal' }).move({ y: 10 });
+	const cone = Solid.cone(5, 10, { color: 'teal' }).move({ y: 18 });
 
 	return Mesh.union(base, sphere, cone).toSolid().center({ x: true, z: true });
+};
+
+// Partial geometries - closed, manifold shapes via CSG cutting
+export const pieSlice = (): Solid => {
+	// Quarter cylinder (90° pie slice)
+	return Solid.cylinder(10, 2, {
+		color: 'red',
+		angle: Solid.DEG_90
+	}).align('bottom');
+};
+
+export const hemisphere = (): Solid => {
+	// Half sphere (180°)
+	return Solid.sphere(8, {
+		color: 'cyan',
+		angle: Solid.DEG_180
+	});
+};
+
+export const coneWedge = (): Solid => {
+	// Half cone wedge (180°)
+	return Solid.cone(8, 12, {
+		color: 'orange',
+		angle: Solid.DEG_180
+	}).align('bottom');
+};
+
+export const partialGear = (): Solid => {
+	// Three-quarter octagonal prism (270°) - gear-like shape
+	const outer = Solid.prism(8, 10, 4, {
+		color: 'silver',
+		angle: Solid.DEG_270
+	});
+	const hole = Solid.cylinder(5, 5, { color: 'silver' });
+
+	return outer.subtract(hole).align('bottom');
+};
+
+export const pieChart = (): Solid => {
+	// Composite: three 90° slices rotated to form a pie chart
+	const slice1 = Solid.cylinder(10, 2, { color: 'red', angle: 90 });
+	const slice2 = Solid.cylinder(10, 2, { color: 'blue', angle: 90 }).rotate({ y: 90 });
+	const slice3 = Solid.cylinder(10, 2, { color: 'green', angle: 90 }).rotate({ y: 180 });
+
+	return Mesh.union(slice1, slice2, slice3).toSolid().align('bottom');
 };
 ```
 
@@ -186,13 +232,28 @@ export const shapesComposition = (): Solid => {
 **Factory Methods:**
 
 - `Solid.cube(width, height, depth, color?)` - Create a rectangular box
-- `Solid.cylinder(radius, height, color?)` - Create a cylinder
-- `Solid.sphere(radius, color?)` - Create a sphere
-- `Solid.cone(radius, height, color?)` - Create a cone
-- `Solid.prism(sides, radius, height, color?)` - Create an N-sided prism (hexagon, octagon, etc.)
-- `Solid.trianglePrism(radius, height, color?)` - Create a triangular prism (3-sided)
+- `Solid.cylinder(radius, height, options?)` - Create a cylinder (full or partial)
+  - `options: { color?, angle? }` - angle in degrees (1-360, default: 360)
+- `Solid.sphere(radius, options?)` - Create a sphere (full or partial)
+  - `options: { color?, angle? }` - angle in degrees (1-360, default: 360)
+- `Solid.cone(radius, height, options?)` - Create a cone (full or partial)
+  - `options: { color?, angle? }` - angle in degrees (1-360, default: 360)
+- `Solid.prism(sides, radius, height, options?)` - Create an N-sided prism (full or partial)
+  - `options: { color?, angle? }` - angle in degrees (1-360, default: 360)
+- `Solid.trianglePrism(radius, height, options?)` - Create a triangular prism (3-sided)
+  - `options: { color? }` - color only, no angle support
 
-**Note:** Sphere, cylinder, cone, and prism use adaptive segment counts based on radius for optimal quality and performance.
+**Angle Constants:**
+
+For convenience when creating partial geometries, predefined angle constants are available:
+
+- `Solid.DEG_45` = 45° - Small wedge
+- `Solid.DEG_90` = 90° - Quarter circle (pie slice)
+- `Solid.DEG_180` = 180° - Half circle (hemisphere for sphere, half cylinder, etc.)
+- `Solid.DEG_270` = 270° - Three-quarter circle
+- `Solid.DEG_360` = 360° - Full circle (default, same as omitting angle parameter)
+
+**Note:** Sphere, cylinder, cone, and prism use adaptive segment counts based on radius for optimal quality and performance. Partial geometries (angle < 360°) are created using CSG subtraction to ensure closed, manifold shapes suitable for further CSG operations.
 
 **Positioning (chainable):**
 
