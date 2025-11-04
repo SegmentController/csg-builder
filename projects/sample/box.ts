@@ -17,7 +17,16 @@ export const alignedBox = (): Solid => {
 	return Mesh.union(cube, cyl).toSolid().align('bottom');
 };
 
+export const cubeMinus = (): Solid => {
+	const cube = Solid.cube(10, 10, 10, 'blue');
+	const sphere = Solid.sphere(3, { angle: 180 }).move({ y: 5 }).setNegative();
+	const sphere2 = sphere.clone().move({ y: 5 }).setNegative(false);
+
+	return Mesh.union(cube, sphere, sphere2).toSolid();
+};
+
 export const components: ComponentsMap = {
 	Box: () => box(),
-	BoxAligned: () => alignedBox()
+	BoxAligned: () => alignedBox(),
+	CubeMinus: () => cubeMinus()
 };
