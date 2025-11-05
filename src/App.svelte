@@ -8,6 +8,8 @@
 	import { generateBinaryStlFromVertices } from '$lib/3d/stl';
 	import { virtualDownload } from '$lib/download';
 	import { MathMax } from '$lib/Math';
+	import type { CameraState } from '$lib/urlState';
+	import { updateURLHash } from '$lib/urlState';
 	import {} from '$projects';
 
 	import App3DScene from './App3DScene.svelte';
@@ -16,12 +18,21 @@
 	let volume = $state(0);
 	let name = $state('');
 	let solid = $state<Solid | undefined>();
+	let cameraState = $state<CameraState | undefined>();
+	let wireframe = $state(false);
+	let saveCameraToUrl = $state(false);
+
 	const setSolid = (recentName: string, s: Solid | Mesh) => {
 		name = recentName;
 		// Convert Mesh to Solid if needed
 		solid = s instanceof Mesh ? s.toSolid() : s;
 		volume = MathMax([...solid.getVertices()]);
 	};
+
+	const setCameraState = (state: CameraState | undefined) => {
+		cameraState = state;
+	};
+
 	const download = () => {
 		if (!solid) return;
 
@@ -31,15 +42,35 @@
 		virtualDownload(name + '.stl', stlData);
 	};
 
-	let wireframe = $state(false);
+	// Clear URL params when saveCameraToUrl is toggled OFF
+	$effect(() => {
+		// Watch saveCameraToUrl state
+		if (!saveCameraToUrl && name) {
+			// Clear camera params from URL when toggle is OFF
+			updateURLHash(name);
+		}
+	});
 </script>
 
-<AppNavigation ondownload={download} onselect={setSolid} bind:wireframe />
+<AppNavigation
+	oncamerastate={setCameraState}
+	ondownload={download}
+	onselect={setSolid}
+	bind:wireframe
+	bind:saveCameraToUrl
+/>
 <div class="canvasContainer">
 	{#if solid}
 		{#key solid}
 			<Canvas>
-				<App3DScene {solid} {volume} {wireframe} />
+				<App3DScene
+					{cameraState}
+					componentName={name}
+					{saveCameraToUrl}
+					{solid}
+					{volume}
+					{wireframe}
+				/>
 			</Canvas>
 		{/key}
 	{/if}
