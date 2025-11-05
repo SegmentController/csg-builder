@@ -11,6 +11,7 @@ CSG Builder allows you to create 3D meshes using TypeScript code with a React-li
 - **Component-Based Architecture** - Define reusable 3D components as TypeScript functions
 - **Primitive Shapes** - Cubes, cylinders, spheres, cones, and polygon prisms with customizable dimensions
 - **Custom Profile Prisms** - Extrude 2D profiles into 3D shapes using points, paths, or Shape API
+- **Body of Revolution** - Create rotationally symmetric objects (chess pieces, vases, bottles) by rotating profiles
 - **Partial Geometries** - Create pie slices, hemispheres, and wedges with CSG-based angle cutting
 - **CSG Operations** - Union and subtraction for complex geometries
 - **Transformations** - Translate, rotate, and scale objects with chainable methods
@@ -341,6 +342,125 @@ export const raceTrack = (): Solid => {
 - Each segment continues from previous endpoint
 - Automatically closes back to origin
 
+### Example: Body of Revolution (Lathe Geometry)
+
+Create rotationally symmetric objects like chess pieces, vases, and bottles by rotating a 2D profile around the Y-axis:
+
+```typescript
+import { Solid, straight, curve } from '$lib/3d/Solid';
+
+// 1. SHAPE BUILDER API - Full control with Three.js Shape methods
+export const vase = (): Solid => {
+	return Solid.revolutionSolid(
+		(shape) => {
+			shape.moveTo(5, 0); // Bottom radius (x = radius, y = height)
+			shape.lineTo(3, 5); // Narrow middle
+			shape.lineTo(6, 10); // Wide top
+			shape.lineTo(5, 15); // Rim
+			shape.lineTo(0, 15); // Back to center
+		},
+		{ color: 'blue' }
+	);
+};
+
+// 2. POINT ARRAY - Simple coordinate-based profiles
+export const chessPawn = (): Solid => {
+	return Solid.revolutionSolidFromPoints(
+		[
+			[0, 0], // Bottom center (x = radius, y = height)
+			[3, 0], // Bottom edge
+			[2, 2], // Narrow stem
+			[4, 8], // Body
+			[2, 10], // Neck
+			[3, 12], // Head
+			[0, 12] // Top center
+		],
+		{ color: 'white' }
+	);
+};
+
+// 3. PATH SEGMENTS - Smooth curves and controlled turns
+export const bottle = (): Solid => {
+	return Solid.revolutionSolidFromPath(
+		[
+			straight(5), // Bottom radius
+			curve(2, 90), // Rounded corner up
+			straight(8), // Body height
+			curve(3, -90), // Curve inward for neck
+			straight(5), // Neck height
+			curve(1, -90), // Top curve
+			straight(2) // Rim width
+		],
+		{ color: 'green' }
+	);
+};
+
+// Sharp corners using zero-radius curves
+export const chessRook = (): Solid => {
+	return Solid.revolutionSolidFromPath(
+		[
+			straight(4), // Base radius
+			curve(0, 90), // Sharp corner up (zero radius = sharp)
+			straight(10), // Tower height
+			curve(0, -90), // Sharp corner outward
+			straight(1), // Battlement step
+			curve(0, 90), // Sharp corner up
+			straight(1.5), // Battlement height
+			curve(0, 180), // Turn back
+			straight(1.5), // Down
+			curve(0, 90), // Corner
+			straight(1) // To center
+		],
+		{ color: 'black' }
+	);
+};
+
+// Partial revolution - cut-away views
+export const quarterVase = (): Solid => {
+	return Solid.revolutionSolidFromPoints(
+		[
+			[0, 0],
+			[4, 0],
+			[3, 2],
+			[5, 6],
+			[4, 10],
+			[0, 10]
+		],
+		{
+			angle: Solid.DEG_90, // 90° slice
+			color: 'purple'
+		}
+	);
+};
+
+// Half revolution for cross-sections
+export const halfBottle = (): Solid => {
+	return Solid.revolutionSolidFromPath(
+		[straight(5), curve(2, 90), straight(10), curve(3, 90), straight(3)],
+		{
+			angle: Solid.DEG_180, // 180° half
+			color: 'cyan'
+		}
+	);
+};
+```
+
+**Revolution Profile Coordinate System:**
+
+- **X-axis** = Radius from center (distance from Y-axis)
+- **Y-axis** = Height (vertical position)
+- Profile is rotated around the Y-axis
+- Start at origin (0, 0) or close to Y-axis for proper revolution
+- Points with X=0 will be at the center axis
+
+**Common Use Cases:**
+
+- Chess pieces (pawn, rook, bishop, queen, king)
+- Tableware (vases, bottles, goblets, wine glasses, bowls)
+- Architectural elements (balusters, columns, finials)
+- Mechanical parts (knobs, handles, pulleys)
+- Decorative objects (candlesticks, lamp bases, ornaments)
+
 ### API Reference
 
 #### Solid Class
@@ -372,12 +492,28 @@ export const raceTrack = (): Solid => {
   - Starts at origin (0, 0) facing right (+X direction)
   - Automatically closes back to origin
 
-**Path Segment Factories** (for use with profilePrismFromPath):
+**Path Segment Factories** (for use with profilePrismFromPath and revolutionSolidFromPath):
 
 - `straight(length)` - Create straight line segment
 - `curve(radius, angle)` - Create curved arc segment
   - `radius` - Arc radius (0 = sharp corner)
   - `angle` - Turn angle in degrees (positive = right, negative = left)
+
+**Body of Revolution Methods:**
+
+- `Solid.revolutionSolid(profileBuilder, options?)` - Rotate 2D profile around Y-axis using Shape API
+  - `profileBuilder: (shape: Shape) => void` - Function that defines the 2D profile
+  - `options: { angle?, color? }` - angle in degrees (1-360, default: 360), color
+  - Full Three.js Shape API: moveTo, lineTo, arc, quadraticCurveTo, bezierCurveTo, etc.
+  - X-axis = radius from center, Y-axis = height
+- `Solid.revolutionSolidFromPoints(points, options?)` - Rotate point array profile around Y-axis
+  - `points: [number, number][]` - Array of [x, y] coordinates (x = radius, y = height)
+  - `options: { angle?, color? }` - angle in degrees (1-360, default: 360), color
+- `Solid.revolutionSolidFromPath(segments, options?)` - Rotate path segment profile around Y-axis
+  - `segments: PathSegment[]` - Array of straight() and curve() segments
+  - `options: { angle?, color? }` - angle in degrees (1-360, default: 360), color
+  - Starts at origin (0, 0) facing right (+X direction)
+  - X-axis = radius from center, Y-axis = height
 
 **Angle Constants:**
 
@@ -551,6 +687,12 @@ csg-builder/
     - Use `profilePrism()` for complex curves (beziers, arcs) with full Shape API
     - Use `profilePrismFromPoints()` for simple polygonal profiles from coordinates
     - Use `profilePrismFromPath()` for smooth curves and controlled turns with straights/curves
+14. **Revolution Method Selection**:
+    - Use `revolutionSolid()` for complex profiles with curves using full Shape API
+    - Use `revolutionSolidFromPoints()` for simple profiles from coordinate pairs (easiest)
+    - Use `revolutionSolidFromPath()` for smooth curves and sharp corners with path segments
+    - Profile coordinate system: X = radius from center, Y = height
+    - Always start at or near X=0 (center axis) for proper revolution
 
 ## Examples
 
@@ -564,6 +706,11 @@ Check out the `projects/sample/` directory for working examples:
   - Partial geometries (pie slices, hemispheres, wedges)
   - Custom profile prisms (Shape API, point arrays, path segments)
   - Path-based profiles with smooth curves and sharp corners
+- **chesspiece.ts** - Body of revolution examples:
+  - Chess pieces (pawn, rook, bishop) using different methods
+  - Decorative objects (vases, bottles, goblets, wine glass)
+  - Partial revolutions (quarter vase, half bottle)
+  - Smooth curves and sharp corners with path segments
 
 ## Troubleshooting
 

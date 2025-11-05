@@ -6,6 +6,7 @@ import {
 	ConeGeometry,
 	CylinderGeometry,
 	ExtrudeGeometry,
+	LatheGeometry,
 	Shape,
 	SphereGeometry,
 	Vector3
@@ -122,6 +123,7 @@ export class Solid {
 			| SphereGeometry
 			| ConeGeometry
 			| ExtrudeGeometry
+			| LatheGeometry
 			| BufferGeometry
 	): Brush {
 		const result = new Brush(geometry.translate(0, 0, 0));
@@ -517,6 +519,298 @@ export class Solid {
 				shape.lineTo(0, 0);
 			},
 			color
+		);
+	};
+
+	/**
+	 * Creates a body of revolution by rotating a 2D profile around the Y-axis.
+	 * Perfect for creating rotationally symmetric objects like chess pieces, vases, bottles, etc.
+	 * Provides flexible Shape API for defining complex profiles with curves, arcs, etc.
+	 *
+	 * @param profileBuilder - Function that receives a Shape instance to define the 2D profile
+	 * @param options - Configuration options
+	 * @param options.angle - Rotation angle in degrees (default: 360 for full revolution)
+	 * @param options.color - Material color (default: 'gray')
+	 * @returns Solid with lathe geometry
+	 *
+	 * @example
+	 * // Simple vase
+	 * const vase = Solid.revolutionSolid((shape) => {
+	 *   shape.moveTo(5, 0);    // Bottom radius
+	 *   shape.lineTo(3, 5);    // Narrow
+	 *   shape.lineTo(6, 10);   // Wide top
+	 *   shape.lineTo(5, 15);   // Rim
+	 * }, { color: 'blue' });
+	 *
+	 * @example
+	 * // Partial revolution (90° slice)
+	 * const slice = Solid.revolutionSolid((shape) => {
+	 *   shape.moveTo(0, 0);
+	 *   shape.lineTo(5, 0);
+	 *   shape.lineTo(5, 10);
+	 *   shape.lineTo(0, 10);
+	 * }, { angle: 90, color: 'red' });
+	 */
+	static revolutionSolid = (
+		profileBuilder: (shape: Shape) => void,
+		options?: {
+			angle?: number;
+			color?: string;
+		}
+	): Solid => {
+		const angle = options?.angle ?? 360;
+		const color = options?.color ?? 'gray';
+
+		// Create shape and extract points
+		const shape = new Shape();
+		profileBuilder(shape);
+
+		// Convert shape to Vector2 points for LatheGeometry
+		const points = shape.getPoints();
+
+		// Calculate radial segments (for full 360° revolution)
+		const segments = Math.max(8, Math.ceil(360 / 15)); // Always use 360 for segment calculation
+
+		// Create full 360° lathe geometry
+		const fullRevolution = new Solid(
+			this.geometryToBrush(new LatheGeometry(points, segments)),
+			color
+		).normalize();
+
+		// If full circle, return as-is (optimization)
+		if (angle >= 360) return fullRevolution;
+
+		// For partial revolutions, calculate max radius and height from profile
+		let maxRadius = 0;
+		let minHeight = Number.POSITIVE_INFINITY;
+		let maxHeight = Number.NEGATIVE_INFINITY;
+
+		for (const point of points) {
+			maxRadius = Math.max(maxRadius, Math.abs(point.x));
+			minHeight = Math.min(minHeight, point.y);
+			maxHeight = Math.max(maxHeight, point.y);
+		}
+
+		const profileHeight = maxHeight - minHeight;
+		const profileCenter = (minHeight + maxHeight) / 2;
+
+		// Create wedge cutter for the section to remove
+		const wedgePoints = this.generateWedgePoints(maxRadius, angle);
+		if (wedgePoints.length === 0) return fullRevolution;
+
+		// Create wedge prism (make it taller to ensure complete cut through entire profile)
+		// The wedge needs to extend through the entire height range of the profile
+		const wedgeHeight = Math.max(profileHeight * 2, maxRadius * 4);
+		const wedgeCutter = this.profilePrismFromPoints(wedgeHeight, wedgePoints, color)
+			.rotate({ x: 90 }) // Rotate to align with Y-axis (revolution axis)
+			.move({ y: -wedgeHeight / 2 + profileCenter }); // Center the wedge on the profile
+
+		// Subtract wedge from full revolution to create closed partial geometry
+		return fullRevolution.subtract(wedgeCutter);
+	};
+
+	/**
+	 * Creates a body of revolution from an array of 2D coordinate points.
+	 * The profile is rotated around the Y-axis.
+	 *
+	 * @param points - Array of [x, y] coordinate pairs defining the profile (x = radius, y = height)
+	 * @param options - Configuration options
+	 * @param options.angle - Rotation angle in degrees (default: 360 for full revolution)
+	 * @param options.color - Material color (default: 'gray')
+	 * @returns Solid with lathe geometry
+	 *
+	 * @example
+	 * // Chess pawn
+	 * const pawn = Solid.revolutionSolidFromPoints([
+	 *   [0, 0],    // Bottom center
+	 *   [3, 0],    // Bottom edge
+	 *   [2, 2],    // Narrow stem
+	 *   [4, 8],    // Body
+	 *   [2, 10],   // Neck
+	 *   [3, 12],   // Head
+	 *   [0, 12]    // Top center
+	 * ], { color: 'white' });
+	 *
+	 * @example
+	 * // Partial revolution bottle (180° half)
+	 * const halfBottle = Solid.revolutionSolidFromPoints([
+	 *   [0, 0],
+	 *   [5, 0],
+	 *   [5, 8],
+	 *   [2, 10],
+	 *   [2, 15],
+	 *   [3, 16],
+	 *   [0, 16]
+	 * ], { angle: 180, color: 'green' });
+	 */
+	static revolutionSolidFromPoints = (
+		points: [number, number][],
+		options?: {
+			angle?: number;
+			color?: string;
+		}
+	): Solid => {
+		if (points.length < 2) {
+			throw new Error('revolutionSolidFromPoints requires at least 2 points');
+		}
+
+		const angle = options?.angle ?? 360;
+		const color = options?.color ?? 'gray';
+
+		return this.revolutionSolid(
+			(shape) => {
+				// Start at first point
+				const [startX, startY] = points[0];
+				shape.moveTo(startX, startY);
+
+				// Draw lines to remaining points
+				for (let index = 1; index < points.length; index++) {
+					const [x, y] = points[index];
+					shape.lineTo(x, y);
+				}
+			},
+			{ angle, color }
+		);
+	};
+
+	/**
+	 * Creates a body of revolution from a path defined by straight and curved segments.
+	 * Path starts at origin (0, 0) facing right (+X direction).
+	 * The profile is rotated around the Y-axis.
+	 *
+	 * @param segments - Array of path segments (straight or curve) defining the profile
+	 * @param options - Configuration options
+	 * @param options.angle - Rotation angle in degrees (default: 360 for full revolution)
+	 * @param options.color - Material color (default: 'gray')
+	 * @returns Solid with lathe geometry
+	 *
+	 * @example
+	 * import { Solid, straight, curve } from '$lib/3d/Solid';
+	 *
+	 * // Rounded bottle with smooth curves
+	 * const bottle = Solid.revolutionSolidFromPath([
+	 *   straight(5),       // Bottom radius
+	 *   curve(2, 90),      // Rounded corner up
+	 *   straight(8),       // Body height
+	 *   curve(3, -90),     // Curve inward for neck
+	 *   straight(5),       // Neck height
+	 *   curve(1, -90),     // Top curve
+	 *   straight(2)        // Rim width
+	 * ], { color: 'blue' });
+	 *
+	 * @example
+	 * // Chess rook with sharp corners
+	 * const rook = Solid.revolutionSolidFromPath([
+	 *   straight(4),       // Base radius
+	 *   curve(0, 90),      // Sharp corner up
+	 *   straight(8),       // Tower height
+	 *   curve(0, -90),     // Sharp corner out
+	 *   straight(1),       // Battlement step
+	 *   curve(0, 90),      // Sharp corner up
+	 *   straight(2),       // Battlement height
+	 *   curve(0, 180),     // Sharp corner back
+	 *   straight(2),       // Down
+	 *   curve(0, 90),      // Corner
+	 *   straight(1)        // To center
+	 * ], { color: 'black' });
+	 */
+	static revolutionSolidFromPath = (
+		segments: PathSegment[],
+		options?: {
+			angle?: number;
+			color?: string;
+		}
+	): Solid => {
+		if (segments.length === 0) {
+			throw new Error('revolutionSolidFromPath requires at least one segment');
+		}
+
+		const angle = options?.angle ?? 360;
+		const color = options?.color ?? 'gray';
+
+		// Validate segments (same validation as profilePrismFromPath)
+		for (const [index, segment] of segments.entries()) {
+			if (segment.type === 'straight') {
+				if (segment.length <= 0 || !Number.isFinite(segment.length)) {
+					throw new Error(
+						`Invalid straight segment at index ${index}: length must be positive and finite (got ${segment.length})`
+					);
+				}
+			} else if (segment.type === 'curve') {
+				if (segment.radius < 0 || !Number.isFinite(segment.radius)) {
+					throw new Error(
+						`Invalid curve segment at index ${index}: radius must be non-negative and finite (got ${segment.radius})`
+					);
+				}
+				if (!Number.isFinite(segment.angle)) {
+					throw new TypeError(
+						`Invalid curve segment at index ${index}: angle must be finite (got ${segment.angle})`
+					);
+				}
+			}
+		}
+
+		return this.revolutionSolid(
+			(shape) => {
+				// Start at origin facing right (+X direction)
+				let x = 0;
+				let y = 0;
+				let heading = 0; // radians, 0 = +X direction
+
+				shape.moveTo(x, y);
+
+				// Process each segment (same logic as profilePrismFromPath)
+				for (const segment of segments) {
+					if (segment.type === 'straight') {
+						// Calculate endpoint based on current heading and length
+						const endX = x + segment.length * Math.cos(heading);
+						const endY = y + segment.length * Math.sin(heading);
+
+						shape.lineTo(endX, endY);
+
+						// Update position
+						x = endX;
+						y = endY;
+					} else if (segment.type === 'curve') {
+						const { radius, angle: curveAngle } = segment;
+						const angleRad = this.degreesToRadians(curveAngle);
+
+						// Handle zero-radius curves (sharp corners)
+						if (radius === 0) {
+							// Just change heading, no arc
+							heading -= angleRad; // Subtract for right turn (positive angle)
+							continue;
+						}
+
+						// Calculate arc center perpendicular to current heading
+						// For right turn (positive angle): center is to the right
+						// For left turn (negative angle): center is to the left
+						const turnDirection = curveAngle >= 0 ? 1 : -1; // 1 = right, -1 = left
+						const centerX = x + radius * Math.sin(heading) * turnDirection;
+						const centerY = y - radius * Math.cos(heading) * turnDirection;
+
+						// Calculate start angle from center to current point
+						const startAngle = Math.atan2(y - centerY, x - centerX);
+
+						// Calculate end angle (subtract angle for right turn, add for left)
+						const endAngle = startAngle - angleRad;
+
+						// Determine arc direction (clockwise for right turns)
+						const clockwise = curveAngle >= 0;
+
+						// Draw the arc using absarc (absolute center coordinates)
+						shape.absarc(centerX, centerY, Math.abs(radius), startAngle, endAngle, clockwise);
+
+						// Calculate new position at end of arc
+						x = centerX + Math.abs(radius) * Math.cos(endAngle);
+						y = centerY + Math.abs(radius) * Math.sin(endAngle);
+
+						// Update heading (subtract angle for right turn, add for left)
+						heading -= angleRad;
+					}
+				}
+			},
+			{ angle, color }
 		);
 	};
 

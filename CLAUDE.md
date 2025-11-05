@@ -619,6 +619,151 @@ const raceTrack = Solid.profilePrismFromPath(3, [
 - Extrudes along Z-axis with configurable height
 - Bevel is disabled for clean CSG operations
 
+### Body of Revolution (Lathe Geometry)
+
+For creating rotationally symmetric objects like chess pieces, vases, bottles, and goblets by rotating a 2D profile around the Y-axis.
+
+**Revolution Solid with Shape Builder:**
+
+```typescript
+Solid.revolutionSolid(
+  profileBuilder: (shape: Shape) => void,
+  options?: {
+    angle?: number;  // Rotation angle in degrees (default: 360)
+    color?: string;
+  }
+)
+
+// Example: Simple vase
+const vase = Solid.revolutionSolid((shape) => {
+  shape.moveTo(5, 0);    // Bottom radius (x = radius, y = height)
+  shape.lineTo(3, 5);    // Narrow middle
+  shape.lineTo(6, 10);   // Wide top
+  shape.lineTo(5, 15);   // Rim
+}, { color: 'blue' });
+
+// Example: Goblet with curves
+const goblet = Solid.revolutionSolid((shape) => {
+  shape.moveTo(0, 0);    // Center bottom (stem)
+  shape.lineTo(1, 0);    // Stem base
+  shape.lineTo(1, 5);    // Stem height
+  shape.quadraticCurveTo(5, 7, 6, 10); // Curved bowl
+  shape.lineTo(6, 12);   // Bowl sides
+  shape.lineTo(0, 12);   // Back to center
+}, { color: 'gold' });
+
+// Full Shape API available: lineTo, quadraticCurveTo, bezierCurveTo, arc, etc.
+```
+
+**Revolution Solid from Points (Simplified):**
+
+```typescript
+Solid.revolutionSolidFromPoints(
+  points: [number, number][],
+  options?: {
+    angle?: number;  // Rotation angle in degrees (default: 360)
+    color?: string;
+  }
+)
+
+// Example: Chess pawn
+const pawn = Solid.revolutionSolidFromPoints([
+  [0, 0],    // Bottom center (x = radius, y = height)
+  [3, 0],    // Bottom edge
+  [2, 2],    // Narrow stem
+  [4, 8],    // Body
+  [2, 10],   // Neck
+  [3, 12],   // Head
+  [0, 12]    // Top center
+], { color: 'white' });
+
+// Example: Partial revolution (180° half bottle)
+const halfBottle = Solid.revolutionSolidFromPoints([
+  [0, 0],
+  [5, 0],
+  [5, 8],
+  [2, 10],
+  [2, 15],
+  [0, 15]
+], { angle: Solid.DEG_180, color: 'green' });
+```
+
+**Revolution Solid from Path (Path-Based):**
+
+```typescript
+Solid.revolutionSolidFromPath(
+  segments: PathSegment[],
+  options?: {
+    angle?: number;  // Rotation angle in degrees (default: 360)
+    color?: string;
+  }
+)
+
+// Import factory functions
+import { Solid, straight, curve } from '$lib/3d/Solid';
+
+// Example: Rounded bottle with smooth curves
+const bottle = Solid.revolutionSolidFromPath([
+  straight(5),       // Bottom radius
+  curve(2, 90),      // Rounded corner up
+  straight(8),       // Body height
+  curve(3, -90),     // Curve inward for neck
+  straight(5),       // Neck height
+  curve(1, -90),     // Top curve
+  straight(2)        // Rim width
+], { color: 'blue' });
+
+// Example: Chess rook with sharp corners
+const rook = Solid.revolutionSolidFromPath([
+  straight(4),       // Base radius
+  curve(0, 90),      // Sharp corner up (zero radius = sharp)
+  straight(10),      // Tower height
+  curve(0, -90),     // Sharp corner outward
+  straight(1),       // Battlement step
+  curve(0, 90),      // Sharp corner up
+  straight(1.5),     // Battlement height
+  curve(0, 180),     // Turn back
+  straight(1.5),     // Down
+  curve(0, 90),      // Corner
+  straight(1)        // To center
+], { color: 'black' });
+
+// Example: Quarter section (90° slice for cross-section view)
+const quarterVase = Solid.revolutionSolidFromPath([
+  straight(4),
+  curve(1, 45),
+  straight(6),
+  curve(2, 45),
+  straight(3)
+], { angle: Solid.DEG_90, color: 'purple' });
+```
+
+**Profile Coordinate System:**
+
+- **X-axis**: Radius from center (distance from Y-axis)
+- **Y-axis**: Height (vertical position)
+- Profile is rotated around the Y-axis
+- Start at origin (0, 0) or close to Y-axis for proper revolution
+- Points with X=0 will be at the center axis
+
+**Key Features:**
+
+- `revolutionSolid()` provides full Three.js Shape API (most flexible)
+- `revolutionSolidFromPoints()` is simpler, takes coordinate pairs
+- `revolutionSolidFromPath()` uses path segments for smooth curves and sharp corners
+- All methods automatically normalize geometry for clean CSG operations
+- Radial segments auto-calculated based on angle (8-48 segments)
+- Supports partial revolutions (angle < 360°) for cut-away views
+- Perfect for rotationally symmetric objects: chess pieces, vases, bottles, goblets, spinning tops
+
+**Common Use Cases:**
+
+- Chess pieces (pawn, rook, bishop, queen, king)
+- Tableware (vases, bottles, goblets, wine glasses, bowls)
+- Architectural elements (balusters, columns, finials)
+- Mechanical parts (knobs, handles, pulleys)
+- Decorative objects (candlesticks, lamp bases, ornaments)
+
 ### Usage Examples
 
 ```typescript
