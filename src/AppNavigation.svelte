@@ -57,9 +57,9 @@
 		<NavUl>
 			{#if getComponentStoreValue().length}
 				<span class="my-auto text-xs">
-					{faceCount.toLocaleString()} faces
+					{dimension.width} x {dimension.height} x {dimension.depth}
 					<br />
-					{dimension.width} x {dimension.height} x {dimension.depth} mm
+					{faceCount.toLocaleString()} faces
 					<br />
 					{generateTimeMs} ms
 				</span>

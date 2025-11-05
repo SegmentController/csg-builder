@@ -603,7 +603,7 @@ export class Solid {
 		const wedgeHeight = Math.max(profileHeight * 2, maxRadius * 4);
 		const wedgeCutter = this.profilePrismFromPoints(wedgeHeight, wedgePoints, color)
 			.rotate({ x: 90 }) // Rotate to align with Y-axis (revolution axis)
-			.move({ y: -wedgeHeight / 2 + profileCenter }); // Center the wedge on the profile
+			.move({ y: profileCenter + wedgeHeight / 2 }); // Center the wedge on the profile (rotation makes extrusion go negative, so add half height)
 
 		// Subtract wedge from full revolution to create closed partial geometry
 		return fullRevolution.subtract(wedgeCutter);
