@@ -542,11 +542,80 @@ const housing = Solid.profilePrismFromPoints(
 );
 ```
 
+**Profile Prism from Path (Path-Based):**
+
+```typescript
+Solid.profilePrismFromPath(
+  height: number,
+  segments: PathSegment[],
+  color?: string
+)
+
+// Import factory functions
+import { Solid, straight, curve } from '$lib/3d/Solid';
+
+// Example: Rounded rectangle
+const roundedRect = Solid.profilePrismFromPath(10, [
+  straight(20),      // Bottom edge
+  curve(5, 90),      // Right turn with radius 5
+  straight(10),      // Right edge
+  curve(5, 90),      // Another right turn
+  straight(20),      // Top edge
+  curve(5, 90),      // Left turn
+  straight(10),      // Left edge
+  curve(5, 90)       // Final turn back to start
+], 'blue'); // Automatically closes back to origin
+
+// Example: S-curve
+const sCurve = Solid.profilePrismFromPath(8, [
+  straight(10),
+  curve(5, 90),      // Right turn (positive angle)
+  straight(5),
+  curve(5, -90),     // Left turn (negative angle)
+  straight(10)
+], 'red');
+
+// Example: Sharp corners using zero-radius curves
+const triangle = Solid.profilePrismFromPath(4, [
+  straight(15),
+  curve(0, 120),     // Sharp 120° corner (no rounding)
+  straight(15),
+  curve(0, 120),     // Another sharp corner
+  straight(15),
+  curve(0, 120)      // Close with sharp corner
+], 'orange');
+
+// Example: Race track (oval)
+const raceTrack = Solid.profilePrismFromPath(3, [
+  straight(30),      // Straightaway
+  curve(8, 180),     // Semicircle turn
+  straight(30),      // Back straightaway
+  curve(8, 180)      // Return semicircle
+], 'green');
+```
+
+**Path Segment Types:**
+
+- `straight(length)` - Straight line segment with specified length
+- `curve(radius, angle)` - Curved segment with:
+  - `radius`: Arc radius (0 = sharp corner, >0 = smooth curve)
+  - `angle`: Turn angle in degrees (positive = right turn, negative = left turn)
+
+**Path Behavior:**
+
+- Always starts at origin (0, 0) facing right (+X direction)
+- Each segment starts from the endpoint of the previous segment
+- Current heading updates after each segment
+- Path automatically closes back to origin
+- Zero-radius curves create sharp corners (heading changes without arc)
+- Positive angle = clockwise/right turn, negative = counter-clockwise/left turn
+
 **Key Features:**
 
 - `profilePrism()` provides full Three.js Shape API (curves, arcs, beziers)
 - `profilePrismFromPoints()` is simpler, takes point array and auto-closes the path
-- Both methods automatically normalize geometry for clean CSG operations
+- `profilePrismFromPath()` uses path segments for smooth curves and controlled turns
+- All methods automatically normalize geometry for clean CSG operations
 - Extrudes along Z-axis with configurable height
 - Bevel is disabled for clean CSG operations
 

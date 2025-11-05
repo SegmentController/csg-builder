@@ -14,6 +14,32 @@ import { ADDITION, Brush, Evaluator, INTERSECTION, SUBTRACTION } from 'three-bvh
 
 import { MathMinMax } from '$lib/Math';
 
+// Path segment type definitions
+export type StraightSegment = {
+	type: 'straight';
+	length: number;
+};
+
+export type CurveSegment = {
+	type: 'curve';
+	radius: number;
+	angle: number; // degrees, positive = right turn, negative = left turn
+};
+
+export type PathSegment = StraightSegment | CurveSegment;
+
+// Factory functions for path segments
+export const straight = (length: number): StraightSegment => ({
+	type: 'straight',
+	length
+});
+
+export const curve = (radius: number, angle: number): CurveSegment => ({
+	type: 'curve',
+	radius,
+	angle
+});
+
 export class Solid {
 	public static evaluator: Evaluator = new Evaluator();
 
@@ -356,6 +382,139 @@ export class Solid {
 
 				// Auto-close: connect back to start
 				shape.lineTo(startX, startY);
+			},
+			color
+		);
+	};
+
+	/**
+	 * Creates a custom profile prism from a path defined by straight and curved segments.
+	 * Path starts at origin (0, 0) facing right (+X direction) and is automatically closed.
+	 *
+	 * @param height - Extrusion height (depth along Z-axis)
+	 * @param segments - Array of path segments (straight or curve)
+	 * @param color - Material color (default: 'gray')
+	 * @returns Solid with extruded geometry
+	 *
+	 * @example
+	 * import { Solid, straight, curve } from '$lib/3d/Solid';
+	 *
+	 * // Rounded rectangle
+	 * const roundedRect = Solid.profilePrismFromPath(10, [
+	 *   straight(20),
+	 *   curve(5, 90),    // Right turn with radius 5
+	 *   straight(10),
+	 *   curve(5, 90),
+	 *   straight(20),
+	 *   curve(5, 90),
+	 *   straight(10),
+	 *   curve(5, 90),
+	 * ], 'blue');
+	 *
+	 * @example
+	 * // S-curve path
+	 * const sCurve = Solid.profilePrismFromPath(8, [
+	 *   straight(10),
+	 *   curve(5, 90),     // Right turn
+	 *   straight(5),
+	 *   curve(5, -90),    // Left turn
+	 *   straight(10),
+	 * ], 'red');
+	 */
+	static profilePrismFromPath = (
+		height: number,
+		segments: PathSegment[],
+		color: string = 'gray'
+	): Solid => {
+		if (segments.length === 0) {
+			throw new Error('profilePrismFromPath requires at least one segment');
+		}
+
+		// Validate segments
+		for (const [index, segment] of segments.entries()) {
+			if (segment.type === 'straight') {
+				if (segment.length <= 0 || !Number.isFinite(segment.length)) {
+					throw new Error(
+						`Invalid straight segment at index ${index}: length must be positive and finite (got ${segment.length})`
+					);
+				}
+			} else if (segment.type === 'curve') {
+				if (segment.radius < 0 || !Number.isFinite(segment.radius)) {
+					throw new Error(
+						`Invalid curve segment at index ${index}: radius must be non-negative and finite (got ${segment.radius})`
+					);
+				}
+				if (!Number.isFinite(segment.angle)) {
+					throw new TypeError(
+						`Invalid curve segment at index ${index}: angle must be finite (got ${segment.angle})`
+					);
+				}
+			}
+		}
+
+		return this.profilePrism(
+			height,
+			(shape) => {
+				// Start at origin facing right (+X direction)
+				let x = 0;
+				let y = 0;
+				let heading = 0; // radians, 0 = +X direction
+
+				shape.moveTo(x, y);
+
+				// Process each segment
+				for (const segment of segments) {
+					if (segment.type === 'straight') {
+						// Calculate endpoint based on current heading and length
+						const endX = x + segment.length * Math.cos(heading);
+						const endY = y + segment.length * Math.sin(heading);
+
+						shape.lineTo(endX, endY);
+
+						// Update position
+						x = endX;
+						y = endY;
+					} else if (segment.type === 'curve') {
+						const { radius, angle } = segment;
+						const angleRad = this.degreesToRadians(angle);
+
+						// Handle zero-radius curves (sharp corners)
+						if (radius === 0) {
+							// Just change heading, no arc
+							heading -= angleRad; // Subtract for right turn (positive angle)
+							continue;
+						}
+
+						// Calculate arc center perpendicular to current heading
+						// For right turn (positive angle): center is to the right
+						// For left turn (negative angle): center is to the left
+						const turnDirection = angle >= 0 ? 1 : -1; // 1 = right, -1 = left
+						const centerX = x + radius * Math.sin(heading) * turnDirection;
+						const centerY = y - radius * Math.cos(heading) * turnDirection;
+
+						// Calculate start angle from center to current point
+						const startAngle = Math.atan2(y - centerY, x - centerX);
+
+						// Calculate end angle (subtract angle for right turn, add for left)
+						const endAngle = startAngle - angleRad;
+
+						// Determine arc direction (clockwise for right turns)
+						const clockwise = angle >= 0;
+
+						// Draw the arc using absarc (absolute center coordinates)
+						shape.absarc(centerX, centerY, Math.abs(radius), startAngle, endAngle, clockwise);
+
+						// Calculate new position at end of arc
+						x = centerX + Math.abs(radius) * Math.cos(endAngle);
+						y = centerY + Math.abs(radius) * Math.sin(endAngle);
+
+						// Update heading (subtract angle for right turn, add for left)
+						heading -= angleRad;
+					}
+				}
+
+				// Auto-close: connect back to origin
+				shape.lineTo(0, 0);
 			},
 			color
 		);

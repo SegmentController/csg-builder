@@ -1,5 +1,5 @@
 import { Mesh } from '$lib/3d/Mesh';
-import { Solid } from '$lib/3d/Solid';
+import { curve, Solid, straight } from '$lib/3d/Solid';
 import type { ComponentsMap } from '$stores/componentStore.svelte';
 
 export const sphereDemo = (): Solid => Solid.sphere(8, { color: 'green' });
@@ -295,6 +295,147 @@ export const customProfileWithHole = (): Solid => {
 	return bracket.subtract(hole1).subtract(hole2);
 };
 
+// NEW: Path-based profile prism demos using straight() and curve()
+
+export const roundedRectanglePath = (): Solid => {
+	// Rounded rectangle using path segments
+	// Demonstrates smooth corners with consistent radius
+	return Solid.profilePrismFromPath(
+		5,
+		[
+			straight(20), // Bottom edge
+			curve(5, 90), // Bottom-right corner (right turn)
+			straight(10), // Right edge
+			curve(5, 90), // Top-right corner
+			straight(20), // Top edge
+			curve(5, 90), // Top-left corner
+			straight(10), // Left edge
+			curve(5, 90) // Bottom-left corner (back to start)
+		],
+		'blue'
+	)
+		.align('bottom')
+		.center({ x: true, z: true });
+};
+
+export const sCurvePath = (): Solid => {
+	// S-curve demonstrating left and right turns
+	// Shows smooth transitions between curves
+	return Solid.profilePrismFromPath(
+		6,
+		[
+			straight(10), // Initial straight
+			curve(5, 90), // Right turn
+			straight(8), // Middle straight
+			curve(5, -90), // Left turn (negative angle)
+			straight(2), // Final straight
+			curve(5, 180), // Left turn (negative angle)
+			straight(22) // Final straight
+		],
+		'red'
+	)
+		.align('bottom')
+		.center({ x: true, z: true });
+};
+
+export const raceTrackPath = (): Solid => {
+	// Oval race track shape with rounded ends
+	// Demonstrates semicircular curves (180°)
+	return Solid.profilePrismFromPath(
+		3,
+		[
+			straight(30), // Straightaway
+			curve(8, 180), // Semicircle turn
+			straight(30), // Back straightaway
+			curve(8, 180) // Return semicircle
+		],
+		'green'
+	)
+		.align('bottom')
+		.center({ x: true, z: true });
+};
+
+export const sharpCornerPath = (): Solid => {
+	// Triangle with sharp corners using zero-radius curves
+	// Demonstrates corner direction changes without rounding
+	return Solid.profilePrismFromPath(
+		4,
+		[
+			straight(15),
+			curve(0, 120), // Sharp 120° corner (zero radius)
+			straight(15),
+			curve(0, 120), // Another sharp corner
+			straight(15),
+			curve(0, 120) // Final sharp corner to close
+		],
+		'orange'
+	)
+		.align('bottom')
+		.center({ x: true, z: true });
+};
+
+export const spiralPath = (): Solid => {
+	// Spiral-like path with decreasing radii
+	// Demonstrates variable curve radii in one path
+	return Solid.profilePrismFromPath(
+		4,
+		[
+			straight(12),
+			curve(8, 90), // Large radius turn
+			straight(8),
+			curve(5, 90), // Medium radius turn
+			straight(5),
+			curve(3, 90), // Small radius turn
+			straight(3)
+		],
+		'purple'
+	)
+		.align('bottom')
+		.center({ x: true, z: true });
+};
+
+export const keyholePath = (): Solid => {
+	// Keyhole shape: circle on top of rectangle
+	// Combines multiple segment types
+	return Solid.profilePrismFromPath(
+		3,
+		[
+			straight(8), // Bottom of shaft
+			curve(0, 90), // Sharp corner
+			straight(4), // Right side of shaft
+			curve(0, 90), // Sharp corner
+			straight(8), // Top of shaft connects to circle
+			curve(6, 180), // Semicircle (right half of keyhole head)
+			straight(0.01), // Tiny segment for smooth connection
+			curve(6, 180) // Semicircle (left half of keyhole head)
+			// Auto-closes back to start
+		],
+		'cyan'
+	)
+		.align('bottom')
+		.center({ x: true, z: true });
+};
+
+export const mixedPath = (): Solid => {
+	// Complex path mixing sharp corners and smooth curves
+	// Demonstrates versatility of the path-based approach
+	return Solid.profilePrismFromPath(
+		5,
+		[
+			straight(12),
+			curve(4, 90), // Rounded corner
+			straight(6),
+			curve(0, 90), // Sharp corner
+			straight(8),
+			curve(4, 135) // Larger angle turn
+			//straight(5)
+		],
+		'magenta'
+	)
+		.align('bottom')
+		.center({ x: true, z: true });
+};
+
 export const components: ComponentsMap = {
 	'New: Sphere': () => sphereDemo(),
 	'New: Cone': () => coneDemo(),
@@ -326,5 +467,13 @@ export const components: ComponentsMap = {
 	'Custom: Arrow Shape': () => arrowShape(),
 	'Custom: Star Prism': () => starPrism(),
 	'Custom: T-Beam': () => tShapedBeam(),
-	'Custom: Profile with Holes': () => customProfileWithHole()
+	'Custom: Profile with Holes': () => customProfileWithHole(),
+	// Path-based profile prism demos
+	'Path: Rounded Rectangle': () => roundedRectanglePath(),
+	'Path: S-Curve': () => sCurvePath(),
+	'Path: Race Track': () => raceTrackPath(),
+	'Path: Sharp Corners': () => sharpCornerPath(),
+	'Path: Spiral': () => spiralPath(),
+	'Path: Keyhole': () => keyholePath(),
+	'Path: Mixed Segments': () => mixedPath()
 };

@@ -10,6 +10,7 @@ CSG Builder allows you to create 3D meshes using TypeScript code with a React-li
 
 - **Component-Based Architecture** - Define reusable 3D components as TypeScript functions
 - **Primitive Shapes** - Cubes, cylinders, spheres, cones, and polygon prisms with customizable dimensions
+- **Custom Profile Prisms** - Extrude 2D profiles into 3D shapes using points, paths, or Shape API
 - **Partial Geometries** - Create pie slices, hemispheres, and wedges with CSG-based angle cutting
 - **CSG Operations** - Union and subtraction for complex geometries
 - **Transformations** - Translate, rotate, and scale objects with chainable methods
@@ -225,6 +226,121 @@ export const pieChart = (): Solid => {
 };
 ```
 
+### Example: Custom Profile Prisms
+
+Create complex 2D profiles and extrude them into 3D shapes. Three approaches available:
+
+```typescript
+import { Solid, straight, curve } from '$lib/3d/Solid';
+
+// 1. SHAPE BUILDER API - Full control with Three.js Shape methods
+export const lBracket = (): Solid => {
+	return Solid.profilePrism(
+		10,
+		(shape) => {
+			shape.moveTo(0, 0);
+			shape.lineTo(20, 0);
+			shape.lineTo(20, 5);
+			shape.lineTo(5, 5);
+			shape.lineTo(5, 20);
+			shape.lineTo(0, 20);
+			// Auto-closes to starting point
+		},
+		'blue'
+	);
+};
+
+// 2. POINT ARRAY - Simple coordinate-based profiles
+export const trapezoid = (): Solid => {
+	return Solid.profilePrismFromPoints(
+		8,
+		[
+			[0, 0], // Start point
+			[10, 0], // Bottom right
+			[8, 5], // Top right
+			[2, 5] // Top left
+			// Automatically closes back to [0, 0]
+		],
+		'red'
+	);
+};
+
+// 3. PATH SEGMENTS - Smooth curves and controlled turns (NEW!)
+export const roundedRectangle = (): Solid => {
+	return Solid.profilePrismFromPath(
+		5,
+		[
+			straight(20), // Bottom edge
+			curve(5, 90), // Right turn with radius 5
+			straight(10), // Right edge
+			curve(5, 90), // Top-right corner
+			straight(20), // Top edge
+			curve(5, 90), // Top-left corner
+			straight(10), // Left edge
+			curve(5, 90) // Bottom-left corner
+			// Automatically closes back to origin
+		],
+		'blue'
+	);
+};
+
+// Path segments support smooth curves and sharp corners
+export const sCurve = (): Solid => {
+	return Solid.profilePrismFromPath(
+		6,
+		[
+			straight(10), // Start with straight
+			curve(5, 90), // Right turn (positive angle)
+			straight(8), // Middle section
+			curve(5, -90), // Left turn (negative angle)
+			straight(10) // Final straight
+		],
+		'green'
+	);
+};
+
+// Sharp corners using zero-radius curves
+export const triangle = (): Solid => {
+	return Solid.profilePrismFromPath(
+		4,
+		[
+			straight(15),
+			curve(0, 120), // Sharp 120° corner (no rounding)
+			straight(15),
+			curve(0, 120), // Sharp corner
+			straight(15),
+			curve(0, 120) // Sharp corner to close
+		],
+		'orange'
+	);
+};
+
+// Oval/race track shape
+export const raceTrack = (): Solid => {
+	return Solid.profilePrismFromPath(
+		3,
+		[
+			straight(30), // Straightaway
+			curve(8, 180), // Semicircle turn
+			straight(30), // Back straightaway
+			curve(8, 180) // Return semicircle
+		],
+		'purple'
+	).center();
+};
+```
+
+**Path Segment Features:**
+
+- `straight(length)` - Straight line segment
+- `curve(radius, angle)` - Curved arc segment
+  - Positive angle = right turn (clockwise)
+  - Negative angle = left turn (counter-clockwise)
+  - Zero radius = sharp corner (no rounding)
+- Path starts at origin (0, 0) facing right (+X)
+- Each segment continues from previous endpoint
+- Automatically closes back to origin
+
 ### API Reference
 
 #### Solid Class
@@ -242,6 +358,26 @@ export const pieChart = (): Solid => {
   - `options: { color?, angle? }` - angle in degrees (1-360, default: 360)
 - `Solid.trianglePrism(radius, height, options?)` - Create a triangular prism (3-sided)
   - `options: { color? }` - color only, no angle support
+
+**Custom Profile Methods:**
+
+- `Solid.profilePrism(height, profileBuilder, color?)` - Extrude custom 2D profile using Shape API
+  - `profileBuilder: (shape: Shape) => void` - Function that defines the 2D path
+  - Full Three.js Shape API: moveTo, lineTo, arc, bezierCurveTo, etc.
+- `Solid.profilePrismFromPoints(height, points, color?)` - Extrude from point array
+  - `points: [number, number][]` - Array of [x, y] coordinates
+  - Automatically closes back to first point
+- `Solid.profilePrismFromPath(height, segments, color?)` - Extrude from path segments
+  - `segments: PathSegment[]` - Array of straight() and curve() segments
+  - Starts at origin (0, 0) facing right (+X direction)
+  - Automatically closes back to origin
+
+**Path Segment Factories** (for use with profilePrismFromPath):
+
+- `straight(length)` - Create straight line segment
+- `curve(radius, angle)` - Create curved arc segment
+  - `radius` - Arc radius (0 = sharp corner)
+  - `angle` - Turn angle in degrees (positive = right, negative = left)
 
 **Angle Constants:**
 
@@ -410,6 +546,11 @@ csg-builder/
 9. **Optional Properties** - Only specify axes you want to transform: `.move({ z: -0.5 })`
 10. **First Solid Must Be Positive** - In `new Mesh()`, the first solid cannot have `.setNegative()`
 11. **Use Path Aliases** - Always import with `$lib/`, `$stores/`, etc. (never relative paths)
+12. **Profile Prism Imports** - Import path factories: `import { Solid, straight, curve } from '$lib/3d/Solid'`
+13. **Profile Method Selection**:
+    - Use `profilePrism()` for complex curves (beziers, arcs) with full Shape API
+    - Use `profilePrismFromPoints()` for simple polygonal profiles from coordinates
+    - Use `profilePrismFromPath()` for smooth curves and controlled turns with straights/curves
 
 ## Examples
 
@@ -418,7 +559,11 @@ Check out the `projects/sample/` directory for working examples:
 - **box.ts** - Simple cube with cylinder
 - **brickWall.ts** - Parametric brick wall with pattern
 - **sideWindow.ts** - Window component with frame and pane
-- **shapes.ts** - Showcase of all primitive shapes (sphere, cone, prism, etc.) with practical examples
+- **shapes.ts** - Comprehensive showcase including:
+  - All primitive shapes (sphere, cone, prism, etc.)
+  - Partial geometries (pie slices, hemispheres, wedges)
+  - Custom profile prisms (Shape API, point arrays, path segments)
+  - Path-based profiles with smooth curves and sharp corners
 
 ## Troubleshooting
 
