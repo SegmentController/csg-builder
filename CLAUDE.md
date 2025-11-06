@@ -45,7 +45,7 @@ npm run all              # Run format:fix, lint:fix, ts:check, and build
    - `merge()` performs actual CSG operations
    - `toSolid()` returns final merged solid
    - Transforms apply to all contained solids
-   - Grid utility: `Mesh.grid(solid, { cols, rows, spacing })` creates 2D arrays
+   - Grid utilities: `gridX()`, `gridXY()`, `gridXYZ()` create 1D, 2D, and 3D arrays
 
 3. **Component Registry** (`src/stores/componentStore.svelte.ts`)
    - Uses Svelte 5 runes (`$state`) for reactivity
@@ -131,7 +131,7 @@ projects/
 - **Scaling**: `scale({ x?, y?, z? })` with optional properties - all values are **multiplicative**
   - `.scale({ x: 2 })` doubles the size on X-axis
   - Scaling is **cumulative**: `.scale({ x: 2 }).scale({ x: 1.5 })` results in 3x scale on X-axis
-- Grid pattern (`Mesh.grid`) accepts configurable spacing parameter
+- Grid patterns (`Mesh.gridX`, `Mesh.gridXY`, `Mesh.gridXYZ`) accept configurable spacing parameters
 - **Transform order matters**: Apply transforms before CSG operations for predictable results
 
 ### Geometry Normalization
@@ -243,7 +243,7 @@ const mesh = new Mesh(
 mesh.center();
 
 // For grid arrays
-const array = Mesh.grid(brick, { cols: 5, rows: 3 }).center(); // Centers the entire array at origin
+const array = Mesh.gridXY(brick, { cols: 5, rows: 3 }).center(); // Centers the entire array at origin
 ```
 
 **Use Cases:**
@@ -341,15 +341,36 @@ See `projects/sample/_context.ts`:
 
 ### Grid Arrays
 
+The `Mesh` class provides three grid methods for creating 1D, 2D, and 3D arrays:
+
 ```typescript
 const brick = Solid.cube(3, 1, 1, 'red');
-// With configurable spacing
-const wall = Mesh.grid(brick, { cols: 10, rows: 5, spacing: [6, 2] }).toSolid();
 
-// Or with default spacing [6, 2]
-const wall2 = Mesh.array(brick, 10, 5).toSolid();
+// 1D grid along X-axis
+const row = Mesh.gridX(brick, { cols: 10, spacing: 1 }).toSolid();
+// Without spacing (solids touching)
+const rowTight = Mesh.gridX(brick, { cols: 10 }).toSolid();
 
-// Grid internally uses: .move({ x: col * spacingX, y: row * spacingY, z: 0 })
+// 2D grid on XY plane (most common for walls, patterns)
+const wall = Mesh.gridXY(brick, { cols: 10, rows: 5, spacing: [1, 0.5] }).toSolid();
+// Without spacing
+const wallTight = Mesh.gridXY(brick, { cols: 10, rows: 5 }).toSolid();
+
+// 3D grid in XYZ space (for volume fills, lattices)
+const lattice = Mesh.gridXYZ(brick, {
+	cols: 5,
+	rows: 5,
+	levels: 3,
+	spacing: [1, 1, 2]
+}).toSolid();
+// Without spacing
+const latticeTight = Mesh.gridXYZ(brick, { cols: 5, rows: 5, levels: 3 }).toSolid();
+
+// Spacing adds gaps between elements:
+// - gridX: spacing = gap between columns
+// - gridXY: spacing = [gapX, gapY]
+// - gridXYZ: spacing = [gapX, gapY, gapZ]
+// Internal calculation: position = index * (dimension + spacing)
 ```
 
 ## Available Primitives
@@ -909,7 +930,7 @@ const brick = cacheFunction((width: number, height: number, depth: number) => {
 // Use cached brick in grid
 export const brickWall = (): Solid => {
 	const b = brick(3, 1, 1.5); // Computed once
-	return Mesh.grid(b, { cols: 10, rows: 8 }).toSolid();
+	return Mesh.gridXY(b, { cols: 10, rows: 8 }).toSolid();
 };
 ```
 

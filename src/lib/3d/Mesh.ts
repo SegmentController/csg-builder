@@ -200,7 +200,7 @@ export class Mesh {
 		return this;
 	}
 
-	public static grid(
+	public static gridXYZ(
 		solid: Solid,
 		options: { cols: number; rows: number; levels: number; spacing?: [number, number, number] }
 	): Mesh {
@@ -226,11 +226,20 @@ export class Mesh {
 		solid: Solid,
 		options: { cols: number; rows: number; spacing?: [number, number] }
 	): Mesh {
-		return Mesh.grid(solid, {
+		return Mesh.gridXYZ(solid, {
 			cols: options.cols,
 			rows: options.rows,
 			levels: 1,
 			spacing: options.spacing ? [options.spacing[0], options.spacing[1], 0] : undefined
+		});
+	}
+
+	public static gridX(solid: Solid, options: { cols: number; spacing?: number }): Mesh {
+		return Mesh.gridXYZ(solid, {
+			cols: options.cols,
+			rows: 1,
+			levels: 1,
+			spacing: options.spacing ? [options.spacing, 0, 0] : undefined
 		});
 	}
 

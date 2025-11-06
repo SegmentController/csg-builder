@@ -571,8 +571,19 @@ For convenience when creating partial geometries, predefined angle constants are
 - `Mesh.difference(base, ...subtract)` - Create mesh with subtraction
 - `Mesh.intersection(...solids)` - Create mesh with intersection
 - `Mesh.compose(...items)` - Compose solids/meshes (respects negative flags)
-- `Mesh.grid(solid, { cols, rows, spacing? })` - Create grid array
-- `Mesh.array(solid, cols, rows)` - Create array with default spacing
+
+**Grid Methods:**
+
+- `Mesh.gridX(solid, { cols, spacing? })` - Create 1D array along X-axis
+- `Mesh.gridXY(solid, { cols, rows, spacing? })` - Create 2D grid on XY plane
+- `Mesh.gridXYZ(solid, { cols, rows, levels, spacing? })` - Create 3D grid in XYZ space
+
+Grid spacing parameters:
+
+- `gridX`: `spacing` is a single number (gap between columns)
+- `gridXY`: `spacing` is `[gapX, gapY]` tuple
+- `gridXYZ`: `spacing` is `[gapX, gapY, gapZ]` tuple
+- If omitted, solids will be placed touching (no gaps)
 
 **Instance Methods:**
 
