@@ -128,9 +128,14 @@ projects/
 - **Relative transforms**: `move({ x?, y?, z? })` and `rotate({ x?, y?, z? })` with optional properties
 - All transformations are **incremental**: `.move({ x: 5 }).move({ x: 3 })` moves 8 units total
 - Rotations use **degrees** (converted to radians internally)
-- **Scaling**: `scale({ x?, y?, z? })` with optional properties - all values are **multiplicative**
-  - `.scale({ x: 2 })` doubles the size on X-axis
+- **Scaling**: `scale({ all?, x?, y?, z? })` with optional properties - all values are **multiplicative**
+  - `all` parameter scales uniformly on all three axes
+  - Individual axis scaling with `x`, `y`, `z` parameters
+  - `.scale({ all: 2 })` doubles the size uniformly on all axes
+  - `.scale({ x: 2 })` doubles the size on X-axis only
+  - `.scale({ all: 2, z: 1.5 })` scales all axes by 2, then additionally scales Z by 1.5 (resulting in 3x on Z)
   - Scaling is **cumulative**: `.scale({ x: 2 }).scale({ x: 1.5 })` results in 3x scale on X-axis
+  - Order matters: `all` is applied first, then individual axis scales are applied
 - Grid patterns (`Mesh.gridX`, `Mesh.gridXY`, `Mesh.gridXYZ`) accept configurable spacing parameters
 - **Transform order matters**: Apply transforms before CSG operations for predictable results
 

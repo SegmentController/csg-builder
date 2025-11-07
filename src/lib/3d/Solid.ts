@@ -842,7 +842,12 @@ export class Solid {
 	}
 
 	// Scaling with object parameters (multiplicative)
-	public scale(factors: { x?: number; y?: number; z?: number }): Solid {
+	public scale(factors: { all?: number; x?: number; y?: number; z?: number }): Solid {
+		if (factors.all !== undefined) {
+			this.brush.scale.x *= factors.all;
+			this.brush.scale.y *= factors.all;
+			this.brush.scale.z *= factors.all;
+		}
 		if (factors.x !== undefined) this.brush.scale.x *= factors.x;
 		if (factors.y !== undefined) this.brush.scale.y *= factors.y;
 		if (factors.z !== undefined) this.brush.scale.z *= factors.z;

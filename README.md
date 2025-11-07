@@ -538,7 +538,13 @@ For convenience when creating partial geometries, predefined angle constants are
 
 **Scaling Methods (chainable, multiplicative):**
 
-- `scale({ x?, y?, z? })` - Scale with optional axis parameters (values are multipliers)
+- `scale({ all?, x?, y?, z? })` - Scale with optional parameters (values are multipliers)
+  - `all` - Uniform scaling on all three axes
+  - `x`, `y`, `z` - Individual axis scaling
+  - Example: `scale({ all: 2 })` - Double size uniformly
+  - Example: `scale({ x: 2, z: 0.5 })` - Stretch on X, compress on Z
+  - Example: `scale({ all: 1.5, y: 2 })` - Scale all by 1.5, then Y by additional 2x (total 3x on Y)
+  - Cumulative: chaining multiplies values
 
 **CSG Methods (return new Solid):**
 
