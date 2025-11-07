@@ -1,6 +1,6 @@
 import { Mesh } from '$lib/3d/Mesh';
 import { Solid } from '$lib/3d/Solid';
-import type { ComponentsMap } from '$stores/componentStore.svelte';
+import type { ComponentsMap } from '$stores/componentStore';
 
 const BORDER = 2;
 

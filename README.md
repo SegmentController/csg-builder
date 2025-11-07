@@ -68,7 +68,7 @@ The application will be available at `http://localhost:5173`
 
 ```typescript
 import { Solid } from '$lib/3d/Solid';
-import type { ComponentsMap } from '$stores/componentStore.svelte';
+import type { ComponentsMap } from '$stores/componentStore';
 
 export const simpleBox = (): Solid => {
 	return Solid.cube(10, 10, 10, 'blue');
@@ -84,7 +84,7 @@ export const components: ComponentsMap = {
 ```typescript
 import { Solid } from '$lib/3d/Solid';
 import { Mesh } from '$lib/3d/Mesh';
-import type { ComponentsMap } from '$stores/componentStore.svelte';
+import type { ComponentsMap } from '$stores/componentStore';
 
 export const hollowBox = (): Solid => {
 	// Create outer box
@@ -613,6 +613,8 @@ Grid spacing parameters:
 
 ```
 csg-builder/
+├── bin/
+│   └── csg-export.ts           # CLI tool for exporting STL files
 ├── src/
 │   ├── lib/
 │   │   ├── 3d/
@@ -623,7 +625,8 @@ csg-builder/
 │   │   ├── buffer.ts            # Buffer utilities
 │   │   └── download.ts          # File download utilities
 │   ├── stores/
-│   │   └── componentStore.svelte.ts  # Component registry
+│   │   ├── componentStore.ts         # Component registry (non-Svelte, for CLI)
+│   │   └── componentStore.svelte.ts  # Component registry (Svelte, for web UI)
 │   ├── types/                   # TypeScript types
 │   ├── App.svelte              # Main application
 │   ├── App3DScene.svelte       # 3D viewport
@@ -635,6 +638,7 @@ csg-builder/
 │       └── *.ts                # Component definitions
 ├── package.json
 ├── tsconfig.json
+├── tsconfig.cli.json           # TypeScript config for CLI
 ├── vite.config.ts
 └── README.md
 ```
@@ -644,6 +648,7 @@ csg-builder/
 - `npm run dev` - Start development server
 - `npm run build` - Build for production
 - `npm run preview` - Preview production build
+- `npm run export` - Export components to STL files via CLI
 - `npm run ts:check` - Run TypeScript type checking
 - `npm run lint:check` - Check code quality
 - `npm run lint:fix` - Auto-fix linting issues
@@ -662,7 +667,7 @@ csg-builder/
 2. Create `projects/my-project/index.ts`:
 
    ```typescript
-   import { addToComponentStore } from '$stores/componentStore.svelte';
+   import { addToComponentStore } from '$stores/componentStore';
    import { components as myComponents } from './myComponent';
 
    addToComponentStore({
@@ -677,12 +682,56 @@ csg-builder/
    export * from './my-project';
    ```
 
+**Note on Component Store:**
+
+- Always import from `$stores/componentStore` (not `.svelte`)
+- This works for both web UI and CLI contexts
+- The system uses a dual-store architecture:
+  - `componentStore.ts` - Base store (plain TypeScript array)
+  - `componentStore.svelte.ts` - Reactive wrapper for Svelte UI
+  - Both share the same underlying data automatically
+
 ## Exporting Models
+
+### Web UI Export
 
 1. Select your component from the dropdown menu
 2. View the 3D preview in the viewport
 3. Click the "Download STL" button
 4. Use the STL file with your 3D printer or modeling software
+
+### CLI Export
+
+Export components to STL files directly from the command line without running the web UI:
+
+**List all available components:**
+
+```bash
+npm run export -- --list
+```
+
+**Export to a file:**
+
+```bash
+npm run export -- Box -o box.stl
+npm run export -- "Chess Pawn" -o pawn.stl
+```
+
+**Export to stdout (pipe to file):**
+
+```bash
+npm run export --silent -- Box > box.stl
+npm run export --silent -- "Brick Wall" > wall.stl
+```
+
+**Note:** Use `--silent` flag when piping to stdout to suppress npm output.
+
+**Benefits of CLI export:**
+
+- Automate STL generation in build scripts
+- Batch export multiple components
+- Integrate with CI/CD pipelines
+- Export without starting the dev server
 
 ## Tips and Best Practices
 

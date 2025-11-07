@@ -1,5 +1,5 @@
 import { curve, Solid, straight } from '$lib/3d/Solid';
-import type { ComponentsMap } from '$stores/componentStore.svelte';
+import type { ComponentsMap } from '$stores/componentStore';
 
 /**
  * Chess Pawn - Simple example using point array

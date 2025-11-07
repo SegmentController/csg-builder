@@ -1,6 +1,6 @@
 import { Mesh } from '$lib/3d/Mesh';
 import { curve, Solid, straight } from '$lib/3d/Solid';
-import type { ComponentsMap } from '$stores/componentStore.svelte';
+import type { ComponentsMap } from '$stores/componentStore';
 
 export const sphereDemo = (): Solid => Solid.sphere(8, { color: 'green' });
 

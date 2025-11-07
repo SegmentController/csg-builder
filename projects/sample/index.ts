@@ -1,4 +1,4 @@
-import { addToComponentStore } from '$stores/componentStore.svelte';
+import { addToComponentStore } from '$stores/componentStore';
 
 import { components as boxComponents } from './box';
 import { components as brickComponents } from './brickWall';

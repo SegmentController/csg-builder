@@ -1,6 +1,6 @@
 import { Mesh } from '$lib/3d/Mesh';
 import { Solid } from '$lib/3d/Solid';
-import type { ComponentsMap } from '$stores/componentStore.svelte';
+import type { ComponentsMap } from '$stores/componentStore';
 
 export const box = (): Solid => {
 	const cube = Solid.cube(10, 10, 10, 'blue');

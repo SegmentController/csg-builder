@@ -12,6 +12,7 @@ CSG Builder is a TypeScript-based 3D mesh creation tool using a component-based 
 npm run dev              # Start Vite dev server with hot reload (http://localhost:5173)
 npm run build            # Production build to ./docs directory
 npm run preview          # Preview production build locally
+npm run export           # CLI tool for exporting components to STL without running UI
 
 npm run ts:check         # Run TypeScript type checking
 npm run lint:check       # Run ESLint
@@ -47,9 +48,11 @@ npm run all              # Run format:fix, lint:fix, ts:check, and build
    - Transforms apply to all contained solids
    - Grid utilities: `gridX()`, `gridXY()`, `gridXYZ()` create 1D, 2D, and 3D arrays
 
-3. **Component Registry** (`src/stores/componentStore.svelte.ts`)
-   - Uses Svelte 5 runes (`$state`) for reactivity
-   - Components auto-register via `addToComponentStore()`
+3. **Component Registry** (dual-store architecture)
+   - **Base Store** (`src/stores/componentStore.ts`) - Plain TypeScript array for CLI and Node.js
+   - **Svelte Store** (`src/stores/componentStore.svelte.ts`) - Reactive wrapper for web UI
+   - Both stores share the same underlying component data via callback mechanism
+   - Components auto-register via `addToComponentStore()` (works in both contexts)
    - Alphabetically sorted by name
    - UI (`AppNavigation.svelte`) generates dropdown from this registry
    - **Type safety**: `ComponentsMap` type enforces functions returning `Solid | Mesh`
@@ -57,15 +60,31 @@ npm run all              # Run format:fix, lint:fix, ts:check, and build
 
 ### Data Flow
 
+**Web UI Path:**
+
 ```
 projects/*.ts (component definitions)
   → export ComponentsMap { "Name": () => Solid }
   → addToComponentStore() on module load
-  → componentStore (Svelte 5 $state reactive)
+  → componentStore (base) → componentStore.svelte (reactive wrapper)
   → AppNavigation.svelte (dropdown + selection)
   → App.svelte (extracts vertices from Solid)
   → App3DScene.svelte (Three.js rendering via Threlte)
   → STL export (generateBinaryStlFromVertices)
+```
+
+**CLI Path:**
+
+```
+projects/*.ts (component definitions)
+  → addToComponentStore() on module load
+  → componentStore (base, plain array)
+  → bin/csg-export.ts (CLI tool)
+    → getComponentStoreValue() (retrieve component by name)
+    → component.receiveData() (execute to get Solid/Mesh)
+    → toSolid() if Mesh, getVertices()
+    → generateBinaryStlFromVertices()
+    → write to stdout or file
 ```
 
 ### Path Aliases (Vite + TypeScript)
@@ -73,7 +92,7 @@ projects/*.ts (component definitions)
 All imports use aliases defined in `vite.config.ts` and `tsconfig.json`. **ALWAYS use these aliases, never relative paths**:
 
 - `$lib/*` → `src/lib/*` (e.g., `import { Solid } from '$lib/3d/Solid'`)
-- `$stores/*` → `src/stores/*` (e.g., `import { addToComponentStore } from '$stores/componentStore.svelte'`)
+- `$stores/*` → `src/stores/*` (e.g., `import { addToComponentStore } from '$stores/componentStore'`)
 - `$types/*` → `src/types/*`
 - `$components/*` → `src/components/*`
 - `$projects` → `projects/index.ts`
@@ -94,6 +113,23 @@ projects/
 ```
 
 **Critical:** Each `projects/[project-name]/index.ts` must be re-exported in `projects/index.ts` or components won't be discovered.
+
+**Dual-Store Architecture:**
+
+- Projects import from `$stores/componentStore` (non-Svelte base store)
+- This works in both web UI and CLI contexts
+- The Svelte wrapper (`componentStore.svelte.ts`) adds reactivity for UI
+- Both stores share the same underlying data via callback mechanism
+- When `addToComponentStore()` is called, it updates the base array and triggers the Svelte reactive wrapper
+
+**Import Pattern (for all project files):**
+
+```typescript
+import { addToComponentStore } from '$stores/componentStore';
+import type { ComponentsMap } from '$stores/componentStore';
+
+// NOT: import from '$stores/componentStore.svelte'
+```
 
 ## Key Implementation Details
 
@@ -267,6 +303,49 @@ Binary STL structure (see `src/lib/3d/stl.ts`):
 - Per-triangle: 12 floats (normal + 3 vertices) + 2-byte attribute
 - **Coordinate swap on export:** `(X, Y, Z) → (X, -Z, Y)` to match STL conventions (line 16)
 
+### CLI Export Tool
+
+The CLI export tool (`bin/csg-export.ts`) allows exporting components to STL files without running the Svelte web UI:
+
+**Usage:**
+
+```bash
+# List all available components
+npm run export -- --list
+
+# Export to file with -o flag
+npm run export -- Box -o box.stl
+npm run export -- "Chess Pawn" -o pawn.stl
+
+# Export to stdout (use --silent to suppress npm output)
+npm run export --silent -- Box > box.stl
+npm run export --silent -- BrickWall > wall.stl
+```
+
+**Implementation Details:**
+
+- Uses `tsx` to run TypeScript with path alias support (`tsconfig.cli.json`)
+- Uses `commander` for CLI argument parsing
+- Imports all projects to trigger component registration
+- Retrieves components from the base (non-Svelte) store
+- Outputs binary STL data to stdout or file
+- Shows helpful error messages with available components on failure
+- Displays export statistics (triangle count, file size)
+
+**Key Files:**
+
+- `bin/csg-export.ts` - CLI entry point with command handlers
+- `tsconfig.cli.json` - TypeScript config with Node.js module resolution
+- `src/stores/componentStore.ts` - Base store (used by CLI)
+- `package.json` - Defines `export` script and dependencies (`tsx`, `commander`)
+
+**Use Cases:**
+
+- Automated STL generation in build scripts
+- Batch export of multiple components
+- CI/CD pipeline integration
+- Headless server environments without display
+
 ### 3D Rendering (Threlte/Three.js)
 
 Scene setup in `App3DScene.svelte`:
@@ -293,7 +372,7 @@ Scene setup in `App3DScene.svelte`:
 ```typescript
 import { Solid } from '$lib/3d/Solid';
 import { Mesh } from '$lib/3d/Mesh';
-import type { ComponentsMap } from '$stores/componentStore.svelte';
+import type { ComponentsMap } from '$stores/componentStore';
 
 export const myPart = (width: number, height: number): Solid => {
 	const base = Solid.cube(width, height, 1, 'blue');

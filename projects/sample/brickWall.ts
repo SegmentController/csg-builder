@@ -1,7 +1,7 @@
 import { Mesh } from '$lib/3d/Mesh';
 import { Solid } from '$lib/3d/Solid';
 import { cacheInlineFunction } from '$lib/cacheFunction';
-import type { ComponentsMap } from '$stores/componentStore.svelte';
+import type { ComponentsMap } from '$stores/componentStore';
 
 import { context } from './_context';
 import { sideWindow } from './sideWindow';
