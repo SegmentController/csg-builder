@@ -952,15 +952,14 @@ export class Solid {
 		solid: Solid,
 		options: { cols: number; rows: number; levels: number; spacing?: [number, number, number] }
 	): Solid {
-		let result = solid.clone();
+		const solids: Solid[] = [];
 		const { width, height, depth } = solid.getBounds();
 		const [spacingX, spacingY, spacingZ] = options.spacing ?? [0, 0, 0];
 
 		for (let x = 0; x < options.cols; x++)
 			for (let y = 0; y < options.rows; y++)
 				for (let z = 0; z < options.levels; z++)
-					result = Solid.UNION(
-						result,
+					solids.push(
 						solid.clone().move({
 							x: x * (width + spacingX),
 							y: y * (height + spacingY),
@@ -968,7 +967,7 @@ export class Solid {
 						})
 					);
 
-		return result;
+		return Solid.MERGE(solids);
 	}
 
 	public static GRID_XY(
