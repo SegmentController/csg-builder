@@ -13,7 +13,7 @@ import {
 } from 'three';
 import { ADDITION, Brush, Evaluator, INTERSECTION, SUBTRACTION } from 'three-bvh-csg';
 
-import { MathMinMax } from '$lib/Math';
+import { MathMinMax, MathRoundTo2 } from '$lib/Math';
 
 // Path segment type definitions
 export type StraightSegment = {
@@ -167,7 +167,7 @@ export class Solid {
 			.move({ y: height * 0.75 }); // Center wedge on Y-axis
 
 		// Subtract wedge from cylinder to create closed partial geometry
-		return fullCylinder.subtract(wedgeCutter);
+		return Solid.SUBTRACT(fullCylinder, wedgeCutter);
 	};
 
 	static sphere = (
@@ -206,7 +206,7 @@ export class Solid {
 			.move({ y: radius * 2 }); // Center wedge on Y-axis
 
 		// Subtract wedge from sphere to create closed partial geometry
-		return fullSphere.subtract(wedgeCutter);
+		return Solid.SUBTRACT(fullSphere, wedgeCutter);
 	};
 
 	static cone = (
@@ -248,7 +248,7 @@ export class Solid {
 			.move({ y: height * 0.75 }); // Center wedge on Y-axis
 
 		// Subtract wedge from cone to create closed partial geometry
-		return fullCone.subtract(wedgeCutter);
+		return Solid.SUBTRACT(fullCone, wedgeCutter);
 	};
 
 	static prism = (
@@ -292,7 +292,7 @@ export class Solid {
 			.move({ y: height * 0.75 }); // Center wedge on Y-axis
 
 		// Subtract wedge from prism to create closed partial geometry
-		return fullPrism.subtract(wedgeCutter);
+		return Solid.SUBTRACT(fullPrism, wedgeCutter);
 	};
 
 	static trianglePrism = (
@@ -605,7 +605,7 @@ export class Solid {
 			.move({ y: profileCenter + wedgeHeight / 2 }); // Center the wedge on the profile (rotation makes extrusion go negative, so add half height)
 
 		// Subtract wedge from full revolution to create closed partial geometry
-		return fullRevolution.subtract(wedgeCutter);
+		return Solid.SUBTRACT(fullRevolution, wedgeCutter);
 	};
 
 	/**
@@ -919,31 +919,78 @@ export class Solid {
 	}
 
 	// Explicit CSG operations
-	public subtract(...others: Solid[]): Solid {
+	public static MERGE(solids: Solid[]): Solid {
+		return solids.reduce((accumulator, solid) => {
+			const resultBrush = Solid.evaluator.evaluate(accumulator.brush, solid.brush, solid.isNegative ? SUBTRACTION : ADDITION);
+			return new Solid(resultBrush, accumulator._color);
+		}, Solid.emptyCube);
+	}
+
+	public static SUBTRACT(source: Solid, ...others: Solid[]): Solid {
 		return others.reduce((accumulator, solid) => {
 			const resultBrush = Solid.evaluator.evaluate(accumulator.brush, solid.brush, SUBTRACTION);
-			return new Solid(resultBrush, accumulator._color, accumulator._isNegative);
-		}, this);
+			return new Solid(resultBrush, accumulator._color);
+		}, source);
 	}
 
-	public union(...others: Solid[]): Solid {
+	public static UNION(source: Solid, ...others: Solid[]): Solid {
 		return others.reduce((accumulator, solid) => {
 			const resultBrush = Solid.evaluator.evaluate(accumulator.brush, solid.brush, ADDITION);
-			return new Solid(resultBrush, accumulator._color, accumulator._isNegative);
-		}, this);
+			return new Solid(resultBrush, accumulator._color);
+		}, source);
 	}
 
-	public intersect(...others: Solid[]): Solid {
-		return others.reduce((accumulator, solid) => {
-			const resultBrush = Solid.evaluator.evaluate(accumulator.brush, solid.brush, INTERSECTION);
-			return new Solid(resultBrush, accumulator._color, accumulator._isNegative);
-		}, this);
+	public static INTERSECT(a: Solid, b: Solid): Solid {
+		return new Solid(Solid.evaluator.evaluate(a.brush, b.brush, INTERSECTION), a._color);
+	}
+
+	public static GRID_XYZ(
+		solid: Solid,
+		options: { cols: number; rows: number; levels: number; spacing?: [number, number, number] }
+	): Solid {
+		let result = solid.clone();
+		const { width, height, depth } = solid.getBounds();
+		const [spacingX, spacingY, spacingZ] = options.spacing ?? [0, 0, 0];
+
+		for (let x = 0; x < options.cols; x++)
+			for (let y = 0; y < options.rows; y++)
+				for (let z = 0; z < options.levels; z++)
+					result = Solid.UNION(result,
+						solid.clone().move({
+							x: x * (width + spacingX),
+							y: y * (height + spacingY),
+							z: z * (depth + spacingZ)
+						})
+					);
+
+		return result;
+	}
+
+	public static GRID_XY(
+		solid: Solid,
+		options: { cols: number; rows: number; spacing?: [number, number] }
+	): Solid {
+		return Solid.GRID_XYZ(solid, {
+			cols: options.cols,
+			rows: options.rows,
+			levels: 1,
+			spacing: options.spacing ? [options.spacing[0], options.spacing[1], 0] : undefined
+		});
+	}
+
+	public static GRID_X(solid: Solid, options: { cols: number; spacing?: number }): Solid {
+		return Solid.GRID_XYZ(solid, {
+			cols: options.cols,
+			rows: 1,
+			levels: 1,
+			spacing: options.spacing ? [options.spacing, 0, 0] : undefined
+		});
 	}
 
 	// Geometry normalization
 	private static emptyCube = new Solid(this.geometryToBrush(new BoxGeometry(0, 0, 0)), 'white');
 	public normalize(): Solid {
-		return this.union(Solid.emptyCube);
+		return Solid.UNION(this, Solid.emptyCube);
 	}
 
 	// Negative flag for composition
@@ -961,9 +1008,6 @@ export class Solid {
 	// Utility methods
 	public getVertices = (): Float32Array =>
 		new Float32Array(this.brush.geometry.attributes['position'].array);
-
-	// Helper to round to 2 decimal places
-	private roundTo2 = (n: number) => Math.round(n * 100) / 100;
 
 	public getBounds(): {
 		width: number;
@@ -986,14 +1030,14 @@ export class Solid {
 		worldBox.getCenter(center);
 
 		// Round all Vector3 components
-		min.set(this.roundTo2(min.x), this.roundTo2(min.y), this.roundTo2(min.z));
-		max.set(this.roundTo2(max.x), this.roundTo2(max.y), this.roundTo2(max.z));
-		center.set(this.roundTo2(center.x), this.roundTo2(center.y), this.roundTo2(center.z));
+		min.set(MathRoundTo2(min.x), MathRoundTo2(min.y), MathRoundTo2(min.z));
+		max.set(MathRoundTo2(max.x), MathRoundTo2(max.y), MathRoundTo2(max.z));
+		center.set(MathRoundTo2(center.x), MathRoundTo2(center.y), MathRoundTo2(center.z));
 
 		return {
-			width: this.roundTo2(max.x - min.x),
-			height: this.roundTo2(max.y - min.y),
-			depth: this.roundTo2(max.z - min.z),
+			width: MathRoundTo2(max.x - min.x),
+			height: MathRoundTo2(max.y - min.y),
+			depth: MathRoundTo2(max.z - min.z),
 			min,
 			max,
 			center

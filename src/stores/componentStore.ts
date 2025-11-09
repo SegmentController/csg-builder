@@ -1,12 +1,11 @@
-import type { Mesh } from '$lib/3d/Mesh';
 import type { Solid } from '$lib/3d/Solid';
 
 export type Component = {
 	name: string;
-	receiveData: () => Solid | Mesh;
+	receiveData: () => Solid | Solid[];
 };
 
-export type ComponentsMap = Record<string, () => Solid | Mesh>;
+export type ComponentsMap = Record<string, () => Solid | Solid[]>;
 
 // Plain array without Svelte runes (for CLI and non-Svelte usage)
 const components: Component[] = [];

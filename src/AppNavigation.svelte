@@ -3,8 +3,7 @@
 	import NavContainer from 'flowbite-svelte/NavContainer.svelte';
 	import { onMount } from 'svelte';
 
-	import { Mesh } from '$lib/3d/Mesh';
-	import type { Solid } from '$lib/3d/Solid';
+	import { Solid } from '$lib/3d/Solid';
 	import type { CameraState } from '$lib/urlState';
 	import { parseCameraFromURL, parseComponentFromURL, updateURLHash } from '$lib/urlState';
 	import { getComponentStoreValue } from '$stores/componentStore.svelte';
@@ -12,7 +11,7 @@
 	type Properties = {
 		wireframe: boolean;
 		saveCameraToUrl: boolean;
-		onselect?: (name: string, data: Solid | Mesh) => void;
+		onselect?: (name: string, data: Solid | Solid[]) => void;
 		ondownload?: () => void;
 		oncamerastate?: (state: CameraState | undefined) => void;
 	};
@@ -62,7 +61,7 @@
 			const startTime = Date.now();
 			const data = sel.receiveData();
 			// Handle both Solid and Mesh
-			const solid = data instanceof Mesh ? data.toSolid() : data;
+			const solid = Array.isArray(data) ? Solid.MERGE(data) : data;
 			faceCount = solid.getVertices().length / 9;
 			dimension = solid.getBounds();
 			generateTimeMs = Date.now() - startTime;

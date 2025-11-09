@@ -1,4 +1,3 @@
-import { Mesh } from '$lib/3d/Mesh';
 import { Solid } from '$lib/3d/Solid';
 import type { ComponentsMap } from '$stores/componentStore';
 
@@ -48,21 +47,20 @@ const brickItem = (): Solid => {
 		y: ROW_B_Y
 	});
 
-	result = result.union(a1, a2, b1, b2, b3);
+	result = Solid.UNION(result, a1, a2, b1, b2, b3);
 
 	return result;
 };
 
-export const brickWall = (cx: number, cy: number): Solid =>
-	Mesh.gridXY(brickItem(), { cols: cx, rows: cy }).toSolid();
+export const brickWall = (cx: number, cy: number): Solid => Solid.GRID_XY(brickItem(), { cols: cx, rows: cy });
 
-export const window = (width: number, height: number, depth: number): Mesh => {
+export const window = (width: number, height: number, depth: number): Solid[] => {
 	const frame = Solid.cube(width, height, depth, 'brown');
 	const BORDER = 2;
 
 	// Opening cuts the frame first (internal operation)
 	const opening = Solid.cube(width - BORDER * 2, height - BORDER * 2, depth * 4, 'gray');
-	const hollowFrame = frame.subtract(opening);
+	const hollowFrame = Solid.SUBTRACT(frame, opening);
 
 	// External negative hole that will cut through walls when window is placed
 	const externalHole = Solid.cube(
@@ -78,14 +76,14 @@ export const window = (width: number, height: number, depth: number): Mesh => {
 
 	// CRITICAL ORDER: hollow frame, negative hole, then bars
 	// This way bars are unioned AFTER the negative is processed
-	return new Mesh(hollowFrame, externalHole, verticalBar, horizontalBar);
+	return [hollowFrame, externalHole, verticalBar, horizontalBar];
 };
 
 export const brickWallWithWindow = (): Solid => {
 	const wall = brickWall(5, 7).center();
 
-	const win = window(10, 14, 3).center().center();
-	return Mesh.compose(wall, win).toSolid();
+	const win = window(10, 14, 3);
+	return Solid.MERGE([wall, ...win]);
 };
 
 export const components: ComponentsMap = {

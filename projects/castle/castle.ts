@@ -33,7 +33,8 @@ export const Castle = (): Solid => {
 	const cornerRL = corner.clone().move({ x: -50, z: -200 }).rotate({ y: 0 });
 	const cornerRR = corner.clone().move({ x: 50, z: -200 }).rotate({ y: -90 });
 
-	return wallF.union(
+	return Solid.UNION(
+		wallF,
 		cornerFL,
 		cornerFR,
 		wallL1,

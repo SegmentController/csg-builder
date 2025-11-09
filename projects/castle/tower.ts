@@ -20,13 +20,14 @@ export const Tower = (radius: number): Solid => {
 		.align('bottom')
 		.move({ y: WALL.HEIGHT + 0.5 })
 		.rotate({ y: 22.5 });
-	let result = tower.union(footer, top).subtract(topInner);
+	let result = Solid.UNION(tower, footer, top);
+	result = Solid.SUBTRACT(result, topInner);
 
 	const window = Solid.cube(radius * 4, WALL.WIDTH * 2, WALL.WIDTH)
 		.align('bottom')
 		.move({ y: WALL.HEIGHT * 1.5 - WALL.WIDTH * 2 });
 	for (let step = 0; step < 4; step++) {
-		result = result.subtract(window);
+		result = Solid.SUBTRACT(result, window);
 		window.rotate({ y: 45 });
 	}
 
@@ -36,9 +37,9 @@ export const Tower = (radius: number): Solid => {
 	const coneInner = Solid.cone(radius + 4, WALL.HEIGHT / 2 + 2, { segments: 8 })
 		.rotate({ y: 22.5 })
 		.align('bottom');
-	cone = cone.subtract(coneInner).move({ y: WALL.HEIGHT + WALL.HEIGHT / 2 });
+	cone = Solid.SUBTRACT(cone, coneInner).move({ y: WALL.HEIGHT + WALL.HEIGHT / 2 });
 
-	result = result.union(cone);
+	result = Solid.UNION(result, cone);
 
 	return result.align('bottom');
 };
@@ -49,13 +50,13 @@ export const CornerTower = (): Solid => {
 	const wall = Wall(20, { includeFootPath: true })
 		.align('left')
 		.move({ x: TOWER.CORNER_RADIUS - 2 });
-	tower = tower.subtract(wall);
+	tower = Solid.SUBTRACT(tower, wall);
 
 	const wall2 = Wall(20, { includeFootPath: true })
 		.align('right')
 		.rotate({ y: 90 })
 		.move({ z: TOWER.CORNER_RADIUS - 2 });
-	tower = tower.subtract(wall2);
+	tower = Solid.SUBTRACT(tower, wall2);
 
 	return tower;
 };
@@ -66,12 +67,12 @@ export const ConnectorTower = (): Solid => {
 	const wall = Wall(20, { includeFootPath: true })
 		.align('left')
 		.move({ x: TOWER.CONNECTOR_RADIUS - 2 });
-	tower = tower.subtract(wall);
+	tower = Solid.SUBTRACT(tower, wall);
 
 	const wall2 = Wall(20, { includeFootPath: true })
 		.align('right')
 		.move({ x: -TOWER.CONNECTOR_RADIUS + 2 });
-	tower = tower.subtract(wall2);
+	tower = Solid.SUBTRACT(tower, wall2);
 
 	return tower;
 };

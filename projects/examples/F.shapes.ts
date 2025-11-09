@@ -65,7 +65,7 @@ export const lProfileWithHoles = (): Solid => {
 	const hole1 = Solid.cylinder(1, 5, { color: 'gray' }).at(2, 7, 2);
 	const hole2 = Solid.cylinder(1, 5, { color: 'gray' }).at(7, 1.5, 2);
 
-	return lProfile.subtract(hole1).subtract(hole2);
+	return Solid.SUBTRACT(lProfile, hole1, hole2);
 };
 
 export const raceTrack = (): Solid => {

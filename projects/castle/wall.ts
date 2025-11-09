@@ -14,13 +14,13 @@ const WallHeader = (length: number) => {
 		z: WALL.WIDTH * 1.75
 	});
 	for (let index = 0; index < length / WALL.ZIGZAG_LENGTH / 2; index++) {
-		header = header.subtract(zigzagNeg);
+		header = Solid.SUBTRACT(header, zigzagNeg);
 		zigzagNeg.move({ x: WALL.ZIGZAG_LENGTH * 2 });
 	}
 	const decor1 = Solid.cylinder(0.5, length)
 		.rotate({ z: 90 })
 		.move({ x: 0, y: WALL.HEIGHT / 2 + WALL.WIDTH / 2, z: WALL.WIDTH * 2.1 });
-	header = header.subtract(decor1);
+	header = Solid.SUBTRACT(header, decor1);
 
 	return header;
 };
@@ -37,12 +37,12 @@ export const Wall = (length: number, config?: { includeFootPath?: boolean }): So
 	const headerSide1 = WallHeader(length);
 	const headerSide2 = headerSide1.clone().rotate({ y: 180 });
 
-	let result = wall.union(header, footer, headerSide1, headerSide2);
+	let result = Solid.UNION(wall, header, footer, headerSide1, headerSide2);
 	if (config?.includeFootPath) {
 		const footPath = Solid.cube(length, WALL.WIDTH * 2, WALL.WIDTH * 4)
 			.align('bottom')
 			.move({ y: WALL.HEIGHT / 2 });
-		result = result.union(footPath);
+		result = Solid.UNION(result, footPath);
 	}
 
 	return result.align('bottom');
@@ -59,11 +59,11 @@ export const WallWithGate = (length: number): Solid => {
 	const circleInner = Solid.cylinder(WALL.GATE_WIDTH / 2, WALL.WIDTH * 4)
 		.move({ y: WALL.HEIGHT - WALL.GATE_WIDTH / 2 })
 		.rotate({ z: 90, y: 90 });
-	cubeInner = cubeInner.union(circleInner);
+	cubeInner = Solid.UNION(cubeInner, circleInner);
 
-	wall = wall.union(cubeInner);
-	cubeInner.scale({ x: 0.8, y: 0.95, z: 1.5 });
-	wall = wall.subtract(cubeInner);
+	wall = Solid.UNION(wall, cubeInner);
+	cubeInner.scale({ x: 0.8, y: 0.95, z: 2 });
+	wall = Solid.SUBTRACT(wall, cubeInner);
 
 	return wall;
 };
