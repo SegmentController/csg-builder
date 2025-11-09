@@ -69,6 +69,6 @@ export const WallWithGate = (length: number): Solid => {
 };
 
 export const components: ComponentsMap = {
-	Wall100: () => Wall(100),
-	WallWithGate100: () => WallWithGate(100)
+	'X. Example: Wall 100': () => Wall(100),
+	'X. Example: Wall with gate 100': () => WallWithGate(100)
 };

@@ -13,7 +13,8 @@ CSG Builder allows you to create 3D meshes using TypeScript code with a React-li
 - **Custom Profile Prisms** - Extrude 2D profiles into 3D shapes using points, paths, or Shape API
 - **Body of Revolution** - Create rotationally symmetric objects (chess pieces, vases, bottles) by rotating profiles
 - **Partial Geometries** - Create pie slices, hemispheres, and wedges with CSG-based angle cutting
-- **CSG Operations** - Union and subtraction for complex geometries
+- **Static CSG Operations** - Immutable SUBTRACT, UNION, INTERSECT, and MERGE operations for complex geometries
+- **Grid Arrays** - Create 1D, 2D, and 3D arrays with static GRID_X, GRID_XY, GRID_XYZ methods
 - **Transformations** - Translate, rotate, and scale objects with chainable methods
 - **Real-Time Preview** - Interactive 3D viewport with orbit controls
 - **STL Export** - Export models in binary STL format for 3D printing
@@ -59,7 +60,7 @@ The application will be available at `http://localhost:5173`
 ### Quick Start
 
 1. Create a new file in `projects/[your-project]/` directory
-2. Define your 3D component using the Body and BodySet classes
+2. Define your 3D component using the Solid class
 3. Export a components map
 4. Register your components in the project index
 5. View and export your model in the browser
@@ -83,7 +84,6 @@ export const components: ComponentsMap = {
 
 ```typescript
 import { Solid } from '$lib/3d/Solid';
-import { Mesh } from '$lib/3d/Mesh';
 import type { ComponentsMap } from '$stores/componentStore';
 
 export const hollowBox = (): Solid => {
@@ -93,19 +93,19 @@ export const hollowBox = (): Solid => {
 	// Create inner box and subtract it
 	const inner = Solid.cube(16, 16, 16, 'red');
 
-	// Explicit CSG subtraction
-	return outer.subtract(inner);
+	// Static CSG subtraction (immutable)
+	return Solid.SUBTRACT(outer, inner);
 };
 
 export const boxWithHoles = (): Solid => {
 	const box = Solid.cube(20, 20, 20, 'blue');
 
-	// Create holes using explicit subtract
+	// Create holes using static SUBTRACT
 	const holeX = Solid.cylinder(3, 25, { color: 'blue' }).rotate({ z: 90 });
 	const holeY = Solid.cylinder(3, 25, { color: 'blue' });
 	const holeZ = Solid.cylinder(3, 25, { color: 'blue' }).rotate({ x: 90 });
 
-	return box.subtract(holeX).subtract(holeY).subtract(holeZ);
+	return Solid.SUBTRACT(box, holeX, holeY, holeZ);
 };
 
 export const components: ComponentsMap = {
@@ -118,16 +118,16 @@ export const components: ComponentsMap = {
 
 ```typescript
 // Window that can be placed in any wall and will cut through it
-export const window = (width: number, height: number, depth: number): Mesh => {
+export const window = (width: number, height: number, depth: number): Solid => {
 	const frame = Solid.cube(width, height, depth, 'brown');
 
-	// Mark opening as negative - it will be subtracted during merge
+	// Mark opening as negative - it will be subtracted during MERGE
 	const opening = Solid.cube(width - 4, height - 4, depth * 4, 'gray').setNegative();
 
 	const bar = Solid.cube(2, height, depth - 1, 'brown').move({ z: -0.5 });
 
-	// First solid (frame) is positive, opening will be subtracted, then bar added
-	return new Mesh(frame, opening, bar);
+	// MERGE respects negative flags: frame + opening (subtracted) + bar
+	return Solid.MERGE([frame, opening, bar]);
 };
 
 // Usage in wall
@@ -135,8 +135,8 @@ export const wallWithWindow = (): Solid => {
 	const wall = Solid.cube(20, 20, 1, 'gray');
 	const win = window(5, 8, 3).move({ x: 10, y: 5 }); // Use move for relative positioning
 
-	// Window's negative opening is processed when merged
-	return Mesh.compose(wall, win).toSolid();
+	// Window's negative opening is already processed in MERGE
+	return Solid.UNION(wall, win);
 };
 ```
 
@@ -144,27 +144,26 @@ export const wallWithWindow = (): Solid => {
 
 ```typescript
 import { Solid } from '$lib/3d/Solid';
-import { Mesh } from '$lib/3d/Mesh';
 
 // Sphere - perfect for rounded features
 export const roundedCorner = (): Solid => {
 	const cube = Solid.cube(20, 20, 20, 'red');
 	const corner = Solid.sphere(3, { color: 'red' }).move({ x: 10, y: 10, z: 10 });
-	return cube.subtract(corner); // Rounded corner via subtraction
+	return Solid.SUBTRACT(cube, corner); // Rounded corner via subtraction
 };
 
 // Cone - great for tapers and chamfers
 export const chamferedEdge = (): Solid => {
 	const block = Solid.cube(15, 15, 15, 'blue');
 	const chamfer = Solid.cone(4, 8, { color: 'blue' }).rotate({ x: 90 }).move({ z: 7.5 });
-	return block.subtract(chamfer);
+	return Solid.SUBTRACT(block, chamfer);
 };
 
 // Prism - N-sided shapes (hexagon, octagon, etc.)
 export const hexNut = (): Solid => {
 	const outer = Solid.prism(6, 10, 5, { color: 'gray' }); // 6 sides = hexagon
 	const hole = Solid.cylinder(4, 6, { color: 'gray' });
-	return outer.subtract(hole).center();
+	return Solid.SUBTRACT(outer, hole).center();
 };
 
 // Triangle Prism - 3-sided prism
@@ -178,7 +177,7 @@ export const shapesComposition = (): Solid => {
 	const sphere = Solid.sphere(8, { color: 'teal' }).move({ y: 10 });
 	const cone = Solid.cone(5, 10, { color: 'teal' }).move({ y: 18 });
 
-	return Mesh.union(base, sphere, cone).toSolid().center({ x: true, z: true });
+	return Solid.UNION(base, sphere, cone).center({ x: true, z: true });
 };
 
 // Partial geometries - closed, manifold shapes via CSG cutting
@@ -214,7 +213,7 @@ export const partialGear = (): Solid => {
 	});
 	const hole = Solid.cylinder(5, 5, { color: 'silver' });
 
-	return outer.subtract(hole).align('bottom');
+	return Solid.SUBTRACT(outer, hole).align('bottom');
 };
 
 export const pieChart = (): Solid => {
@@ -223,7 +222,7 @@ export const pieChart = (): Solid => {
 	const slice2 = Solid.cylinder(10, 2, { color: 'blue', angle: 90 }).rotate({ y: 90 });
 	const slice3 = Solid.cylinder(10, 2, { color: 'green', angle: 90 }).rotate({ y: 180 });
 
-	return Mesh.union(slice1, slice2, slice3).toSolid().align('bottom');
+	return Solid.UNION(slice1, slice2, slice3).align('bottom');
 };
 ```
 
@@ -546,16 +545,34 @@ For convenience when creating partial geometries, predefined angle constants are
   - Example: `scale({ all: 1.5, y: 2 })` - Scale all by 1.5, then Y by additional 2x (total 3x on Y)
   - Cumulative: chaining multiplies values
 
-**CSG Methods (return new Solid):**
+**Static CSG Methods (all immutable - return new Solid):**
 
-- `subtract(other)` - Boolean subtraction
-- `union(other)` - Boolean union
-- `intersect(other)` - Boolean intersection
+- `Solid.SUBTRACT(source, ...others)` - Boolean subtraction (removes all others from source)
+- `Solid.UNION(source, ...others)` - Boolean union (combines all solids)
+- `Solid.INTERSECT(a, b)` - Boolean intersection (keeps only overlapping volume)
+- `Solid.MERGE(solids[])` - Merge array of solids, respecting negative flags
 
-**Composition Methods:**
+**Static Grid Methods (all immutable - return new Solid):**
 
-- `setNegative(negative?)` - Mark solid as negative (for Mesh composition)
+- `Solid.GRID_X(solid, { cols, spacing? })` - Create 1D array along X-axis
+- `Solid.GRID_XY(solid, { cols, rows, spacing? })` - Create 2D grid on XY plane
+- `Solid.GRID_XYZ(solid, { cols, rows, levels, spacing? })` - Create 3D grid in XYZ space
+
+Grid spacing parameters:
+
+- `GRID_X`: `spacing` is a single number (gap between columns)
+- `GRID_XY`: `spacing` is `[gapX, gapY]` tuple
+- `GRID_XYZ`: `spacing` is `[gapX, gapY, gapZ]` tuple
+- If omitted, solids will be placed touching (no gaps)
+
+**Negative Flags (for MERGE):**
+
+- `setNegative(negative?)` - Mark solid as negative (for use with MERGE)
 - `isNegative` - Getter to check if solid is marked negative
+- When using `MERGE`, solids are processed in **array order**
+- First solid cannot be negative (base geometry)
+- Each subsequent solid is added (positive) or subtracted (negative)
+- Example: `Solid.MERGE([base, positive1, negative1, positive2])` → `((base + positive1) - negative1) + positive2`
 
 **Alignment Methods (chainable):**
 
@@ -569,46 +586,6 @@ For convenience when creating partial geometries, predefined angle constants are
 - `clone()` - Create a copy
 - `getVertices()` - Get vertex array for rendering/export
 
-#### Mesh Class
-
-**Static Constructors:**
-
-- `Mesh.union(...solids)` - Create mesh with union operation
-- `Mesh.difference(base, ...subtract)` - Create mesh with subtraction
-- `Mesh.intersection(...solids)` - Create mesh with intersection
-- `Mesh.compose(...items)` - Compose solids/meshes (respects negative flags)
-
-**Grid Methods:**
-
-- `Mesh.gridX(solid, { cols, spacing? })` - Create 1D array along X-axis
-- `Mesh.gridXY(solid, { cols, rows, spacing? })` - Create 2D grid on XY plane
-- `Mesh.gridXYZ(solid, { cols, rows, levels, spacing? })` - Create 3D grid in XYZ space
-
-Grid spacing parameters:
-
-- `gridX`: `spacing` is a single number (gap between columns)
-- `gridXY`: `spacing` is `[gapX, gapY]` tuple
-- `gridXYZ`: `spacing` is `[gapX, gapY, gapZ]` tuple
-- If omitted, solids will be placed touching (no gaps)
-
-**Instance Methods:**
-
-- `append(...solids)` - Add solids without merging
-- `merge(...solids)` - Add and perform CSG merge (respects negative solids)
-- `toSolid()` - Convert to single merged Solid
-- `getSolids()` - Get array of all solids in mesh
-
-**Transformation Methods (applied to all solids in the mesh):**
-
-- `at(x, y, z)` - Set absolute position for all solids
-- `move({ x?, y?, z? })` - Move relative with optional axis parameters
-- `rotate({ x?, y?, z? })` - Rotate with optional axis parameters
-- `center(axes?)` - Center the entire mesh on all axes or specific axes
-- `align(direction)` - Align mesh edge to origin
-- `getBounds()` - Get combined bounding box of all solids
-
-**Note on Negative Solids:** When a Mesh is merged, solids are processed in **declaration order**. The first solid cannot be negative (base geometry). Each subsequent solid is either added (positive) or subtracted (negative) from the accumulated result. Example: `new Mesh(base, positive1, negative1, positive2)` processes as `((base + positive1) - negative1) + positive2`.
-
 ### Project Structure
 
 ```
@@ -618,8 +595,7 @@ csg-builder/
 ├── src/
 │   ├── lib/
 │   │   ├── 3d/
-│   │   │   ├── Solid.ts         # Core 3D primitive class
-│   │   │   ├── Mesh.ts          # Solid collection manager
+│   │   │   ├── Solid.ts         # Core 3D class with primitives, CSG ops, and grids
 │   │   │   └── stl.ts           # STL export functionality
 │   │   ├── Math.ts              # Math utilities
 │   │   ├── buffer.ts            # Buffer utilities
@@ -738,22 +714,23 @@ npm run export --silent -- "Brick Wall" > wall.stl
 1. **Keep Components Pure** - Component functions should return new instances
 2. **Use Descriptive Names** - Component names appear in the UI dropdown
 3. **Chain Transformations** - Methods return `this` for fluent API usage
-4. **Explicit CSG Operations** - Use `subtract()`, `union()`, `intersect()` methods
-5. **Return Solid or Mesh** - Components can return either type (renderer extracts vertices)
+4. **Static CSG Operations** - Use `Solid.SUBTRACT()`, `Solid.UNION()`, `Solid.INTERSECT()`, `Solid.MERGE()` (all immutable)
+5. **Return Solid** - Components must return `Solid` type (renderer extracts vertices)
 6. **Use Parameters** - Make components flexible with function parameters
 7. **Test Incrementally** - Build complex models step by step
 8. **Absolute vs Relative Positioning**:
    - `at(x, y, z)` - Absolute position (requires all 3 params, don't chain)
    - `move({ x?, y?, z? })` - Relative movement (optional params, accumulates when chained)
 9. **Optional Properties** - Only specify axes you want to transform: `.move({ z: -0.5 })`
-10. **First Solid Must Be Positive** - In `new Mesh()`, the first solid cannot have `.setNegative()`
-11. **Use Path Aliases** - Always import with `$lib/`, `$stores/`, etc. (never relative paths)
-12. **Profile Prism Imports** - Import path factories: `import { Solid, straight, curve } from '$lib/3d/Solid'`
-13. **Profile Method Selection**:
+10. **First Solid Must Be Positive** - In `Solid.MERGE([...])`, the first solid cannot have `.setNegative()`
+11. **CSG Immutability** - All static CSG methods return new Solid instances without modifying originals
+12. **Use Path Aliases** - Always import with `$lib/`, `$stores/`, etc. (never relative paths)
+13. **Profile Prism Imports** - Import path factories: `import { Solid, straight, curve } from '$lib/3d/Solid'`
+14. **Profile Method Selection**:
     - Use `profilePrism()` for complex curves (beziers, arcs) with full Shape API
     - Use `profilePrismFromPoints()` for simple polygonal profiles from coordinates
     - Use `profilePrismFromPath()` for smooth curves and controlled turns with straights/curves
-14. **Revolution Method Selection**:
+15. **Revolution Method Selection**:
     - Use `revolutionSolid()` for complex profiles with curves using full Shape API
     - Use `revolutionSolidFromPoints()` for simple profiles from coordinate pairs (easiest)
     - Use `revolutionSolidFromPath()` for smooth curves and sharp corners with path segments
@@ -787,19 +764,19 @@ Check out the `projects/sample/` directory for working examples:
 - Verify component name in `ComponentsMap` is unique
 - Restart dev server
 
-**Problem:** Mesh appears black or invisible
+**Problem:** Solid appears black or invisible
 
 - Verify color is a valid CSS color string
-- Ensure component returns `Solid` or `Mesh` (call `toSolid()` on `Mesh` if needed)
+- Ensure component returns `Solid` (not other types)
 - Check geometry isn't degenerate (zero volume)
 - Check browser console for geometry errors
 
-**Problem:** "First solid in Mesh cannot be negative" error
+**Problem:** "First solid in MERGE cannot be negative" error
 
-- The first solid in `new Mesh(...)` cannot have `.setNegative()` applied
+- The first solid in array passed to `Solid.MERGE([...])` cannot have `.setNegative()` applied
 - Fix: Ensure first solid is always positive (base geometry)
-- Wrong: `new Mesh(hole.setNegative(), box)` ❌
-- Correct: `new Mesh(box, hole.setNegative())` ✅
+- Wrong: `Solid.MERGE([hole.setNegative(), box])` ❌
+- Correct: `Solid.MERGE([box, hole.setNegative()])` ✅
 
 **Problem:** CSG operation is slow
 
@@ -816,9 +793,9 @@ Check out the `projects/sample/` directory for working examples:
 
 **Problem:** STL export fails
 
-- Ensure component returns valid merged geometry
+- Ensure component returns valid Solid geometry
 - Check browser console for errors
-- Verify final mesh has vertices
+- Verify final Solid has vertices
 
 ## Browser Support
 

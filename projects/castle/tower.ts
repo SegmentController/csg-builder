@@ -78,6 +78,6 @@ export const ConnectorTower = (): Solid => {
 };
 
 export const components: ComponentsMap = {
-	CornerTower10: () => CornerTower(),
-	ConnectorTower10: () => ConnectorTower()
+	'X. Example: Corner Tower 10': () => CornerTower(),
+	'X. Example: Connector Tower 10': () => ConnectorTower()
 };

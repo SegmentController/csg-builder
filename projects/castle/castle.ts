@@ -50,5 +50,5 @@ export const Castle = (): Solid => {
 };
 
 export const components: ComponentsMap = {
-	Castle: () => Castle()
+	'X. Example: Whole Castle': () => Castle()
 };

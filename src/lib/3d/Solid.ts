@@ -921,7 +921,11 @@ export class Solid {
 	// Explicit CSG operations
 	public static MERGE(solids: Solid[]): Solid {
 		return solids.reduce((accumulator, solid) => {
-			const resultBrush = Solid.evaluator.evaluate(accumulator.brush, solid.brush, solid.isNegative ? SUBTRACTION : ADDITION);
+			const resultBrush = Solid.evaluator.evaluate(
+				accumulator.brush,
+				solid.brush,
+				solid.isNegative ? SUBTRACTION : ADDITION
+			);
 			return new Solid(resultBrush, accumulator._color);
 		}, Solid.emptyCube);
 	}
@@ -955,7 +959,8 @@ export class Solid {
 		for (let x = 0; x < options.cols; x++)
 			for (let y = 0; y < options.rows; y++)
 				for (let z = 0; z < options.levels; z++)
-					result = Solid.UNION(result,
+					result = Solid.UNION(
+						result,
 						solid.clone().move({
 							x: x * (width + spacingX),
 							y: y * (height + spacingY),

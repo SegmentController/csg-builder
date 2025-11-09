@@ -52,7 +52,8 @@ const brickItem = (): Solid => {
 	return result;
 };
 
-export const brickWall = (cx: number, cy: number): Solid => Solid.GRID_XY(brickItem(), { cols: cx, rows: cy });
+export const brickWall = (cx: number, cy: number): Solid =>
+	Solid.GRID_XY(brickItem(), { cols: cx, rows: cy });
 
 export const window = (width: number, height: number, depth: number): Solid[] => {
 	const frame = Solid.cube(width, height, depth, 'brown');
