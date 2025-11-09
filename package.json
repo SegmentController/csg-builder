@@ -53,7 +53,6 @@
 	"dependencies": {
 		"@threlte/core": "^8.2.1",
 		"@threlte/extras": "^9.6.1",
-		"ieee754": "^1.2.1",
 		"three": "^0.181.0",
 		"three-bvh-csg": "^0.0.17"
 	}
