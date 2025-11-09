@@ -1,0 +1,11 @@
+export const WALL = {
+	HEIGHT: 20,
+	WIDTH: 2,
+	ZIGZAG_LENGTH: 5,
+	GATE_WIDTH: 14
+};
+
+export const TOWER = {
+	CORNER_RADIUS: 8,
+	CONNECTOR_RADIUS: 6
+};

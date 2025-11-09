@@ -26,7 +26,7 @@ export const quarterVase = (): Solid => {
 			curve(2, 45), // Curve outward for rim
 			straight(4) // Rim width
 		],
-		{ angle: Solid.DEG_90, color: 'purple' }
+		{ angle: 90, color: 'purple' }
 	);
 };
 

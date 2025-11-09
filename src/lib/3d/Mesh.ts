@@ -1,5 +1,4 @@
 import { Vector3 } from 'three';
-import { ADDITION, SUBTRACTION } from 'three-bvh-csg';
 
 import { Solid } from './Solid';
 
@@ -44,21 +43,16 @@ export class Mesh {
 		if (solid.length > 0) this.append(...solid);
 		if (this.solids.length > 1) {
 			// Process solids in declaration order
-			let brush = this.solids[0].brush;
-			const color = this.solids[0].color;
-
-			if (this.solids[0].isNegative) {
-				throw new Error('First solid in Mesh cannot be negative');
-			}
+			let solid = this.solids[0];
+			if (solid.isNegative) throw new Error('First solid in Mesh cannot be negative');
 
 			// Process each solid in order
-			for (let c = 1; c < this.solids.length; c++) {
-				const currentSolid = this.solids[c];
-				const operation = currentSolid.isNegative ? SUBTRACTION : ADDITION;
-				brush = Solid.evaluator.evaluate(brush, currentSolid.brush, operation);
-			}
+			for (let c = 1; c < this.solids.length; c++)
+				solid = this.solids[c].isNegative
+					? solid.subtract(this.solids[c])
+					: solid.union(this.solids[c]);
 
-			this.solids = [new Solid(brush, color, false)];
+			this.solids = [solid];
 		}
 		return this;
 	}

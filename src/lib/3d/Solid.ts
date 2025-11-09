@@ -42,14 +42,7 @@ export const curve = (radius: number, angle: number): CurveSegment => ({
 });
 
 export class Solid {
-	public static evaluator: Evaluator = new Evaluator();
-
-	// Angle constants in degrees
-	public static readonly DEG_45 = 45;
-	public static readonly DEG_90 = 90;
-	public static readonly DEG_180 = 180;
-	public static readonly DEG_270 = 270;
-	public static readonly DEG_360 = 360;
+	private static evaluator: Evaluator = new Evaluator();
 
 	// Helper to convert degrees to radians
 	private static degreesToRadians = (degrees: number): number => degrees * (Math.PI / 180);
@@ -181,7 +174,8 @@ export class Solid {
 		radius: number,
 		options?: {
 			color?: string;
-			angle?: number; // degrees
+			angle?: number;
+			segments?: number;
 		}
 	): Solid => {
 		const color = options?.color ?? 'gray';
@@ -190,7 +184,11 @@ export class Solid {
 		// Create full 360° sphere
 		const fullSphere = new Solid(
 			this.geometryToBrush(
-				new SphereGeometry(radius, MathMinMax(radius * 8, 16, 48), MathMinMax(radius * 8, 16, 48))
+				new SphereGeometry(
+					radius,
+					options?.segments ?? MathMinMax(radius * 8, 16, 48),
+					options?.segments ?? MathMinMax(radius * 8, 16, 48)
+				)
 			),
 			color
 		).normalize();
@@ -216,7 +214,8 @@ export class Solid {
 		height: number,
 		options?: {
 			color?: string;
-			angle?: number; // degrees
+			angle?: number;
+			segments?: number;
 		}
 	): Solid => {
 		const color = options?.color ?? 'gray';
@@ -228,7 +227,7 @@ export class Solid {
 				new ConeGeometry(
 					radius,
 					height,
-					MathMinMax(radius * 8, 16, 48),
+					options?.segments ?? MathMinMax(radius * 8, 16, 48),
 					1, // heightSegments
 					false // openEnded
 				)
@@ -942,14 +941,15 @@ export class Solid {
 	}
 
 	// Geometry normalization
-	static emptyCube = new Solid(this.geometryToBrush(new BoxGeometry(0, 0, 0)), 'white');
+	private static emptyCube = new Solid(this.geometryToBrush(new BoxGeometry(0, 0, 0)), 'white');
 	public normalize(): Solid {
 		return this.union(Solid.emptyCube);
 	}
 
 	// Negative flag for composition
 	public setNegative(negative: boolean = true): Solid {
-		return new Solid(this.brush.clone(true), this._color, negative);
+		this._isNegative = negative;
+		return this;
 	}
 
 	// Material methods
