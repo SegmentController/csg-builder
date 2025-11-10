@@ -18,7 +18,13 @@ CSG Builder allows you to create 3D meshes using TypeScript code with a React-li
 - **Transformations** - Translate, rotate, and scale objects with chainable methods
 - **Real-Time Preview** - Interactive 3D viewport with orbit controls
 - **STL Export** - Export models in binary STL format for 3D printing
-- **Hot Reload** - Instant updates during development
+- **Hot Reload** - Instant updates during development with simple browser refresh (Ctrl+R)
+- **Full Examples** - See how to use all features in the included examples by running the app and exploring the dropdown
+
+![Whole castle](./STLs/X. Example* Whole Castle.stl)
+[Brick Wall with Window](./STLs/E. Wall* Brick Wall with Window.stl)
+[L Profile With Holes](./STLs/F. Shapes* L Profile With Holes.stl)
+[Connector Tower 10](./STLs/X. Example* Connector Tower 10.stl)
 
 ## Tech Stack
 
@@ -449,7 +455,7 @@ export const halfBottle = (): Solid => {
 - **X-axis** = Radius from center (distance from Y-axis)
 - **Y-axis** = Height (vertical position)
 - Profile is rotated around the Y-axis
-- Start at origin (0, 0) or close to Y-axis for proper revolution
+- Start at origin (0, 0) or close to the Y-axis for proper revolution
 - Points with X=0 will be at the center axis
 
 **Common Use Cases:**
@@ -833,8 +839,8 @@ npm run export --silent -- "Brick Wall" > wall.stl
 6. **Use Parameters** - Make components flexible with function parameters
 7. **Test Incrementally** - Build complex models step by step
 8. **Absolute vs Relative Positioning**:
-   - `at(x, y, z)` - Absolute position (requires all 3 params, don't chain)
-   - `move({ x?, y?, z? })` - Relative movement (optional params, accumulates when chained)
+   - `at(x, y, z)` - Absolute position (requires all 3 parameters, don't chain)
+   - `move({ x?, y?, z? })` - Relative movement (optional parameters, accumulates when chained)
 9. **Optional Properties** - Only specify axes you want to transform: `.move({ z: -0.5 })`
 10. **First Solid Must Be Positive** - In `Solid.MERGE([...])`, the first solid cannot have `.setNegative()`
 11. **CSG Immutability** - All static CSG methods return new Solid instances without modifying originals
@@ -853,8 +859,8 @@ npm run export --silent -- "Brick Wall" > wall.stl
 16. **Performance Optimization with Caching**:
     - Use `cacheFunction()` or `cacheInlineFunction()` to cache expensive component computations
     - Perfect for reusable parametric components (walls, towers, decorative elements)
-    - Cache persists for the entire session - same parameters return cached result instantly
-    - See "Performance Optimization" section for detailed usage guide
+    - Cache persists for the entire session - the same parameters return the cached result instantly
+    - See the "Performance Optimization" section for a detailed usage guide
     - Don't cache simple/fast operations or one-time components
 
 ## Examples
@@ -912,9 +918,9 @@ Check out the `projects/castle/` directory for advanced caching examples:
 
 **Problem:** Positioning not working as expected
 
-- `at(x, y, z)` requires all 3 parameters and sets absolute position
+- `at(x, y, z)` requires all 3 parameters and sets the absolute position
 - `move({ x?, y?, z? })` uses optional parameters for relative movement
-- Don't chain `.at()` calls - only the last one takes effect
+- Don't chain `.at()` calls - only the last one will take effect
 - `.move()` calls accumulate when chained
 
 **Problem:** STL export fails
