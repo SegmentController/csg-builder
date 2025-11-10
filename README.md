@@ -13,11 +13,25 @@ CSG Builder allows you to create 3D meshes using TypeScript code with a React-li
 - **Custom Profile Prisms** - Extrude 2D profiles into 3D shapes using points, paths, or Shape API
 - **Body of Revolution** - Create rotationally symmetric objects (chess pieces, vases, bottles) by rotating profiles
 - **Partial Geometries** - Create pie slices, hemispheres, and wedges with CSG-based angle cutting
-- **CSG Operations** - Union and subtraction for complex geometries
+- **Static CSG Operations** - Immutable SUBTRACT, UNION, INTERSECT, and MERGE operations for complex geometries
+- **Grid Arrays** - Create 1D, 2D, and 3D arrays with static GRID_X, GRID_XY, GRID_XYZ methods
 - **Transformations** - Translate, rotate, and scale objects with chainable methods
 - **Real-Time Preview** - Interactive 3D viewport with orbit controls
 - **STL Export** - Export models in binary STL format for 3D printing
-- **Hot Reload** - Instant updates during development
+- **Hot Reload** - Instant updates during development with simple browser refresh (Ctrl+R)
+- **Full Examples** - See how to use all features in the included examples by running the app and exploring the dropdown
+
+## Examples STLs
+
+[Whole castle](./STLs/Castle.stl)
+
+[Brick Wall with Window](./STLs/BrickWallwithWindow.stl)
+
+[L Profile With Holes](./STLs/LProfileWithHoles.stl)
+
+[Connector Tower 10](./STLs/ConnectorTower10.stl)
+
+![Castle](./STLs/castle.png)
 
 ## Tech Stack
 
@@ -59,7 +73,7 @@ The application will be available at `http://localhost:5173`
 ### Quick Start
 
 1. Create a new file in `projects/[your-project]/` directory
-2. Define your 3D component using the Body and BodySet classes
+2. Define your 3D component using the Solid class
 3. Export a components map
 4. Register your components in the project index
 5. View and export your model in the browser
@@ -68,7 +82,7 @@ The application will be available at `http://localhost:5173`
 
 ```typescript
 import { Solid } from '$lib/3d/Solid';
-import type { ComponentsMap } from '$stores/componentStore.svelte';
+import type { ComponentsMap } from '$stores/componentStore';
 
 export const simpleBox = (): Solid => {
 	return Solid.cube(10, 10, 10, 'blue');
@@ -83,8 +97,7 @@ export const components: ComponentsMap = {
 
 ```typescript
 import { Solid } from '$lib/3d/Solid';
-import { Mesh } from '$lib/3d/Mesh';
-import type { ComponentsMap } from '$stores/componentStore.svelte';
+import type { ComponentsMap } from '$stores/componentStore';
 
 export const hollowBox = (): Solid => {
 	// Create outer box
@@ -93,19 +106,19 @@ export const hollowBox = (): Solid => {
 	// Create inner box and subtract it
 	const inner = Solid.cube(16, 16, 16, 'red');
 
-	// Explicit CSG subtraction
-	return outer.subtract(inner);
+	// Static CSG subtraction (immutable)
+	return Solid.SUBTRACT(outer, inner);
 };
 
 export const boxWithHoles = (): Solid => {
 	const box = Solid.cube(20, 20, 20, 'blue');
 
-	// Create holes using explicit subtract
+	// Create holes using static SUBTRACT
 	const holeX = Solid.cylinder(3, 25, { color: 'blue' }).rotate({ z: 90 });
 	const holeY = Solid.cylinder(3, 25, { color: 'blue' });
 	const holeZ = Solid.cylinder(3, 25, { color: 'blue' }).rotate({ x: 90 });
 
-	return box.subtract(holeX).subtract(holeY).subtract(holeZ);
+	return Solid.SUBTRACT(box, holeX, holeY, holeZ);
 };
 
 export const components: ComponentsMap = {
@@ -118,16 +131,16 @@ export const components: ComponentsMap = {
 
 ```typescript
 // Window that can be placed in any wall and will cut through it
-export const window = (width: number, height: number, depth: number): Mesh => {
+export const window = (width: number, height: number, depth: number): Solid => {
 	const frame = Solid.cube(width, height, depth, 'brown');
 
-	// Mark opening as negative - it will be subtracted during merge
+	// Mark opening as negative - it will be subtracted during MERGE
 	const opening = Solid.cube(width - 4, height - 4, depth * 4, 'gray').setNegative();
 
 	const bar = Solid.cube(2, height, depth - 1, 'brown').move({ z: -0.5 });
 
-	// First solid (frame) is positive, opening will be subtracted, then bar added
-	return new Mesh(frame, opening, bar);
+	// MERGE respects negative flags: frame + opening (subtracted) + bar
+	return Solid.MERGE([frame, opening, bar]);
 };
 
 // Usage in wall
@@ -135,8 +148,8 @@ export const wallWithWindow = (): Solid => {
 	const wall = Solid.cube(20, 20, 1, 'gray');
 	const win = window(5, 8, 3).move({ x: 10, y: 5 }); // Use move for relative positioning
 
-	// Window's negative opening is processed when merged
-	return Mesh.compose(wall, win).toSolid();
+	// Window's negative opening is already processed in MERGE
+	return Solid.UNION(wall, win);
 };
 ```
 
@@ -144,27 +157,26 @@ export const wallWithWindow = (): Solid => {
 
 ```typescript
 import { Solid } from '$lib/3d/Solid';
-import { Mesh } from '$lib/3d/Mesh';
 
 // Sphere - perfect for rounded features
 export const roundedCorner = (): Solid => {
 	const cube = Solid.cube(20, 20, 20, 'red');
 	const corner = Solid.sphere(3, { color: 'red' }).move({ x: 10, y: 10, z: 10 });
-	return cube.subtract(corner); // Rounded corner via subtraction
+	return Solid.SUBTRACT(cube, corner); // Rounded corner via subtraction
 };
 
 // Cone - great for tapers and chamfers
 export const chamferedEdge = (): Solid => {
 	const block = Solid.cube(15, 15, 15, 'blue');
 	const chamfer = Solid.cone(4, 8, { color: 'blue' }).rotate({ x: 90 }).move({ z: 7.5 });
-	return block.subtract(chamfer);
+	return Solid.SUBTRACT(block, chamfer);
 };
 
 // Prism - N-sided shapes (hexagon, octagon, etc.)
 export const hexNut = (): Solid => {
 	const outer = Solid.prism(6, 10, 5, { color: 'gray' }); // 6 sides = hexagon
 	const hole = Solid.cylinder(4, 6, { color: 'gray' });
-	return outer.subtract(hole).center();
+	return Solid.SUBTRACT(outer, hole).center();
 };
 
 // Triangle Prism - 3-sided prism
@@ -178,7 +190,7 @@ export const shapesComposition = (): Solid => {
 	const sphere = Solid.sphere(8, { color: 'teal' }).move({ y: 10 });
 	const cone = Solid.cone(5, 10, { color: 'teal' }).move({ y: 18 });
 
-	return Mesh.union(base, sphere, cone).toSolid().center({ x: true, z: true });
+	return Solid.UNION(base, sphere, cone).center({ x: true, z: true });
 };
 
 // Partial geometries - closed, manifold shapes via CSG cutting
@@ -214,7 +226,7 @@ export const partialGear = (): Solid => {
 	});
 	const hole = Solid.cylinder(5, 5, { color: 'silver' });
 
-	return outer.subtract(hole).align('bottom');
+	return Solid.SUBTRACT(outer, hole).align('bottom');
 };
 
 export const pieChart = (): Solid => {
@@ -223,7 +235,7 @@ export const pieChart = (): Solid => {
 	const slice2 = Solid.cylinder(10, 2, { color: 'blue', angle: 90 }).rotate({ y: 90 });
 	const slice3 = Solid.cylinder(10, 2, { color: 'green', angle: 90 }).rotate({ y: 180 });
 
-	return Mesh.union(slice1, slice2, slice3).toSolid().align('bottom');
+	return Solid.UNION(slice1, slice2, slice3).align('bottom');
 };
 ```
 
@@ -450,7 +462,7 @@ export const halfBottle = (): Solid => {
 - **X-axis** = Radius from center (distance from Y-axis)
 - **Y-axis** = Height (vertical position)
 - Profile is rotated around the Y-axis
-- Start at origin (0, 0) or close to Y-axis for proper revolution
+- Start at origin (0, 0) or close to the Y-axis for proper revolution
 - Points with X=0 will be at the center axis
 
 **Common Use Cases:**
@@ -460,6 +472,120 @@ export const halfBottle = (): Solid => {
 - Architectural elements (balusters, columns, finials)
 - Mechanical parts (knobs, handles, pulleys)
 - Decorative objects (candlesticks, lamp bases, ornaments)
+
+## Performance Optimization
+
+For expensive component computations that are called repeatedly with the same parameters, CSG Builder provides caching utilities to improve performance.
+
+### Caching Functions
+
+The caching system (`src/lib/cacheFunction.ts`) provides two wrapper functions to cache component results:
+
+#### Named Function Caching
+
+Use `cacheFunction` to wrap named functions that return `Solid`:
+
+```typescript
+import { cacheFunction } from '$lib/cacheFunction';
+
+// Original function
+const expensiveWall = (length: number, height: number): Solid => {
+	// Complex CSG operations...
+	const wall = Solid.cube(length, height, 2, 'gray');
+	const windows = Solid.cube(5, 8, 3, 'gray');
+	return Solid.SUBTRACT(wall, windows);
+};
+
+// Wrap with cache
+const cachedWall = cacheFunction(expensiveWall);
+
+// Usage: First call computes, subsequent calls with same params return cached result
+const wall1 = cachedWall(100, 20); // Computes and caches result
+const wall2 = cachedWall(100, 20); // Returns cached result (instant)
+const wall3 = cachedWall(150, 25); // Different params - computes new result
+```
+
+#### Inline Function Caching
+
+Use `cacheInlineFunction` for arrow functions or when you need explicit control over the cache key:
+
+```typescript
+import { cacheInlineFunction } from '$lib/cacheFunction';
+
+// For arrow functions or inline definitions
+export const Wall = cacheInlineFunction(
+	'Wall',
+	(length: number, config?: { includeFootPath?: boolean }): Solid => {
+		const wall = Solid.cube(length, 20, 2, 'gray');
+		// ... complex CSG operations
+		return wall;
+	}
+);
+
+// Used in components
+export const components: ComponentsMap = {
+	'Wall 100': () => Wall(100), // Cached
+	'Wall 150': () => Wall(150), // Different params - new cache entry
+	'Wall 100 with path': () => Wall(100, { includeFootPath: true }) // Different params - new cache entry
+};
+```
+
+### How Caching Works
+
+- **Cache Key**: Generated from function name and serialized arguments: `${functionName}:${JSON.stringify(args)}`
+- **Cloning**: Results are cloned before caching to ensure immutability
+- **Persistence**: Cache persists for the entire session (not cleared automatically)
+- **Type Safety**: Only works with functions returning `Solid` instances
+
+### When to Use Caching
+
+**✅ Good use cases:**
+
+- Component functions called multiple times with same parameters
+- Expensive CSG operations in reusable parts (walls, towers, decorative elements)
+- Base shapes used in grid/array patterns
+- Parametric components that are frequently reused
+
+**❌ Don't use for:**
+
+- Functions with side effects
+- Functions with non-serializable parameters (functions, symbols, etc.)
+- One-time components that are never reused
+- Very simple/fast operations (caching overhead not worth it)
+
+### Real-World Example
+
+From the castle project, the `Wall` component is cached and reused multiple times:
+
+```typescript
+import { cacheInlineFunction } from '$lib/cacheFunction';
+
+// Cached wall component (expensive CSG operations)
+export const Wall = cacheInlineFunction(
+	'Wall',
+	(length: number, config?: { includeFootPath?: boolean }): Solid => {
+		const wall = Solid.cube(length, 20, 2, 'green');
+		const header = Solid.cube(length, 4, 8, 'green');
+		// ... complex zigzag pattern with subtractions
+		return Solid.UNION(wall, header).align('bottom');
+	}
+);
+
+// Reused in tower component - Wall(20) is computed once, then cached
+export const CornerTower = cacheInlineFunction('CornerTower', (): Solid => {
+	let tower = Tower(10);
+
+	// First Wall(20) call - computes and caches
+	const wall1 = Wall(20, { includeFootPath: true });
+	tower = Solid.SUBTRACT(tower, wall1);
+
+	// Second Wall(20) call - returns cached result (instant!)
+	const wall2 = Wall(20, { includeFootPath: true });
+	tower = Solid.SUBTRACT(tower, wall2.rotate({ y: 90 }));
+
+	return tower;
+});
+```
 
 ### API Reference
 
@@ -538,18 +664,42 @@ For convenience when creating partial geometries, predefined angle constants are
 
 **Scaling Methods (chainable, multiplicative):**
 
-- `scale({ x?, y?, z? })` - Scale with optional axis parameters (values are multipliers)
+- `scale({ all?, x?, y?, z? })` - Scale with optional parameters (values are multipliers)
+  - `all` - Uniform scaling on all three axes
+  - `x`, `y`, `z` - Individual axis scaling
+  - Example: `scale({ all: 2 })` - Double size uniformly
+  - Example: `scale({ x: 2, z: 0.5 })` - Stretch on X, compress on Z
+  - Example: `scale({ all: 1.5, y: 2 })` - Scale all by 1.5, then Y by additional 2x (total 3x on Y)
+  - Cumulative: chaining multiplies values
 
-**CSG Methods (return new Solid):**
+**Static CSG Methods (all immutable - return new Solid):**
 
-- `subtract(other)` - Boolean subtraction
-- `union(other)` - Boolean union
-- `intersect(other)` - Boolean intersection
+- `Solid.SUBTRACT(source, ...others)` - Boolean subtraction (removes all others from source)
+- `Solid.UNION(source, ...others)` - Boolean union (combines all solids)
+- `Solid.INTERSECT(a, b)` - Boolean intersection (keeps only overlapping volume)
+- `Solid.MERGE(solids[])` - Merge array of solids, respecting negative flags
 
-**Composition Methods:**
+**Static Grid Methods (all immutable - return new Solid):**
 
-- `setNegative(negative?)` - Mark solid as negative (for Mesh composition)
+- `Solid.GRID_X(solid, { cols, spacing? })` - Create 1D array along X-axis
+- `Solid.GRID_XY(solid, { cols, rows, spacing? })` - Create 2D grid on XY plane
+- `Solid.GRID_XYZ(solid, { cols, rows, levels, spacing? })` - Create 3D grid in XYZ space
+
+Grid spacing parameters:
+
+- `GRID_X`: `spacing` is a single number (gap between columns)
+- `GRID_XY`: `spacing` is `[gapX, gapY]` tuple
+- `GRID_XYZ`: `spacing` is `[gapX, gapY, gapZ]` tuple
+- If omitted, solids will be placed touching (no gaps)
+
+**Negative Flags (for MERGE):**
+
+- `setNegative(negative?)` - Mark solid as negative (for use with MERGE)
 - `isNegative` - Getter to check if solid is marked negative
+- When using `MERGE`, solids are processed in **array order**
+- First solid cannot be negative (base geometry)
+- Each subsequent solid is added (positive) or subtracted (negative)
+- Example: `Solid.MERGE([base, positive1, negative1, positive2])` → `((base + positive1) - negative1) + positive2`
 
 **Alignment Methods (chainable):**
 
@@ -563,50 +713,23 @@ For convenience when creating partial geometries, predefined angle constants are
 - `clone()` - Create a copy
 - `getVertices()` - Get vertex array for rendering/export
 
-#### Mesh Class
-
-**Static Constructors:**
-
-- `Mesh.union(...solids)` - Create mesh with union operation
-- `Mesh.difference(base, ...subtract)` - Create mesh with subtraction
-- `Mesh.intersection(...solids)` - Create mesh with intersection
-- `Mesh.compose(...items)` - Compose solids/meshes (respects negative flags)
-- `Mesh.grid(solid, { cols, rows, spacing? })` - Create grid array
-- `Mesh.array(solid, cols, rows)` - Create array with default spacing
-
-**Instance Methods:**
-
-- `append(...solids)` - Add solids without merging
-- `merge(...solids)` - Add and perform CSG merge (respects negative solids)
-- `toSolid()` - Convert to single merged Solid
-- `getSolids()` - Get array of all solids in mesh
-
-**Transformation Methods (applied to all solids in the mesh):**
-
-- `at(x, y, z)` - Set absolute position for all solids
-- `move({ x?, y?, z? })` - Move relative with optional axis parameters
-- `rotate({ x?, y?, z? })` - Rotate with optional axis parameters
-- `center(axes?)` - Center the entire mesh on all axes or specific axes
-- `align(direction)` - Align mesh edge to origin
-- `getBounds()` - Get combined bounding box of all solids
-
-**Note on Negative Solids:** When a Mesh is merged, solids are processed in **declaration order**. The first solid cannot be negative (base geometry). Each subsequent solid is either added (positive) or subtracted (negative) from the accumulated result. Example: `new Mesh(base, positive1, negative1, positive2)` processes as `((base + positive1) - negative1) + positive2`.
-
 ### Project Structure
 
 ```
 csg-builder/
+├── bin/
+│   └── csg-export.ts           # CLI tool for exporting STL files
 ├── src/
 │   ├── lib/
 │   │   ├── 3d/
-│   │   │   ├── Solid.ts         # Core 3D primitive class
-│   │   │   ├── Mesh.ts          # Solid collection manager
+│   │   │   ├── Solid.ts         # Core 3D class with primitives, CSG ops, and grids
 │   │   │   └── stl.ts           # STL export functionality
 │   │   ├── Math.ts              # Math utilities
 │   │   ├── buffer.ts            # Buffer utilities
 │   │   └── download.ts          # File download utilities
 │   ├── stores/
-│   │   └── componentStore.svelte.ts  # Component registry
+│   │   ├── componentStore.ts         # Component registry (non-Svelte, for CLI)
+│   │   └── componentStore.svelte.ts  # Component registry (Svelte, for web UI)
 │   ├── types/                   # TypeScript types
 │   ├── App.svelte              # Main application
 │   ├── App3DScene.svelte       # 3D viewport
@@ -618,6 +741,7 @@ csg-builder/
 │       └── *.ts                # Component definitions
 ├── package.json
 ├── tsconfig.json
+├── tsconfig.cli.json           # TypeScript config for CLI
 ├── vite.config.ts
 └── README.md
 ```
@@ -627,6 +751,7 @@ csg-builder/
 - `npm run dev` - Start development server
 - `npm run build` - Build for production
 - `npm run preview` - Preview production build
+- `npm run export` - Export components to STL files via CLI
 - `npm run ts:check` - Run TypeScript type checking
 - `npm run lint:check` - Check code quality
 - `npm run lint:fix` - Auto-fix linting issues
@@ -645,7 +770,7 @@ csg-builder/
 2. Create `projects/my-project/index.ts`:
 
    ```typescript
-   import { addToComponentStore } from '$stores/componentStore.svelte';
+   import { addToComponentStore } from '$stores/componentStore';
    import { components as myComponents } from './myComponent';
 
    addToComponentStore({
@@ -660,39 +785,90 @@ csg-builder/
    export * from './my-project';
    ```
 
+**Note on Component Store:**
+
+- Always import from `$stores/componentStore` (not `.svelte`)
+- This works for both web UI and CLI contexts
+- The system uses a dual-store architecture:
+  - `componentStore.ts` - Base store (plain TypeScript array)
+  - `componentStore.svelte.ts` - Reactive wrapper for Svelte UI
+  - Both share the same underlying data automatically
+
 ## Exporting Models
+
+### Web UI Export
 
 1. Select your component from the dropdown menu
 2. View the 3D preview in the viewport
 3. Click the "Download STL" button
 4. Use the STL file with your 3D printer or modeling software
 
+### CLI Export
+
+Export components to STL files directly from the command line without running the web UI:
+
+**List all available components:**
+
+```bash
+npm run export -- --list
+```
+
+**Export to a file:**
+
+```bash
+npm run export -- Box -o box.stl
+npm run export -- "Chess Pawn" -o pawn.stl
+```
+
+**Export to stdout (pipe to file):**
+
+```bash
+npm run export --silent -- Box > box.stl
+npm run export --silent -- "Brick Wall" > wall.stl
+```
+
+**Note:** Use `--silent` flag when piping to stdout to suppress npm output.
+
+**Benefits of CLI export:**
+
+- Automate STL generation in build scripts
+- Batch export multiple components
+- Integrate with CI/CD pipelines
+- Export without starting the dev server
+
 ## Tips and Best Practices
 
 1. **Keep Components Pure** - Component functions should return new instances
 2. **Use Descriptive Names** - Component names appear in the UI dropdown
 3. **Chain Transformations** - Methods return `this` for fluent API usage
-4. **Explicit CSG Operations** - Use `subtract()`, `union()`, `intersect()` methods
-5. **Return Solid or Mesh** - Components can return either type (renderer extracts vertices)
+4. **Static CSG Operations** - Use `Solid.SUBTRACT()`, `Solid.UNION()`, `Solid.INTERSECT()`, `Solid.MERGE()` (all immutable)
+5. **Return Solid** - Components must return `Solid` type (renderer extracts vertices)
 6. **Use Parameters** - Make components flexible with function parameters
 7. **Test Incrementally** - Build complex models step by step
 8. **Absolute vs Relative Positioning**:
-   - `at(x, y, z)` - Absolute position (requires all 3 params, don't chain)
-   - `move({ x?, y?, z? })` - Relative movement (optional params, accumulates when chained)
+   - `at(x, y, z)` - Absolute position (requires all 3 parameters, don't chain)
+   - `move({ x?, y?, z? })` - Relative movement (optional parameters, accumulates when chained)
 9. **Optional Properties** - Only specify axes you want to transform: `.move({ z: -0.5 })`
-10. **First Solid Must Be Positive** - In `new Mesh()`, the first solid cannot have `.setNegative()`
-11. **Use Path Aliases** - Always import with `$lib/`, `$stores/`, etc. (never relative paths)
-12. **Profile Prism Imports** - Import path factories: `import { Solid, straight, curve } from '$lib/3d/Solid'`
-13. **Profile Method Selection**:
+10. **First Solid Must Be Positive** - In `Solid.MERGE([...])`, the first solid cannot have `.setNegative()`
+11. **CSG Immutability** - All static CSG methods return new Solid instances without modifying originals
+12. **Use Path Aliases** - Always import with `$lib/`, `$stores/`, etc. (never relative paths)
+13. **Profile Prism Imports** - Import path factories: `import { Solid, straight, curve } from '$lib/3d/Solid'`
+14. **Profile Method Selection**:
     - Use `profilePrism()` for complex curves (beziers, arcs) with full Shape API
     - Use `profilePrismFromPoints()` for simple polygonal profiles from coordinates
     - Use `profilePrismFromPath()` for smooth curves and controlled turns with straights/curves
-14. **Revolution Method Selection**:
+15. **Revolution Method Selection**:
     - Use `revolutionSolid()` for complex profiles with curves using full Shape API
     - Use `revolutionSolidFromPoints()` for simple profiles from coordinate pairs (easiest)
     - Use `revolutionSolidFromPath()` for smooth curves and sharp corners with path segments
     - Profile coordinate system: X = radius from center, Y = height
     - Always start at or near X=0 (center axis) for proper revolution
+16. **Performance Optimization with Caching**:
+    - Use `cacheFunction()` or `cacheInlineFunction()` to cache expensive component computations
+    - Perfect for reusable parametric components (walls, towers, decorative elements)
+    - Cache persists for the entire session - the same parameters return the cached result instantly
+    - See the "Performance Optimization" section for a detailed usage guide
+    - Don't cache simple/fast operations or one-time components
 
 ## Examples
 
@@ -712,6 +888,12 @@ Check out the `projects/sample/` directory for working examples:
   - Partial revolutions (quarter vase, half bottle)
   - Smooth curves and sharp corners with path segments
 
+Check out the `projects/castle/` directory for advanced caching examples:
+
+- **wall.ts** - Cached wall component with complex zigzag pattern
+- **tower.ts** - Tower components that reuse cached walls
+- Demonstrates performance optimization with `cacheInlineFunction()`
+
 ## Troubleshooting
 
 **Problem:** Component doesn't appear in dropdown
@@ -721,19 +903,19 @@ Check out the `projects/sample/` directory for working examples:
 - Verify component name in `ComponentsMap` is unique
 - Restart dev server
 
-**Problem:** Mesh appears black or invisible
+**Problem:** Solid appears black or invisible
 
 - Verify color is a valid CSS color string
-- Ensure component returns `Solid` or `Mesh` (call `toSolid()` on `Mesh` if needed)
+- Ensure component returns `Solid` (not other types)
 - Check geometry isn't degenerate (zero volume)
 - Check browser console for geometry errors
 
-**Problem:** "First solid in Mesh cannot be negative" error
+**Problem:** "First solid in MERGE cannot be negative" error
 
-- The first solid in `new Mesh(...)` cannot have `.setNegative()` applied
+- The first solid in array passed to `Solid.MERGE([...])` cannot have `.setNegative()` applied
 - Fix: Ensure first solid is always positive (base geometry)
-- Wrong: `new Mesh(hole.setNegative(), box)` ❌
-- Correct: `new Mesh(box, hole.setNegative())` ✅
+- Wrong: `Solid.MERGE([hole.setNegative(), box])` ❌
+- Correct: `Solid.MERGE([box, hole.setNegative()])` ✅
 
 **Problem:** CSG operation is slow
 
@@ -743,16 +925,16 @@ Check out the `projects/sample/` directory for working examples:
 
 **Problem:** Positioning not working as expected
 
-- `at(x, y, z)` requires all 3 parameters and sets absolute position
+- `at(x, y, z)` requires all 3 parameters and sets the absolute position
 - `move({ x?, y?, z? })` uses optional parameters for relative movement
-- Don't chain `.at()` calls - only the last one takes effect
+- Don't chain `.at()` calls - only the last one will take effect
 - `.move()` calls accumulate when chained
 
 **Problem:** STL export fails
 
-- Ensure component returns valid merged geometry
+- Ensure component returns valid Solid geometry
 - Check browser console for errors
-- Verify final mesh has vertices
+- Verify final Solid has vertices
 
 ## Browser Support
 

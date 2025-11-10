@@ -18,7 +18,7 @@ export const cacheInlineFunction = <T extends (...arguments_: Parameters<T>) => 
 		if (cacheKey in cache) return cache[cacheKey];
 
 		const result = function_(...arguments_);
-		cache[cacheKey] = result;
+		cache[cacheKey] = result.clone();
 		return result;
 	}) as T;
 };

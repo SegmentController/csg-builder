@@ -12,6 +12,7 @@ CSG Builder is a TypeScript-based 3D mesh creation tool using a component-based 
 npm run dev              # Start Vite dev server with hot reload (http://localhost:5173)
 npm run build            # Production build to ./docs directory
 npm run preview          # Preview production build locally
+npm run export           # CLI tool for exporting components to STL without running UI
 
 npm run ts:check         # Run TypeScript type checking
 npm run lint:check       # Run ESLint
@@ -29,43 +30,53 @@ npm run all              # Run format:fix, lint:fix, ts:check, and build
 
 ## High-Level Architecture
 
-### Three-Layer Component System
+### Two-Layer Component System
 
 1. **Primitive Layer** (`Solid` class in `src/lib/3d/Solid.ts`)
    - Wraps Three.js `Brush` objects from `three-bvh-csg` library
    - Factory methods: `cube()`, `cylinder()`, `sphere()`, `cone()`, `prism()`, `trianglePrism()`
    - Provides fluent API for transformations (all methods return `this`)
-   - Explicit CSG methods: `subtract()`, `union()`, `intersect()`
+   - **Static CSG methods**: `SUBTRACT()`, `UNION()`, `INTERSECT()`, `MERGE()` - all immutable (return new Solid)
+   - **Static Grid methods**: `GRID_X()`, `GRID_XY()`, `GRID_XYZ()` - create arrays of solids
    - Supports both **absolute** (`at()`) and **relative** (`move()`) positioning
 
-2. **Composition Layer** (`Mesh` class in `src/lib/3d/Mesh.ts`)
-   - Manages collections of `Solid` objects
-   - Performs CSG operations via static `Solid.evaluator` (from `three-bvh-csg`)
-   - `append()` adds solids without merging
-   - `merge()` performs actual CSG operations
-   - `toSolid()` returns final merged solid
-   - Transforms apply to all contained solids
-   - Grid utility: `Mesh.grid(solid, { cols, rows, spacing })` creates 2D arrays
-
-3. **Component Registry** (`src/stores/componentStore.svelte.ts`)
-   - Uses Svelte 5 runes (`$state`) for reactivity
-   - Components auto-register via `addToComponentStore()`
+2. **Component Registry** (dual-store architecture)
+   - **Base Store** (`src/stores/componentStore.ts`) - Plain TypeScript array for CLI and Node.js
+   - **Svelte Store** (`src/stores/componentStore.svelte.ts`) - Reactive wrapper for web UI
+   - Both stores share the same underlying component data via callback mechanism
+   - Components auto-register via `addToComponentStore()` (works in both contexts)
    - Alphabetically sorted by name
    - UI (`AppNavigation.svelte`) generates dropdown from this registry
-   - **Type safety**: `ComponentsMap` type enforces functions returning `Solid | Mesh`
-   - Components can return either `Solid` or `Mesh` - renderer extracts vertices automatically
+   - **Type safety**: `ComponentsMap` type enforces functions returning `Solid`
+   - Components return `Solid` - renderer extracts vertices automatically
 
 ### Data Flow
+
+**Web UI Path:**
 
 ```
 projects/*.ts (component definitions)
   → export ComponentsMap { "Name": () => Solid }
   → addToComponentStore() on module load
-  → componentStore (Svelte 5 $state reactive)
+  → componentStore (base) → componentStore.svelte (reactive wrapper)
   → AppNavigation.svelte (dropdown + selection)
   → App.svelte (extracts vertices from Solid)
   → App3DScene.svelte (Three.js rendering via Threlte)
   → STL export (generateBinaryStlFromVertices)
+```
+
+**CLI Path:**
+
+```
+projects/*.ts (component definitions)
+  → addToComponentStore() on module load
+  → componentStore (base, plain array)
+  → bin/csg-export.ts (CLI tool)
+    → getComponentStoreValue() (retrieve component by name)
+    → component.receiveData() (execute to get Solid)
+    → getVertices()
+    → generateBinaryStlFromVertices()
+    → write to stdout or file
 ```
 
 ### Path Aliases (Vite + TypeScript)
@@ -73,7 +84,7 @@ projects/*.ts (component definitions)
 All imports use aliases defined in `vite.config.ts` and `tsconfig.json`. **ALWAYS use these aliases, never relative paths**:
 
 - `$lib/*` → `src/lib/*` (e.g., `import { Solid } from '$lib/3d/Solid'`)
-- `$stores/*` → `src/stores/*` (e.g., `import { addToComponentStore } from '$stores/componentStore.svelte'`)
+- `$stores/*` → `src/stores/*` (e.g., `import { addToComponentStore } from '$stores/componentStore'`)
 - `$types/*` → `src/types/*`
 - `$components/*` → `src/components/*`
 - `$projects` → `projects/index.ts`
@@ -95,19 +106,38 @@ projects/
 
 **Critical:** Each `projects/[project-name]/index.ts` must be re-exported in `projects/index.ts` or components won't be discovered.
 
+**Dual-Store Architecture:**
+
+- Projects import from `$stores/componentStore` (non-Svelte base store)
+- This works in both web UI and CLI contexts
+- The Svelte wrapper (`componentStore.svelte.ts`) adds reactivity for UI
+- Both stores share the same underlying data via callback mechanism
+- When `addToComponentStore()` is called, it updates the base array and triggers the Svelte reactive wrapper
+
+**Import Pattern (for all project files):**
+
+```typescript
+import { addToComponentStore } from '$stores/componentStore';
+import type { ComponentsMap } from '$stores/componentStore';
+
+// NOT: import from '$stores/componentStore.svelte'
+```
+
 ## Key Implementation Details
 
 ### CSG Operation Mechanics
 
-- CSG operations use explicit methods: `subtract()`, `union()`, `intersect()`
+- **All CSG operations are static and immutable** - they return new Solid instances without modifying inputs
+- CSG operations use static methods: `Solid.SUBTRACT()`, `Solid.UNION()`, `Solid.INTERSECT()`, `Solid.MERGE()`
 - The `Solid.evaluator` (static, single instance) performs all boolean operations
-- Each CSG operation creates a **new** Solid with new Brush - immutable pattern
-- `Mesh.toSolid()` performs final merge when multiple solids need to be combined
-- **Negative Solids**: `setNegative()` marks a solid for subtraction during Mesh merge
-  - **IMPORTANT**: Mesh processes solids in **declaration order** (not by grouping positive/negative)
+- Each CSG operation creates a **new** Solid with new Brush - immutable pattern ensures original solids remain unchanged
+- **MERGE()**: Combines multiple solids, respecting negative flags
+  - `Solid.MERGE([base, positive1, negative1, positive2])` → `((base + positive1) - negative1) + positive2`
   - First solid cannot be negative (throws error)
-  - Each subsequent solid is either added (positive) or subtracted (negative) from the accumulated result
-  - Example: `new Mesh(base, positive1, negative1, positive2)` → `((base + positive1) - negative1) + positive2`
+  - Processes solids in **array order** (not by grouping positive/negative)
+- **Negative Solids**: `setNegative()` marks a solid for subtraction when used with `MERGE()`
+  - Only relevant when passing solid to `MERGE()`
+  - Use `SUBTRACT()` for explicit subtraction without negative flags
 - `updateMatrixWorld()` must be called after transforms (handled automatically by methods)
 - **Partial Geometries**: Cylinder, cone, sphere, and prism primitives with `angle` < 360° use CSG subtraction
   - Creates full 360° geometry first
@@ -123,15 +153,19 @@ projects/
 
 - Three.js right-handed: X-right, Y-up, Z-toward camera
 - **Absolute positioning**: `at(x, y, z)` sets position directly (all params required)
-  - `Solid.at()` sets the solid's position
-  - `Mesh.at()` applies the same position to **all solids** in the mesh (they move together)
+  - `Solid.at()` sets the solid's position (mutates the solid, returns `this` for chaining)
 - **Relative transforms**: `move({ x?, y?, z? })` and `rotate({ x?, y?, z? })` with optional properties
 - All transformations are **incremental**: `.move({ x: 5 }).move({ x: 3 })` moves 8 units total
 - Rotations use **degrees** (converted to radians internally)
-- **Scaling**: `scale({ x?, y?, z? })` with optional properties - all values are **multiplicative**
-  - `.scale({ x: 2 })` doubles the size on X-axis
+- **Scaling**: `scale({ all?, x?, y?, z? })` with optional properties - all values are **multiplicative**
+  - `all` parameter scales uniformly on all three axes
+  - Individual axis scaling with `x`, `y`, `z` parameters
+  - `.scale({ all: 2 })` doubles the size uniformly on all axes
+  - `.scale({ x: 2 })` doubles the size on X-axis only
+  - `.scale({ all: 2, z: 1.5 })` scales all axes by 2, then additionally scales Z by 1.5 (resulting in 3x on Z)
   - Scaling is **cumulative**: `.scale({ x: 2 }).scale({ x: 1.5 })` results in 3x scale on X-axis
-- Grid pattern (`Mesh.grid`) accepts configurable spacing parameter
+  - Order matters: `all` is applied first, then individual axis scales are applied
+- **Grid patterns**: Static methods `Solid.GRID_X()`, `Solid.GRID_XY()`, `Solid.GRID_XYZ()` accept configurable spacing parameters
 - **Transform order matters**: Apply transforms before CSG operations for predictable results
 
 ### Geometry Normalization
@@ -169,7 +203,7 @@ const custom = Solid.cube(10, 10, 10, 'red').scale({ x: 2, y: 0.5 }).normalize()
 
 ### Centering & Alignment
 
-Both `Solid` and `Mesh` support automatic centering and alignment operations:
+`Solid` supports automatic centering and alignment operations:
 
 **Bounding Box Utility:**
 
@@ -195,9 +229,10 @@ solid.center({ z: true }); // Center on Z-axis only
 solid.center({ x: true }); // Center on X-axis only
 
 // Example: Center a complex shape
-const myShape = Solid.cube(10, 20, 5, 'red')
-	.subtract(Solid.cylinder(3, 25, { color: 'red' }).rotate({ x: 90 }))
-	.center(); // Centers the result at origin
+const myShape = Solid.SUBTRACT(
+	Solid.cube(10, 20, 5, 'red'),
+	Solid.cylinder(3, 25, { color: 'red' }).rotate({ x: 90 })
+).center(); // Centers the result at origin
 ```
 
 **Edge Alignment Method:**
@@ -229,21 +264,13 @@ const piece = Solid.cube(20, 10, 5, 'blue')
 	.rotate({ z: 45 }); // And rotate
 ```
 
-**Mesh Centering:**
+**Grid Arrays:**
 
-`Mesh` methods work on the combined bounding box of all contained solids:
+Grid methods return a single Solid, which can be centered:
 
 ```typescript
-const mesh = new Mesh(
-	Solid.cube(10, 10, 10, 'red').move({ x: 20 }),
-	Solid.cylinder(5, 15, 'blue').move({ x: -20 })
-);
-
-// Centers the entire composition, not individual pieces
-mesh.center();
-
-// For grid arrays
-const array = Mesh.grid(brick, { cols: 5, rows: 3 }).center(); // Centers the entire array at origin
+// Create grid and center the entire array
+const array = Solid.GRID_XY(brick, { cols: 5, rows: 3 }).center();
 ```
 
 **Use Cases:**
@@ -261,6 +288,49 @@ Binary STL structure (see `src/lib/3d/stl.ts`):
 - 4-byte triangle count (vertices.length / 9)
 - Per-triangle: 12 floats (normal + 3 vertices) + 2-byte attribute
 - **Coordinate swap on export:** `(X, Y, Z) → (X, -Z, Y)` to match STL conventions (line 16)
+
+### CLI Export Tool
+
+The CLI export tool (`bin/csg-export.ts`) allows exporting components to STL files without running the Svelte web UI:
+
+**Usage:**
+
+```bash
+# List all available components
+npm run export -- --list
+
+# Export to file with -o flag
+npm run export -- Box -o box.stl
+npm run export -- "Chess Pawn" -o pawn.stl
+
+# Export to stdout (use --silent to suppress npm output)
+npm run export --silent -- Box > box.stl
+npm run export --silent -- BrickWall > wall.stl
+```
+
+**Implementation Details:**
+
+- Uses `tsx` to run TypeScript with path alias support (`tsconfig.cli.json`)
+- Uses `commander` for CLI argument parsing
+- Imports all projects to trigger component registration
+- Retrieves components from the base (non-Svelte) store
+- Outputs binary STL data to stdout or file
+- Shows helpful error messages with available components on failure
+- Displays export statistics (triangle count, file size)
+
+**Key Files:**
+
+- `bin/csg-export.ts` - CLI entry point with command handlers
+- `tsconfig.cli.json` - TypeScript config with Node.js module resolution
+- `src/stores/componentStore.ts` - Base store (used by CLI)
+- `package.json` - Defines `export` script and dependencies (`tsx`, `commander`)
+
+**Use Cases:**
+
+- Automated STL generation in build scripts
+- Batch export of multiple components
+- CI/CD pipeline integration
+- Headless server environments without display
 
 ### 3D Rendering (Threlte/Three.js)
 
@@ -287,14 +357,13 @@ Scene setup in `App3DScene.svelte`:
 
 ```typescript
 import { Solid } from '$lib/3d/Solid';
-import { Mesh } from '$lib/3d/Mesh';
-import type { ComponentsMap } from '$stores/componentStore.svelte';
+import type { ComponentsMap } from '$stores/componentStore';
 
 export const myPart = (width: number, height: number): Solid => {
 	const base = Solid.cube(width, height, 1, 'blue');
 	const hole = Solid.cylinder(2, 5, { color: 'blue' }).rotate({ x: 90 });
 
-	return base.subtract(hole);
+	return Solid.SUBTRACT(base, hole);
 };
 
 export const components: ComponentsMap = {
@@ -304,31 +373,31 @@ export const components: ComponentsMap = {
 
 ### Subtraction Patterns
 
-**Direct Subtraction (for simple cases):**
+**Direct Subtraction (immutable static method):**
 
 ```typescript
-// Hollow box example - explicit subtract method
+// Hollow box example - static SUBTRACT method
 const outer = Solid.cube(20, 20, 20, 'red');
 const inner = Solid.cube(16, 16, 16, 'red');
-const result = outer.subtract(inner); // Explicit subtraction
+const result = Solid.SUBTRACT(outer, inner); // Returns new Solid
 ```
 
-**Negative Solids (for reusable components):**
+**Negative Solids (for merge operations):**
 
 ```typescript
-// Window component with negative opening that cuts through walls
-export const window = (width: number, height: number): Mesh => {
+// Window component with negative opening
+export const window = (width: number, height: number): Solid => {
 	const frame = Solid.cube(width, height, 3, 'brown');
 	const opening = Solid.cube(width - 4, height - 4, 10, 'gray').setNegative(); // Marks as negative
 	const bar = Solid.cube(1, height, 2, 'brown');
 
-	return new Mesh(frame, opening, bar); // Mesh tracks negative solids
+	return Solid.MERGE([frame, opening, bar]); // MERGE respects negative flags
 };
 
-// Usage: Window's negative opening cuts into wall automatically
+// Usage: Window's negative opening cuts into wall
 const wall = Solid.cube(20, 20, 1, 'gray');
-const win = window(5, 8).at(10, 5, 0);
-return Mesh.compose(wall, win).toSolid(); // Opening subtracts from wall!
+const win = window(5, 8).move({ x: 10, y: 5 });
+return Solid.UNION(wall, win); // Combines wall and window (with its hole)
 ```
 
 ### Reusable Components with Context
@@ -341,15 +410,37 @@ See `projects/sample/_context.ts`:
 
 ### Grid Arrays
 
+The `Solid` class provides three static grid methods for creating 1D, 2D, and 3D arrays:
+
 ```typescript
 const brick = Solid.cube(3, 1, 1, 'red');
-// With configurable spacing
-const wall = Mesh.grid(brick, { cols: 10, rows: 5, spacing: [6, 2] }).toSolid();
 
-// Or with default spacing [6, 2]
-const wall2 = Mesh.array(brick, 10, 5).toSolid();
+// 1D grid along X-axis
+const row = Solid.GRID_X(brick, { cols: 10, spacing: 1 });
+// Without spacing (solids touching)
+const rowTight = Solid.GRID_X(brick, { cols: 10 });
 
-// Grid internally uses: .move({ x: col * spacingX, y: row * spacingY, z: 0 })
+// 2D grid on XY plane (most common for walls, patterns)
+const wall = Solid.GRID_XY(brick, { cols: 10, rows: 5, spacing: [1, 0.5] });
+// Without spacing
+const wallTight = Solid.GRID_XY(brick, { cols: 10, rows: 5 });
+
+// 3D grid in XYZ space (for volume fills, lattices)
+const lattice = Solid.GRID_XYZ(brick, {
+	cols: 5,
+	rows: 5,
+	levels: 3,
+	spacing: [1, 1, 2]
+});
+// Without spacing
+const latticeTight = Solid.GRID_XYZ(brick, { cols: 5, rows: 5, levels: 3 });
+
+// All grid methods return a single merged Solid (immutable)
+// Spacing adds gaps between elements:
+// - GRID_X: spacing = gap between columns
+// - GRID_XY: spacing = [gapX, gapY]
+// - GRID_XYZ: spacing = [gapX, gapY, gapZ]
+// Internal calculation: position = index * (dimension + spacing)
 ```
 
 ## Available Primitives
@@ -768,17 +859,20 @@ const quarterVase = Solid.revolutionSolidFromPath([
 
 ```typescript
 // Rounded corners using sphere subtraction
-const roundedCube = Solid.cube(20, 20, 20, 'red').subtract(
+const roundedCube = Solid.SUBTRACT(
+	Solid.cube(20, 20, 20, 'red'),
 	Solid.sphere(3, { color: 'red' }).move({ x: 10, y: 10, z: 10 })
 );
 
 // Chamfered edge using cone
-const chamferedBlock = Solid.cube(15, 15, 15, 'blue').subtract(
+const chamferedBlock = Solid.SUBTRACT(
+	Solid.cube(15, 15, 15, 'blue'),
 	Solid.cone(4, 8, { color: 'blue' }).rotate({ x: 90 })
 );
 
 // Hexagonal nut
-const nut = Solid.prism(6, 10, 5, { color: 'gray' }).subtract(
+const nut = Solid.SUBTRACT(
+	Solid.prism(6, 10, 5, { color: 'gray' }),
 	Solid.cylinder(4, 6, { color: 'gray' })
 );
 
@@ -852,14 +946,16 @@ import { cacheFunction } from '$lib/cacheFunction';
 // Original function
 const expensiveComponent = (width: number, height: number): Solid => {
 	// Complex CSG operations...
-	return result;
+	const base = Solid.cube(width, height, 2, 'gray');
+	const cutouts = Solid.cylinder(5, height + 1, { color: 'gray' });
+	return Solid.SUBTRACT(base, cutouts);
 };
 
 // Wrap with cache
 const cachedComponent = cacheFunction(expensiveComponent);
 
 // Usage: First call computes, subsequent calls with same params return cached result
-const part1 = cachedComponent(10, 20); // Computes
+const part1 = cachedComponent(10, 20); // Computes and caches result
 const part2 = cachedComponent(10, 20); // Returns cached result (instant)
 const part3 = cachedComponent(15, 25); // Different params - computes new result
 ```
@@ -871,45 +967,98 @@ import { cacheInlineFunction } from '$lib/cacheFunction';
 
 // For arrow functions or when function.name isn't available
 const cachedPart = cacheInlineFunction('myPart', (size: number) => {
-	return Solid.cube(size, size, size, 'red').subtract(
+	return Solid.SUBTRACT(
+		Solid.cube(size, size, size, 'red'),
 		Solid.cylinder(size / 2, size * 2, { color: 'red' })
 	);
 });
+
+// Real-world example from castle project
+export const Wall = cacheInlineFunction(
+	'Wall',
+	(length: number, config?: { includeFootPath?: boolean }): Solid => {
+		const wall = Solid.cube(length, 20, 2, 'green');
+		const header = Solid.cube(length, 4, 8, 'green').move({ y: 10 });
+		// ... complex zigzag pattern with multiple subtractions
+		let result = Solid.UNION(wall, header);
+
+		if (config?.includeFootPath) {
+			const footPath = Solid.cube(length, 4, 8).align('bottom').move({ y: 10 });
+			result = Solid.UNION(result, footPath);
+		}
+
+		return result.align('bottom');
+	}
+);
 ```
 
 **How it works:**
 
 - Cache key generated from function name and serialized arguments: `${functionName}:${JSON.stringify(args)}`
-- Returns cached `Solid` instance if key exists in cache
-- Otherwise computes result, caches it, and returns it
+- **Results are cloned before caching** to ensure immutability (each call gets independent instance)
+- Returns cached clone if key exists in cache
+- Otherwise computes result, caches a clone, and returns the original
 - Cache persists for the session (not cleared automatically)
-- **Important**: Only caches functions returning `Solid` (not `Mesh`)
+- **Important**: Only caches functions returning `Solid` instances
 
 **When to use:**
 
-- Component functions called multiple times with same parameters
-- Expensive CSG operations in reusable parts
-- Grid/array patterns where same base shape is used repeatedly
-- **Don't use** for functions with side effects or non-serializable parameters
+- ✅ Component functions called multiple times with same parameters
+- ✅ Expensive CSG operations in reusable parts (walls, towers, decorative elements)
+- ✅ Grid/array patterns where same base shape is used repeatedly
+- ✅ Parametric components that are frequently reused in different contexts
+- ❌ **Don't use** for functions with side effects or non-serializable parameters (functions, symbols, etc.)
+- ❌ **Don't use** for one-time components that are never reused
+- ❌ **Don't use** for very simple/fast operations (caching overhead not worth it)
+
+**Example: Reusing cached components:**
+
+```typescript
+import { cacheInlineFunction } from '$lib/cacheFunction';
+import { Solid } from '$lib/3d/Solid';
+
+// Cached wall component (expensive CSG operations with zigzag pattern)
+export const Wall = cacheInlineFunction('Wall', (length: number): Solid => {
+	let wall = Solid.cube(length, 20, 2, 'green');
+	// ... complex CSG operations with zigzag pattern
+	return wall.align('bottom');
+});
+
+// Tower component reuses Wall multiple times - Wall(20) computed once!
+export const CornerTower = cacheInlineFunction('CornerTower', (): Solid => {
+	let tower = Solid.prism(8, 10, 20, { color: 'red' }).align('bottom');
+
+	// First Wall(20) call - computes and caches result
+	const wall1 = Wall(20).align('left').move({ x: 8 });
+	tower = Solid.SUBTRACT(tower, wall1);
+
+	// Second Wall(20) call - returns cached result (instant!)
+	const wall2 = Wall(20).align('right').rotate({ y: 90 }).move({ z: 8 });
+	tower = Solid.SUBTRACT(tower, wall2);
+
+	return tower;
+});
+```
 
 **Example: Cached grid components:**
 
 ```typescript
 import { cacheFunction } from '$lib/cacheFunction';
 import { Solid } from '$lib/3d/Solid';
-import { Mesh } from '$lib/3d/Mesh';
 
 // Cache the expensive base brick
 const brick = cacheFunction((width: number, height: number, depth: number) => {
-	return Solid.cube(width, height, depth, 'red')
-		.subtract(Solid.cylinder(0.5, height * 2, { color: 'red' }))
-		.subtract(Solid.cylinder(0.5, height * 2, { color: 'red' }).move({ x: width - 1 }));
+	return Solid.SUBTRACT(
+		Solid.cube(width, height, depth, 'red'),
+		Solid.cylinder(0.5, height * 2, { color: 'red' }),
+		Solid.cylinder(0.5, height * 2, { color: 'red' }).move({ x: width - 1 })
+	);
 });
 
-// Use cached brick in grid
+// Use cached brick in grid - brick(3, 1, 1.5) computed once for entire wall!
 export const brickWall = (): Solid => {
 	const b = brick(3, 1, 1.5); // Computed once
-	return Mesh.grid(b, { cols: 10, rows: 8 }).toSolid();
+	return Solid.GRID_XY(b, { cols: 10, rows: 8 });
 };
 ```
 
@@ -922,9 +1071,8 @@ export const brickWall = (): Solid => {
 - Ensure component name in `ComponentsMap` is unique
 - Restart dev server if hot reload fails
 
-### Mesh Renders Black/Wrong
+### Solid Renders Black/Wrong
 
-- Missing final merge - ensure component returns a `Solid`, call `toSolid()` on `Mesh` if needed
 - Invalid color string (must be CSS color: 'red', '#ff0000', etc.)
 - Degenerate geometry (zero-volume shapes)
 - Normals not computed (should auto-compute in `App3DScene.svelte:21`)
@@ -940,16 +1088,16 @@ export const brickWall = (): Solid => {
 - Use path aliases (`$lib/`, not relative `../../lib/`)
 - Run `npm run ts:check` to see full error context
 - Check `tsconfig.json` paths match `vite.config.ts` aliases
-- Ensure components return `Solid` or `Mesh` (not other types)
+- Ensure components return `Solid` (not other types)
 
 ### Critical Errors to Avoid
 
-**"First solid in Mesh cannot be negative"** error:
+**"First solid in MERGE cannot be negative"** error:
 
-- Thrown when first solid in `new Mesh(...)` has `.setNegative()` applied
+- Thrown when first solid in array passed to `Solid.MERGE([...])` has `.setNegative()` applied
 - Fix: Ensure first solid is always positive (base geometry)
-- Example wrong: `new Mesh(hole.setNegative(), box)` ❌
-- Example correct: `new Mesh(box, hole.setNegative())` ✅
+- Example wrong: `Solid.MERGE([hole.setNegative(), box])` ❌
+- Example correct: `Solid.MERGE([box, hole.setNegative()])` ✅
 
 **Position vs. Move confusion**:
 
@@ -957,3 +1105,9 @@ export const brickWall = (): Solid => {
 - `move({ x?, y?, z? })` is **relative** - parameters are optional
 - Don't chain `.at()` calls - only the last one takes effect
 - Chain `.move()` calls - they accumulate
+
+**CSG operation immutability**:
+
+- All static CSG methods (`SUBTRACT`, `UNION`, `INTERSECT`, `MERGE`) return **new** Solid instances
+- Original solids are not modified
+- Example: `const result = Solid.SUBTRACT(a, b);` // a and b remain unchanged

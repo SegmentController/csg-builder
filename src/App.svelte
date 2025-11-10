@@ -3,8 +3,7 @@
 
 	import { Canvas } from '@threlte/core';
 
-	import { Mesh } from '$lib/3d/Mesh';
-	import type { Solid } from '$lib/3d/Solid';
+	import { Solid } from '$lib/3d/Solid';
 	import { generateBinaryStlFromVertices } from '$lib/3d/stl';
 	import { virtualDownload } from '$lib/download';
 	import { MathMax } from '$lib/Math';
@@ -22,10 +21,10 @@
 	let wireframe = $state(false);
 	let saveCameraToUrl = $state(false);
 
-	const setSolid = (recentName: string, s: Solid | Mesh) => {
+	const setSolid = (recentName: string, s: Solid | Solid[]) => {
 		name = recentName;
 		// Convert Mesh to Solid if needed
-		solid = s instanceof Mesh ? s.toSolid() : s;
+		solid = Array.isArray(s) ? Solid.MERGE(s) : s;
 		volume = MathMax([...solid.getVertices()]);
 	};
 

@@ -1,0 +1,23 @@
+{
+	"compilerOptions": {
+		"strict": true,
+		"target": "ES2022",
+		"module": "ESNext",
+		"moduleResolution": "bundler",
+		"allowImportingTsExtensions": true,
+		"noEmit": true,
+		"isolatedModules": true,
+		"esModuleInterop": true,
+		"skipLibCheck": true,
+		"resolveJsonModule": true,
+		"paths": {
+			"$components/*": ["./src/components/*"],
+			"$lib/*": ["./src/lib/*"],
+			"$stores/*": ["./src/stores/*"],
+			"$types/*": ["./src/types/*"],
+			"$projects": ["./projects"]
+		}
+	},
+	"include": ["bin/**/*.ts", "src/**/*.ts", "projects/**/*.ts"],
+	"exclude": ["src/**/*.svelte.ts", "node_modules"]
+}
