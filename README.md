@@ -21,7 +21,7 @@ CSG Builder allows you to create 3D meshes using TypeScript code with a React-li
 - **Hot Reload** - Instant updates during development with simple browser refresh (Ctrl+R)
 - **Full Examples** - See how to use all features in the included examples by running the app and exploring the dropdown
 
-## Examples
+## Examples STLs
 
 [Whole castle](./STLs/Castle.stl)
 
@@ -30,6 +30,8 @@ CSG Builder allows you to create 3D meshes using TypeScript code with a React-li
 [L Profile With Holes](./STLs/LProfileWithHoles.stl)
 
 [Connector Tower 10](./STLs/ConnectorTower10.stl)
+
+![Castle](./STLs/castle.png)
 
 ## Tech Stack
 
