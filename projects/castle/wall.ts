@@ -1,4 +1,5 @@
 import { Solid } from '$lib/3d/Solid';
+import { cacheInlineFunction } from '$lib/cacheFunction';
 import type { ComponentsMap } from '$stores/componentStore';
 
 import { WALL } from './_const';
@@ -25,30 +26,33 @@ const WallHeader = (length: number) => {
 	return header;
 };
 
-export const Wall = (length: number, config?: { includeFootPath?: boolean }): Solid => {
-	const wall = Solid.cube(length, WALL.HEIGHT, WALL.WIDTH, 'green');
-	const header = Solid.cube(length, WALL.WIDTH, WALL.WIDTH * 4, 'green').move({
-		y: WALL.HEIGHT / 2 - WALL.WIDTH / 2
-	});
-	const footer = header
-		.clone()
-		.move({ y: -WALL.HEIGHT + WALL.WIDTH })
-		.scale({ z: 0.5 });
-	const headerSide1 = WallHeader(length);
-	const headerSide2 = headerSide1.clone().rotate({ y: 180 });
+export const Wall = cacheInlineFunction(
+	'Wall',
+	(length: number, config?: { includeFootPath?: boolean }): Solid => {
+		const wall = Solid.cube(length, WALL.HEIGHT, WALL.WIDTH, 'green');
+		const header = Solid.cube(length, WALL.WIDTH, WALL.WIDTH * 4, 'green').move({
+			y: WALL.HEIGHT / 2 - WALL.WIDTH / 2
+		});
+		const footer = header
+			.clone()
+			.move({ y: -WALL.HEIGHT + WALL.WIDTH })
+			.scale({ z: 0.5 });
+		const headerSide1 = WallHeader(length);
+		const headerSide2 = headerSide1.clone().rotate({ y: 180 });
 
-	let result = Solid.UNION(wall, header, footer, headerSide1, headerSide2);
-	if (config?.includeFootPath) {
-		const footPath = Solid.cube(length, WALL.WIDTH * 2, WALL.WIDTH * 4)
-			.align('bottom')
-			.move({ y: WALL.HEIGHT / 2 });
-		result = Solid.UNION(result, footPath);
+		let result = Solid.UNION(wall, header, footer, headerSide1, headerSide2);
+		if (config?.includeFootPath) {
+			const footPath = Solid.cube(length, WALL.WIDTH * 2, WALL.WIDTH * 4)
+				.align('bottom')
+				.move({ y: WALL.HEIGHT / 2 });
+			result = Solid.UNION(result, footPath);
+		}
+
+		return result.align('bottom');
 	}
+);
 
-	return result.align('bottom');
-};
-
-export const WallWithGate = (length: number): Solid => {
+export const WallWithGate = cacheInlineFunction('WallWithGate', (length: number): Solid => {
 	let wall = Wall(length);
 
 	let cubeInner = Solid.cube(
@@ -66,7 +70,7 @@ export const WallWithGate = (length: number): Solid => {
 	wall = Solid.SUBTRACT(wall, cubeInner);
 
 	return wall;
-};
+});
 
 export const components: ComponentsMap = {
 	'X. Example: Wall 100': () => Wall(100),

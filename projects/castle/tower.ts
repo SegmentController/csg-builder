@@ -1,10 +1,11 @@
 import { Solid } from '$lib/3d/Solid';
+import { cacheInlineFunction } from '$lib/cacheFunction';
 import type { ComponentsMap } from '$stores/componentStore';
 
 import { TOWER, WALL } from './_const';
 import { Wall } from './wall';
 
-export const Tower = (radius: number): Solid => {
+const Tower = (radius: number): Solid => {
 	const tower = Solid.prism(8, radius, WALL.HEIGHT, { color: 'red' })
 		.align('bottom')
 		.rotate({ y: 22.5 });
@@ -44,7 +45,7 @@ export const Tower = (radius: number): Solid => {
 	return result.align('bottom');
 };
 
-export const CornerTower = (): Solid => {
+export const CornerTower = cacheInlineFunction('CornetTower', (): Solid => {
 	let tower = Tower(TOWER.CORNER_RADIUS);
 
 	const wall = Wall(20, { includeFootPath: true })
@@ -59,9 +60,9 @@ export const CornerTower = (): Solid => {
 	tower = Solid.SUBTRACT(tower, wall2);
 
 	return tower;
-};
+});
 
-export const ConnectorTower = (): Solid => {
+export const ConnectorTower = cacheInlineFunction('ConnectorTower', (): Solid => {
 	let tower = Tower(TOWER.CONNECTOR_RADIUS);
 
 	const wall = Wall(20, { includeFootPath: true })
@@ -75,7 +76,7 @@ export const ConnectorTower = (): Solid => {
 	tower = Solid.SUBTRACT(tower, wall2);
 
 	return tower;
-};
+});
 
 export const components: ComponentsMap = {
 	'X. Example: Corner Tower 10': () => CornerTower(),
