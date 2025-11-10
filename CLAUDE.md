@@ -946,14 +946,16 @@ import { cacheFunction } from '$lib/cacheFunction';
 // Original function
 const expensiveComponent = (width: number, height: number): Solid => {
 	// Complex CSG operations...
-	return result;
+	const base = Solid.cube(width, height, 2, 'gray');
+	const cutouts = Solid.cylinder(5, height + 1, { color: 'gray' });
+	return Solid.SUBTRACT(base, cutouts);
 };
 
 // Wrap with cache
 const cachedComponent = cacheFunction(expensiveComponent);
 
 // Usage: First call computes, subsequent calls with same params return cached result
-const part1 = cachedComponent(10, 20); // Computes
+const part1 = cachedComponent(10, 20); // Computes and caches result
 const part2 = cachedComponent(10, 20); // Returns cached result (instant)
 const part3 = cachedComponent(15, 25); // Different params - computes new result
 ```
@@ -965,26 +967,78 @@ import { cacheInlineFunction } from '$lib/cacheFunction';
 
 // For arrow functions or when function.name isn't available
 const cachedPart = cacheInlineFunction('myPart', (size: number) => {
-	return Solid.cube(size, size, size, 'red').subtract(
+	return Solid.SUBTRACT(
+		Solid.cube(size, size, size, 'red'),
 		Solid.cylinder(size / 2, size * 2, { color: 'red' })
 	);
 });
+
+// Real-world example from castle project
+export const Wall = cacheInlineFunction(
+	'Wall',
+	(length: number, config?: { includeFootPath?: boolean }): Solid => {
+		const wall = Solid.cube(length, 20, 2, 'green');
+		const header = Solid.cube(length, 4, 8, 'green').move({ y: 10 });
+		// ... complex zigzag pattern with multiple subtractions
+		let result = Solid.UNION(wall, header);
+
+		if (config?.includeFootPath) {
+			const footPath = Solid.cube(length, 4, 8).align('bottom').move({ y: 10 });
+			result = Solid.UNION(result, footPath);
+		}
+
+		return result.align('bottom');
+	}
+);
 ```
 
 **How it works:**
 
 - Cache key generated from function name and serialized arguments: `${functionName}:${JSON.stringify(args)}`
-- Returns cached `Solid` instance if key exists in cache
-- Otherwise computes result, caches it, and returns it
+- **Results are cloned before caching** to ensure immutability (each call gets independent instance)
+- Returns cached clone if key exists in cache
+- Otherwise computes result, caches a clone, and returns the original
 - Cache persists for the session (not cleared automatically)
-- **Important**: Only caches functions returning `Solid` (not `Mesh`)
+- **Important**: Only caches functions returning `Solid` instances
 
 **When to use:**
 
-- Component functions called multiple times with same parameters
-- Expensive CSG operations in reusable parts
-- Grid/array patterns where same base shape is used repeatedly
-- **Don't use** for functions with side effects or non-serializable parameters
+- ✅ Component functions called multiple times with same parameters
+- ✅ Expensive CSG operations in reusable parts (walls, towers, decorative elements)
+- ✅ Grid/array patterns where same base shape is used repeatedly
+- ✅ Parametric components that are frequently reused in different contexts
+- ❌ **Don't use** for functions with side effects or non-serializable parameters (functions, symbols, etc.)
+- ❌ **Don't use** for one-time components that are never reused
+- ❌ **Don't use** for very simple/fast operations (caching overhead not worth it)
+
+**Example: Reusing cached components:**
+
+```typescript
+import { cacheInlineFunction } from '$lib/cacheFunction';
+import { Solid } from '$lib/3d/Solid';
+
+// Cached wall component (expensive CSG operations with zigzag pattern)
+export const Wall = cacheInlineFunction('Wall', (length: number): Solid => {
+	let wall = Solid.cube(length, 20, 2, 'green');
+	// ... complex CSG operations with zigzag pattern
+	return wall.align('bottom');
+});
+
+// Tower component reuses Wall multiple times - Wall(20) computed once!
+export const CornerTower = cacheInlineFunction('CornerTower', (): Solid => {
+	let tower = Solid.prism(8, 10, 20, { color: 'red' }).align('bottom');
+
+	// First Wall(20) call - computes and caches result
+	const wall1 = Wall(20).align('left').move({ x: 8 });
+	tower = Solid.SUBTRACT(tower, wall1);
+
+	// Second Wall(20) call - returns cached result (instant!)
+	const wall2 = Wall(20).align('right').rotate({ y: 90 }).move({ z: 8 });
+	tower = Solid.SUBTRACT(tower, wall2);
+
+	return tower;
+});
+```
 
 **Example: Cached grid components:**
 
@@ -1001,7 +1055,7 @@ const brick = cacheFunction((width: number, height: number, depth: number) => {
 	);
 });
 
-// Use cached brick in grid
+// Use cached brick in grid - brick(3, 1, 1.5) computed once for entire wall!
 export const brickWall = (): Solid => {
 	const b = brick(3, 1, 1.5); // Computed once
 	return Solid.GRID_XY(b, { cols: 10, rows: 8 });

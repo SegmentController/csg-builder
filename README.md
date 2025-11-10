@@ -460,6 +460,120 @@ export const halfBottle = (): Solid => {
 - Mechanical parts (knobs, handles, pulleys)
 - Decorative objects (candlesticks, lamp bases, ornaments)
 
+## Performance Optimization
+
+For expensive component computations that are called repeatedly with the same parameters, CSG Builder provides caching utilities to improve performance.
+
+### Caching Functions
+
+The caching system (`src/lib/cacheFunction.ts`) provides two wrapper functions to cache component results:
+
+#### Named Function Caching
+
+Use `cacheFunction` to wrap named functions that return `Solid`:
+
+```typescript
+import { cacheFunction } from '$lib/cacheFunction';
+
+// Original function
+const expensiveWall = (length: number, height: number): Solid => {
+	// Complex CSG operations...
+	const wall = Solid.cube(length, height, 2, 'gray');
+	const windows = Solid.cube(5, 8, 3, 'gray');
+	return Solid.SUBTRACT(wall, windows);
+};
+
+// Wrap with cache
+const cachedWall = cacheFunction(expensiveWall);
+
+// Usage: First call computes, subsequent calls with same params return cached result
+const wall1 = cachedWall(100, 20); // Computes and caches result
+const wall2 = cachedWall(100, 20); // Returns cached result (instant)
+const wall3 = cachedWall(150, 25); // Different params - computes new result
+```
+
+#### Inline Function Caching
+
+Use `cacheInlineFunction` for arrow functions or when you need explicit control over the cache key:
+
+```typescript
+import { cacheInlineFunction } from '$lib/cacheFunction';
+
+// For arrow functions or inline definitions
+export const Wall = cacheInlineFunction(
+	'Wall',
+	(length: number, config?: { includeFootPath?: boolean }): Solid => {
+		const wall = Solid.cube(length, 20, 2, 'gray');
+		// ... complex CSG operations
+		return wall;
+	}
+);
+
+// Used in components
+export const components: ComponentsMap = {
+	'Wall 100': () => Wall(100), // Cached
+	'Wall 150': () => Wall(150), // Different params - new cache entry
+	'Wall 100 with path': () => Wall(100, { includeFootPath: true }) // Different params - new cache entry
+};
+```
+
+### How Caching Works
+
+- **Cache Key**: Generated from function name and serialized arguments: `${functionName}:${JSON.stringify(args)}`
+- **Cloning**: Results are cloned before caching to ensure immutability
+- **Persistence**: Cache persists for the entire session (not cleared automatically)
+- **Type Safety**: Only works with functions returning `Solid` instances
+
+### When to Use Caching
+
+**✅ Good use cases:**
+
+- Component functions called multiple times with same parameters
+- Expensive CSG operations in reusable parts (walls, towers, decorative elements)
+- Base shapes used in grid/array patterns
+- Parametric components that are frequently reused
+
+**❌ Don't use for:**
+
+- Functions with side effects
+- Functions with non-serializable parameters (functions, symbols, etc.)
+- One-time components that are never reused
+- Very simple/fast operations (caching overhead not worth it)
+
+### Real-World Example
+
+From the castle project, the `Wall` component is cached and reused multiple times:
+
+```typescript
+import { cacheInlineFunction } from '$lib/cacheFunction';
+
+// Cached wall component (expensive CSG operations)
+export const Wall = cacheInlineFunction(
+	'Wall',
+	(length: number, config?: { includeFootPath?: boolean }): Solid => {
+		const wall = Solid.cube(length, 20, 2, 'green');
+		const header = Solid.cube(length, 4, 8, 'green');
+		// ... complex zigzag pattern with subtractions
+		return Solid.UNION(wall, header).align('bottom');
+	}
+);
+
+// Reused in tower component - Wall(20) is computed once, then cached
+export const CornerTower = cacheInlineFunction('CornerTower', (): Solid => {
+	let tower = Tower(10);
+
+	// First Wall(20) call - computes and caches
+	const wall1 = Wall(20, { includeFootPath: true });
+	tower = Solid.SUBTRACT(tower, wall1);
+
+	// Second Wall(20) call - returns cached result (instant!)
+	const wall2 = Wall(20, { includeFootPath: true });
+	tower = Solid.SUBTRACT(tower, wall2.rotate({ y: 90 }));
+
+	return tower;
+});
+```
+
 ### API Reference
 
 #### Solid Class
@@ -736,6 +850,12 @@ npm run export --silent -- "Brick Wall" > wall.stl
     - Use `revolutionSolidFromPath()` for smooth curves and sharp corners with path segments
     - Profile coordinate system: X = radius from center, Y = height
     - Always start at or near X=0 (center axis) for proper revolution
+16. **Performance Optimization with Caching**:
+    - Use `cacheFunction()` or `cacheInlineFunction()` to cache expensive component computations
+    - Perfect for reusable parametric components (walls, towers, decorative elements)
+    - Cache persists for the entire session - same parameters return cached result instantly
+    - See "Performance Optimization" section for detailed usage guide
+    - Don't cache simple/fast operations or one-time components
 
 ## Examples
 
@@ -754,6 +874,12 @@ Check out the `projects/sample/` directory for working examples:
   - Decorative objects (vases, bottles, goblets, wine glass)
   - Partial revolutions (quarter vase, half bottle)
   - Smooth curves and sharp corners with path segments
+
+Check out the `projects/castle/` directory for advanced caching examples:
+
+- **wall.ts** - Cached wall component with complex zigzag pattern
+- **tower.ts** - Tower components that reuse cached walls
+- Demonstrates performance optimization with `cacheInlineFunction()`
 
 ## Troubleshooting
 
