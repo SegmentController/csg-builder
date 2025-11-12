@@ -17,6 +17,7 @@ export default defineConfig({
 		chunkSizeWarningLimit: 1500,
 		assetsInlineLimit: 0
 	},
+	base: process.env.NODE_ENV === 'production' ? '/csg-builder' : '',
 	resolve: {
 		alias: {
 			$components: path.resolve(__dirname, './src/components'),
