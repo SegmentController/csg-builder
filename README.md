@@ -2,6 +2,8 @@
 
 A TypeScript-based 3D mesh creation tool using a component-based architecture. Build complex 3D models programmatically and export them as STL files.
 
+[Online CSG-builder demo](https://segmentcontroller.github.io/csg-builder/)
+
 ## Overview
 
 CSG Builder allows you to create 3D meshes using TypeScript code with a React-like component pattern. It leverages Constructive Solid Geometry (CSG) operations to combine, subtract, and transform primitive shapes (cubes, cylinders, spheres, cones, and polygon prisms) into complex geometries.
