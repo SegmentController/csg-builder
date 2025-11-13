@@ -6,6 +6,46 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 CSG Builder is a TypeScript-based 3D mesh creation tool using a component-based architecture. Users write TypeScript code to define 3D components (similar to React components) that are composed of primitive shapes (cubes, cylinders, spheres, cones, and polygon prisms). The system uses Constructive Solid Geometry (CSG) operations to perform boolean operations (union, subtraction) and exports the final mesh as binary STL files.
 
+## Learning Resources
+
+The codebase includes two fully-documented example projects that serve as both working code and comprehensive tutorials:
+
+### **projects/examples/** - Progressive Learning Examples
+
+A series of 8 tutorial files (A through G) demonstrating CSG Builder syntax progressively:
+
+- **A.solids.ts** - Basic primitives (cube, cylinder, sphere, cone, prisms)
+- **B.operations.ts** - CSG boolean operations (union, subtract, intersect)
+- **C.alignment.ts** - Positioning and alignment methods
+- **D.partials.ts** - Partial geometries with angle parameters
+- **E.wallAndWindow.ts** - Complex multi-component composition
+- **F.shapes.ts** - Custom profile prisms (2D to 3D extrusion)
+- **G.revolution.ts** - Revolution solids (lathe geometry)
+
+Each file contains comprehensive inline comments explaining:
+
+- Syntax patterns and method signatures
+- Key concepts (immutability, method chaining, static vs instance methods)
+- Common pitfalls and best practices
+- Use cases and practical examples
+
+**Start here** to learn CSG Builder syntax from basics to advanced techniques.
+
+### **projects/castle/** - Production-Ready Architecture Example
+
+A complete castle project demonstrating advanced patterns for complex 3D model composition:
+
+- **Multi-file modular structure** (wall.ts, tower.ts, castle.ts)
+- **Hierarchical component composition** (Primitives → Building Blocks → Assembly)
+- **Shared configuration** via \_const.ts
+- **Performance optimization** with cacheInlineFunction()
+- **Cross-file dependencies** and component integration
+- **Advanced CSG techniques** (boolean carving, component subtraction, loops)
+
+Fully commented to show production-ready patterns, architectural decisions, and performance considerations.
+
+**Use this** as a reference for structuring complex, maintainable 3D projects.
+
 ## Build and Development Commands
 
 ```bash

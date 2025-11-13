@@ -8,6 +8,8 @@ A TypeScript-based 3D mesh creation tool using a component-based architecture. B
 
 CSG Builder allows you to create 3D meshes using TypeScript code with a React-like component pattern. It leverages Constructive Solid Geometry (CSG) operations to combine, subtract, and transform primitive shapes (cubes, cylinders, spheres, cones, and polygon prisms) into complex geometries.
 
+**📖 New to CSG Builder?** Check out the [Examples & Learning Resources](#examples--learning-resources) section below. All example projects are **fully documented with comprehensive inline comments** to help you learn the syntax and patterns.
+
 ## Features
 
 - **Component-Based Architecture** - Define reusable 3D components as TypeScript functions
@@ -21,7 +23,7 @@ CSG Builder allows you to create 3D meshes using TypeScript code with a React-li
 - **Real-Time Preview** - Interactive 3D viewport with orbit controls
 - **STL Export** - Export models in binary STL format for 3D printing
 - **Hot Reload** - Instant updates during development with simple browser refresh (Ctrl+R)
-- **Full Examples** - See how to use all features in the included examples by running the app and exploring the dropdown
+- **Comprehensive Documentation** - Fully-commented example projects teaching syntax from basics to advanced patterns
 
 ## Examples STLs
 
@@ -872,29 +874,57 @@ npm run export --silent -- "Brick Wall" > wall.stl
     - See the "Performance Optimization" section for a detailed usage guide
     - Don't cache simple/fast operations or one-time components
 
-## Examples
+## Examples & Learning Resources
 
-Check out the `projects/sample/` directory for working examples:
+CSG Builder includes **fully-documented example projects** that serve as both working code and comprehensive tutorials. All example files contain extensive inline comments explaining syntax, patterns, and best practices.
 
-- **box.ts** - Simple cube with cylinder
-- **brickWall.ts** - Parametric brick wall with pattern
-- **sideWindow.ts** - Window component with frame and pane
-- **shapes.ts** - Comprehensive showcase including:
-  - All primitive shapes (sphere, cone, prism, etc.)
-  - Partial geometries (pie slices, hemispheres, wedges)
-  - Custom profile prisms (Shape API, point arrays, path segments)
-  - Path-based profiles with smooth curves and sharp corners
-- **chesspiece.ts** - Body of revolution examples:
-  - Chess pieces (pawn, rook, bishop) using different methods
-  - Decorative objects (vases, bottles, goblets, wine glass)
-  - Partial revolutions (quarter vase, half bottle)
-  - Smooth curves and sharp corners with path segments
+### 📚 **projects/examples/** - Progressive Learning Tutorial
 
-Check out the `projects/castle/` directory for advanced caching examples:
+A series of 8 tutorial files (A through G) teaching CSG Builder from basics to advanced:
 
-- **wall.ts** - Cached wall component with complex zigzag pattern
-- **tower.ts** - Tower components that reuse cached walls
-- Demonstrates performance optimization with `cacheInlineFunction()`
+- **A.solids.ts** - All basic primitives (cube, cylinder, sphere, cone, prisms)
+- **B.operations.ts** - CSG boolean operations (union, subtract, intersect)
+- **C.alignment.ts** - Positioning and alignment methods
+- **D.partials.ts** - Partial geometries with angle parameters (pie slices, hemispheres)
+- **E.wallAndWindow.ts** - Complex multi-component composition patterns
+- **F.shapes.ts** - Custom profile prisms (3 methods for 2D to 3D extrusion)
+- **G.revolution.ts** - Revolution solids (lathe geometry for chess pieces, vases)
+
+**Each file includes:**
+
+- ✅ Comprehensive inline comments explaining every pattern
+- ✅ Syntax documentation (parameters, return types, method signatures)
+- ✅ Key concepts (immutability, method chaining, static vs instance methods)
+- ✅ Common pitfalls and warnings (⚠️)
+- ✅ Tips and best practices (💡)
+- ✅ Use cases and practical applications
+
+**🎓 Start with `A.solids.ts` and work through to `G.revolution.ts` to learn CSG Builder progressively.**
+
+### 🏰 **projects/castle/** - Production-Ready Architecture
+
+A complete multi-file castle project demonstrating advanced patterns:
+
+- **Modular structure**: Separate files for walls, towers, and assembly
+- **Hierarchical composition**: Primitives → Building Blocks → Final Assembly
+- **Shared configuration**: `_const.ts` for project-wide constants
+- **Performance optimization**: Extensive use of `cacheInlineFunction()`
+- **Cross-file dependencies**: Components importing and reusing other components
+- **Advanced CSG techniques**: Boolean carving, component subtraction, CSG in loops
+
+**All files fully commented** showing production-ready patterns, architectural decisions, performance considerations, and complex assembly strategies.
+
+**🏗️ Use this as a reference for structuring large-scale, maintainable 3D projects.**
+
+### 📦 **projects/sample/** - Additional Working Examples
+
+Practical examples for specific use cases:
+
+- **box.ts** - Simple cube with cylinder hole
+- **brickWall.ts** - Parametric brick wall with relief pattern
+- **sideWindow.ts** - Reusable window component with frame
+- **shapes.ts** - Comprehensive showcase of all shape types
+- **chesspiece.ts** - Body of revolution examples (chess pieces, vases)
 
 ## Troubleshooting
 
