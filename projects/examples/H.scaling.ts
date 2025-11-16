@@ -35,15 +35,15 @@ import { addToComponentStore } from '$stores/componentStore';
  */
 const uniformScaling = (): Solid => {
 	// Create a 10x10x10 cube
-	const originalCube = Solid.cube(10, 10, 10, 'blue').move({ x: -30 });
+	const originalCube = Solid.cube(10, 10, 10, { color: 'blue' }).move({ x: -30 });
 
 	// Double the size uniformly (all axes)
-	const doubledCube = Solid.cube(10, 10, 10, 'green')
+	const doubledCube = Solid.cube(10, 10, 10, { color: 'green' })
 		.scale({ all: 2 }) // Now 20x20x20
 		.move({ x: 0 });
 
 	// Half the size uniformly (all axes)
-	const halvedCube = Solid.cube(10, 10, 10, 'red')
+	const halvedCube = Solid.cube(10, 10, 10, { color: 'red' })
 		.scale({ all: 0.5 }) // Now 5x5x5
 		.move({ x: 30 });
 
@@ -69,7 +69,7 @@ const axisScaling = (): Solid => {
 		.move({ y: 0 });
 
 	// Stretch a cube in two directions
-	const stretchedCube = Solid.cube(8, 8, 8, 'purple')
+	const stretchedCube = Solid.cube(8, 8, 8, { color: 'purple' })
 		.scale({ x: 1.5, z: 2 }) // 1.5x wider, 2x deeper, same height
 		.move({ y: -20 });
 
@@ -84,22 +84,24 @@ const axisScaling = (): Solid => {
  */
 const combinedScaling = (): Solid => {
 	// Start with a 10x10x10 cube
-	const cube1 = Solid.cube(10, 10, 10, 'lime')
+	const cube1 = Solid.cube(10, 10, 10, { color: 'lime' })
 		.scale({ all: 2 }) // First: 20x20x20
 		.move({ x: -30, y: 15 });
 
 	// Scale all by 2, then additionally scale Z by 1.5
-	const cube2 = Solid.cube(10, 10, 10, 'yellow')
+	const cube2 = Solid.cube(10, 10, 10, { color: 'yellow' })
 		.scale({ all: 2, z: 1.5 }) // 20x20x30 (Z is 2 * 1.5 = 3x original)
 		.move({ x: 0, y: 15 });
 
 	// Scale all by 0.5, then stretch X by 3
-	const cube3 = Solid.cube(10, 10, 10, 'magenta')
+	const cube3 = Solid.cube(10, 10, 10, { color: 'magenta' })
 		.scale({ all: 0.5, x: 3 }) // 15x5x5 (X is 0.5 * 3 = 1.5x, Y/Z are 0.5x)
 		.move({ x: 30, y: 15 });
 
 	// Visual reference: original size cube at bottom
-	const reference = Solid.cube(10, 10, 10, 'gray').move({ y: -15 }).center({ x: true, z: true });
+	const reference = Solid.cube(10, 10, 10, { color: 'gray' })
+		.move({ y: -15 })
+		.center({ x: true, z: true });
 
 	return Solid.MERGE([cube1, cube2, cube3, reference]);
 };
@@ -139,9 +141,11 @@ const cumulativeScaling = (): Solid => {
 const aspectRatioAdjustments = (): Solid => {
 	// Base window component (always create at standard size)
 	const createWindow = (): Solid => {
-		const frame = Solid.cube(10, 15, 2, 'brown');
-		const glass = Solid.cube(8, 13, 1, 'cyan').move({ y: 0, z: 0.5 }).center({ x: true, y: true });
-		const divider = Solid.cube(0.5, 15, 2, 'brown').center({ x: true, y: true });
+		const frame = Solid.cube(10, 15, 2, { color: 'brown' });
+		const glass = Solid.cube(8, 13, 1, { color: 'cyan' })
+			.move({ y: 0, z: 0.5 })
+			.center({ x: true, y: true });
+		const divider = Solid.cube(0.5, 15, 2, { color: 'brown' }).center({ x: true, y: true });
 		return Solid.MERGE([frame, glass, divider]);
 	};
 
@@ -190,8 +194,8 @@ const aspectRatioAdjustments = (): Solid => {
  *    - Example of what to avoid:
  *      const result = Solid.SUBTRACT(big, small).scale({ all: 2 }); // Can cause issues
  *    - Better approach:
- *      const big = Solid.cube(20, 20, 20, 'red').scale({ all: 2 });
- *      const small = Solid.cube(10, 10, 10, 'red').scale({ all: 2 });
+ *      const big = Solid.cube(20, 20, 20, { color: 'red' }).scale({ all: 2 });
+ *      const small = Solid.cube(10, 10, 10, { color: 'red' }).scale({ all: 2 });
  *      const result = Solid.SUBTRACT(big, small);
  */
 

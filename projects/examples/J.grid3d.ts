@@ -38,7 +38,7 @@ import { addToComponentStore } from '$stores/componentStore';
  * See the difference between GRID_X, GRID_XY, and GRID_XYZ.
  */
 const gridComparison = (): Solid => {
-	const cube = Solid.cube(4, 4, 4, 'red');
+	const cube = Solid.sphere(2, { color: 'red' });
 
 	// 1D grid: 5 cubes in a row along X-axis
 	const grid1D = Solid.GRID_X(cube, { cols: 5 })
@@ -135,8 +135,8 @@ const latticeStructure = (): Solid => {
  */
 const checkerboard3D = (): Solid => {
 	// Create two cube types (light and dark)
-	const lightCube = Solid.cube(5, 5, 5, 'white');
-	const darkCube = Solid.cube(5, 5, 5, 'black');
+	const lightCube = Solid.sphere(2.5, { color: 'white' });
+	const darkCube = Solid.cube(5, 5, 5, { color: 'black' });
 
 	// Strategy: Create alternating layers
 	// Layer 1 (bottom): Start with light cube
@@ -169,7 +169,7 @@ const checkerboard3D = (): Solid => {
  */
 const storageShelf = (): Solid => {
 	// Vertical supports (corner posts)
-	const post = Solid.cube(2, 40, 2, 'brown');
+	const post = Solid.cube(2, 40, 2, { color: 'brown' });
 	const posts = Solid.GRID_XYZ(post, {
 		cols: 2,
 		rows: 1,
@@ -180,39 +180,42 @@ const storageShelf = (): Solid => {
 		.align('left')
 		.align('front');
 
-	// Horizontal shelves
-	const shelf = Solid.cube(30, 1.5, 20, 'lightgray');
-	const shelves = Solid.GRID_X(shelf, { cols: 1 }) // Single column (just one shelf width-wise)
-		.move({ z: 0 })
+	// Horizontal shelves - create separate instances at different heights
+	const shelf1 = Solid.cube(30, 1.5, 20, { color: 'lightgray' })
 		.align('bottom')
 		.align('left')
-		.align('front');
+		.align('front')
+		.move({ y: 0 });
 
-	// Stack shelves at different heights
-	const shelfLevel1 = shelves.move({ y: 0 });
-	const shelfLevel2 = shelves.move({ y: 12 });
-	const shelfLevel3 = shelves.move({ y: 24 });
-	const shelfLevel4 = shelves.move({ y: 36 });
+	const shelf2 = Solid.cube(30, 1.5, 20, { color: 'lightgray' })
+		.align('bottom')
+		.align('left')
+		.align('front')
+		.move({ y: 12 });
+
+	const shelf3 = Solid.cube(30, 1.5, 20, { color: 'lightgray' })
+		.align('bottom')
+		.align('left')
+		.align('front')
+		.move({ y: 24 });
+
+	const shelf4 = Solid.cube(30, 1.5, 20, { color: 'lightgray' })
+		.align('bottom')
+		.align('left')
+		.align('front')
+		.move({ y: 36 });
 
 	// Add items on shelves (books represented as small cubes)
-	const book = Solid.cube(2, 6, 3, 'red');
+	const book = Solid.cube(2, 6, 3, { color: 'red' });
 	const booksShelf2 = Solid.GRID_XY(book, { cols: 8, rows: 2, spacing: [1, 0] })
 		.align('bottom')
 		.move({ x: 3, y: 13.5, z: 4 });
 
-	const booksShelf3 = Solid.GRID_XY(book, { cols: 6, rows: 3, spacing: [1.5, 0] })
+	const booksShelf3 = Solid.GRID_XY(book, { cols: 7, rows: 3, spacing: [1.5, 0] })
 		.align('bottom')
 		.move({ x: 5, y: 25.5, z: 3 });
 
-	return Solid.MERGE([
-		posts,
-		shelfLevel1,
-		shelfLevel2,
-		shelfLevel3,
-		shelfLevel4,
-		booksShelf2,
-		booksShelf3
-	]);
+	return Solid.MERGE([posts, shelf1, shelf2, shelf3, shelf4, booksShelf2, booksShelf3]);
 };
 
 /**

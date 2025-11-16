@@ -44,7 +44,7 @@ export const arrow = (): Solid => {
 			[0, 3] // Left bottom (arrow tail end)
 			// Auto-closes back to [0, 5]
 		],
-		'orange'
+		{ color: 'orange' }
 	)
 		.align('bottom')
 		.center({ x: true, z: true });
@@ -82,7 +82,7 @@ export const star = (): Solid => {
 				shape.lineTo(radius * Math.cos(angle), radius * Math.sin(angle));
 			}
 		},
-		'gold'
+		{ color: 'gold' }
 	)
 		.align('bottom')
 		.center({ x: true, z: true });
@@ -113,7 +113,7 @@ export const lProfileWithHoles = (): Solid => {
 			shape.lineTo(0, 10); // Top horizontal (tall)
 			shape.lineTo(0, 0); // Close back to start
 		},
-		'gray'
+		{ color: 'gray' }
 	);
 
 	// Add cylindrical holes using CSG subtraction
@@ -152,7 +152,7 @@ export const raceTrack = (): Solid => {
 			straight(20), // Back straightaway
 			curve(5, 180) // Return semicircle (auto-closes to origin)
 		],
-		'green'
+		{ color: 'green' }
 	);
 };
 

@@ -39,7 +39,7 @@ import { WALL } from './_const';
  */
 const WallHeader = cacheInlineFunction('WallHeader', (length: number) => {
 	// Base header strip (horizontal band at top of wall)
-	let header = Solid.cube(length, WALL.WIDTH * 2, WALL.WIDTH / 2, 'green').move({
+	let header = Solid.cube(length, WALL.WIDTH * 2, WALL.WIDTH / 2, { color: 'green' }).move({
 		y: WALL.HEIGHT / 2 + WALL.WIDTH,
 		z: WALL.WIDTH * 1.75
 	});
@@ -96,10 +96,10 @@ export const Wall = cacheInlineFunction(
 	'Wall',
 	(length: number, config?: { includeFootPath?: boolean }): Solid => {
 		// Main wall body (vertical plane)
-		const wall = Solid.cube(length, WALL.HEIGHT, WALL.WIDTH, 'green');
+		const wall = Solid.cube(length, WALL.HEIGHT, WALL.WIDTH, { color: 'green' });
 
 		// Top horizontal band (walkway on top of wall)
-		const header = Solid.cube(length, WALL.WIDTH, WALL.WIDTH * 4, 'green').move({
+		const header = Solid.cube(length, WALL.WIDTH, WALL.WIDTH * 4, { color: 'green' }).move({
 			y: WALL.HEIGHT / 2 - WALL.WIDTH / 2
 		});
 

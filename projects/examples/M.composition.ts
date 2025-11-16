@@ -44,12 +44,15 @@ const parametricBuilding = (): Solid => {
 	const cachedWindow = cacheInlineFunction(
 		'BuildingWindow',
 		(width: number, height: number): Solid => {
-			const frame = Solid.cube(width, height, 1.5, 'brown');
-			const glass = Solid.cube(width - 0.8, height - 0.8, 0.8, 'cyan')
+			const frame = Solid.cube(width, height, 1.5, { color: 'brown' });
+			const glass = Solid.cube(width - 0.8, height - 0.8, 0.8, { color: 'cyan' })
 				.center({ x: true, y: true })
 				.move({ z: 0.4 });
-			const dividerH = Solid.cube(width, 0.3, 1.5, 'brown').center({ x: true, y: true });
-			const dividerV = Solid.cube(0.3, height, 1.5, 'brown').center({ x: true, y: true });
+			const dividerH = Solid.cube(width, 0.3, 1.5, { color: 'brown' }).center({ x: true, y: true });
+			const dividerV = Solid.cube(0.3, height, 1.5, { color: 'brown' }).center({
+				x: true,
+				y: true
+			});
 			return Solid.MERGE([frame, glass, dividerH, dividerV]);
 		}
 	);
@@ -59,22 +62,22 @@ const parametricBuilding = (): Solid => {
 		'BuildingFloor',
 		(width: number, height: number, depth: number, windowCount: number): Solid => {
 			// Floor slab
-			const floor = Solid.cube(width, 1, depth, 'gray').align('bottom');
+			const floor = Solid.cube(width, 1, depth, { color: 'gray' }).align('bottom');
 
 			// Walls
-			const frontWall = Solid.cube(width, height, 2, 'lightgray')
+			const frontWall = Solid.cube(width, height, 2, { color: 'lightgray' })
 				.align('bottom')
 				.move({ y: 1, z: -depth / 2 + 1 });
 
-			const backWall = Solid.cube(width, height, 2, 'lightgray')
+			const backWall = Solid.cube(width, height, 2, { color: 'lightgray' })
 				.align('bottom')
 				.move({ y: 1, z: depth / 2 - 1 });
 
-			const leftWall = Solid.cube(2, height, depth - 4, 'lightgray')
+			const leftWall = Solid.cube(2, height, depth - 4, { color: 'lightgray' })
 				.align('bottom')
 				.move({ x: -width / 2 + 1, y: 1 });
 
-			const rightWall = Solid.cube(2, height, depth - 4, 'lightgray')
+			const rightWall = Solid.cube(2, height, depth - 4, { color: 'lightgray' })
 				.align('bottom')
 				.move({ x: width / 2 - 1, y: 1 });
 
@@ -134,7 +137,7 @@ const parametricBuilding = (): Solid => {
 const geometricSculpture = (): Solid => {
 	// Create base element with transform chain
 	const createTwistedElement = (angle: number, scaleY: number): Solid => {
-		return Solid.cube(4, 8, 4, 'purple')
+		return Solid.cube(4, 8, 4, { color: 'purple' })
 			.center() // Center for symmetric rotation
 			.scale({ y: scaleY }) // Vary height
 			.rotate({ y: angle }) // Twist
@@ -177,79 +180,40 @@ const geometricSculpture = (): Solid => {
  * Complex 3D grid pattern with hollow sections and CSG operations.
  */
 const complexLattice = (): Solid => {
-	// Cached beam component
-	const cachedBeam = cacheInlineFunction(
-		'LatticeBeam',
-		(length: number, thickness: number): Solid => {
-			const beam = Solid.cylinder(thickness, length, { color: 'silver' }).rotate({ z: 90 });
+	// Simplified beam (just cylinder, no decorative ends)
+	const beamLength = 20;
+	const beamThickness = 1;
+	const spacing = 20;
 
-			// Add decorative ends
-			const end = Solid.sphere(thickness * 1.2, { color: 'gold' });
-			const end1 = end.move({ x: -length / 2 });
-			const end2 = end.move({ x: length / 2 });
+	// Create just 6 beams showing the lattice concept (2 per direction)
+	const beamX1 = Solid.cylinder(beamThickness, beamLength, { color: 'silver' })
+		.rotate({ z: 90 })
+		.move({ y: 0, z: 0 });
 
-			return Solid.MERGE([beam, end1, end2]);
-		}
-	);
+	const beamX2 = Solid.cylinder(beamThickness, beamLength, { color: 'silver' })
+		.rotate({ z: 90 })
+		.move({ y: spacing, z: spacing });
 
-	// Create 3D lattice frame
-	const beamLength = 15;
-	const beamThickness = 0.8;
-	const spacing = 15;
+	const beamY1 = Solid.cylinder(beamThickness, beamLength, { color: 'orange' }).move({
+		x: 0,
+		z: 0
+	});
 
-	// X-direction beams
-	const beamsX: Solid[] = [];
-	for (let y = 0; y < 4; y++) {
-		for (let z = 0; z < 4; z++) {
-			const beam = cachedBeam(beamLength, beamThickness).move({
-				x: 0,
-				y: y * spacing,
-				z: z * spacing
-			});
-			beamsX.push(beam);
-		}
-	}
+	const beamY2 = Solid.cylinder(beamThickness, beamLength, { color: 'orange' }).move({
+		x: spacing,
+		z: spacing
+	});
 
-	// Y-direction beams
-	const beamsY: Solid[] = [];
-	for (let x = 0; x < 4; x++) {
-		for (let z = 0; z < 4; z++) {
-			const beam = cachedBeam(beamLength, beamThickness)
-				.rotate({ z: -90 })
-				.move({
-					x: x * spacing,
-					y: 0,
-					z: z * spacing
-				});
-			beamsY.push(beam);
-		}
-	}
+	const beamZ1 = Solid.cylinder(beamThickness, beamLength, { color: 'gold' })
+		.rotate({ x: 90 })
+		.move({ x: 0, y: 0 });
 
-	// Z-direction beams
-	const beamsZ: Solid[] = [];
-	for (let x = 0; x < 4; x++) {
-		for (let y = 0; y < 4; y++) {
-			const beam = cachedBeam(beamLength, beamThickness)
-				.rotate({ y: 90 })
-				.move({
-					x: x * spacing,
-					y: y * spacing,
-					z: 0
-				});
-			beamsZ.push(beam);
-		}
-	}
+	const beamZ2 = Solid.cylinder(beamThickness, beamLength, { color: 'gold' })
+		.rotate({ x: 90 })
+		.move({ x: spacing, y: spacing });
 
-	// Merge all beams
-	const lattice = Solid.MERGE([...beamsX, ...beamsY, ...beamsZ]);
-
-	// Create a hollow sphere to carve out center
-	const outerSphere = Solid.sphere(25, { color: 'silver' });
-	const innerSphere = Solid.sphere(20, { color: 'silver' });
-	const hollowSphere = Solid.SUBTRACT(outerSphere, innerSphere);
-
-	// Intersect lattice with hollow sphere (keep only parts inside sphere shell)
-	return Solid.INTERSECT(lattice, hollowSphere).center();
+	// Merge just 6 beams (minimal lattice structure)
+	return Solid.MERGE([beamX1, beamX2, beamY1, beamY2, beamZ1, beamZ2]).center();
 };
 
 /**
@@ -265,13 +229,14 @@ const modularStadium = (): Solid => {
 		seatsPerRow: 20,
 		seatWidth: 1.8,
 		tierHeight: 2.5,
-		tierDepth: 3
+		tierDepth: 3,
+		radialOffset: 40 // Distance from center to start of seating
 	};
 
 	// Cached seat component
 	const cachedSeat = cacheInlineFunction('StadiumSeat', (): Solid => {
-		const base = Solid.cube(1.5, 0.8, 1.8, 'blue');
-		const back = Solid.cube(1.5, 1.2, 0.3, 'blue')
+		const base = Solid.cube(1.5, 0.8, 1.8, { color: 'blue' });
+		const back = Solid.cube(1.5, 1.2, 0.3, { color: 'blue' })
 			.align('bottom')
 			.move({ y: 0.8, z: -1.8 / 2 + 0.15 });
 		return Solid.MERGE([base, back]).align('bottom');
@@ -306,13 +271,15 @@ const modularStadium = (): Solid => {
 			stadiumConfig.seatsPerRow * stadiumConfig.seatWidth,
 			0.5,
 			stadiumConfig.tiersPerSection * stadiumConfig.tierDepth + 5,
-			'gray'
+			{ color: 'gray' }
 		)
 			.align('bottom')
 			.move({ y: -1 })
 			.center({ x: true, z: true });
 
-		return Solid.MERGE([...tiers, aislePlatform]).rotate({ y: sectionIndex * 120 });
+		return Solid.MERGE([...tiers, aislePlatform])
+			.move({ z: -stadiumConfig.radialOffset }) // Push outward from center first
+			.rotate({ y: sectionIndex * 120 }); // Then rotate around center
 	};
 
 	// Create three sections around a central field
@@ -334,29 +301,27 @@ const modularStadium = (): Solid => {
  * Demonstrates all H-L concepts in a single production-quality model.
  */
 const buildingComplex = (): Solid => {
-	// Shared configuration
+	// Shared configuration (further reduced for performance)
 	const complexConfig = {
-		towerHeight: 60,
+		towerHeight: 30,
 		towerWidth: 20,
-		bridgeHeight: 40,
+		bridgeHeight: 20,
 		bridgeLength: 30
 	};
 
-	// Cached components (Level 1: Primitives)
+	// Cached components (Level 1: Primitives - simplified for performance)
 	const cachedWindowSmall = cacheInlineFunction('SmallWindow', (): Solid => {
-		const frame = Solid.cube(3, 4, 1, 'brown');
-		const glass = Solid.cube(2.5, 3.5, 0.5, 'cyan').center({ x: true, y: true }).move({ z: 0.5 });
-		return Solid.MERGE([frame, glass]);
+		return Solid.cube(3, 4, 1, { color: 'brown' }); // Simplified: just frame, no glass/dividers
 	});
 
 	// Level 2: Building blocks
 	const cachedTower = cacheInlineFunction('Tower', (height: number, width: number): Solid => {
 		// Tower body
-		const body = Solid.cube(width, height, width, 'lightgray').align('bottom');
+		const body = Solid.cube(width, height, width, { color: 'lightgray' }).align('bottom');
 
-		// Add windows in 3D grid pattern
+		// Add windows in 3D grid pattern (reduced to 2 per floor for performance)
 		const window = cachedWindowSmall();
-		const windowsPerFloor = 4;
+		const windowsPerFloor = 2;
 		const floors = Math.floor(height / 10);
 
 		const windows: Solid[] = [];
@@ -371,9 +336,8 @@ const buildingComplex = (): Solid => {
 			}
 		}
 
-		// Roof
-		const roof = Solid.prism(4, width * 0.7, width * 0.9, { color: 'red' })
-			.rotate({ x: 90 })
+		// Roof (simplified to cube for performance)
+		const roof = Solid.cube(width, 3, width, { color: 'red' })
 			.align('bottom')
 			.move({ y: height })
 			.center({ x: true, z: true });
@@ -391,22 +355,22 @@ const buildingComplex = (): Solid => {
 	});
 
 	// Connecting bridge
-	const bridge = Solid.cube(complexConfig.bridgeLength, 5, 15, 'gray')
+	const bridge = Solid.cube(complexConfig.bridgeLength, 5, 15, { color: 'gray' })
 		.align('bottom')
 		.move({ y: complexConfig.bridgeHeight })
 		.center({ x: true, z: true });
 
-	// Support columns for bridge
+	// Support columns for bridge (reduced to 2x2 for performance)
 	const columnHeight = complexConfig.bridgeHeight;
 	const column = Solid.cylinder(1.5, columnHeight, { color: 'gray' }).align('bottom');
 	const columns = Solid.GRID_XY(column, {
 		cols: 2,
-		rows: 3,
-		spacing: [complexConfig.bridgeLength - 3, 6]
+		rows: 2,
+		spacing: [complexConfig.bridgeLength - 3, 8]
 	}).center({ x: true, z: true });
 
 	// Ground platform
-	const platform = Solid.cube(complexConfig.bridgeLength + 40, 2, 40, 'brown')
+	const platform = Solid.cube(complexConfig.bridgeLength + 40, 2, 40, { color: 'brown' })
 		.align('bottom')
 		.move({ y: -1 })
 		.center({ x: true, z: true });

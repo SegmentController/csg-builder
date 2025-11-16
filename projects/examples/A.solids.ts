@@ -19,7 +19,7 @@ import type { ComponentsMap } from '$stores/componentStore';
  * Parameters: width (X), height (Y), depth (Z), color
  */
 export const cube = (): Solid => {
-	return Solid.cube(10, 10, 10, 'red'); // 10×10×10 red cube
+	return Solid.cube(10, 10, 10, { color: 'red' }); // 10×10×10 red cube
 };
 
 /**

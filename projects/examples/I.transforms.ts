@@ -47,7 +47,7 @@ const transformOrder = (): Solid => {
 	const rotateFirstCylinder = Solid.cylinder(3, 15, { color: 'blue' })
 		.rotate({ z: 90 }) // Orient horizontally first
 		.rotate({ y: 45 }) // Rotate at origin
-		.move({ x: 20 }); // Move in the rotated direction
+		.move({ x: 10 }); // Move in the rotated direction
 	// Result: Cylinder moves at an angle (following its rotated X-axis)
 
 	// Visual reference: Show origin
@@ -65,7 +65,7 @@ const transformOrder = (): Solid => {
 const centeringInChains = (): Solid => {
 	// Pattern A: Center FIRST, then transform
 	// Good for: Symmetric rotations and scaling around center
-	const centerFirst = Solid.cube(10, 20, 5, 'green')
+	const centerFirst = Solid.cube(10, 20, 5, { color: 'green' })
 		.center() // Center at origin (0,0,0)
 		.rotate({ z: 45 }) // Rotate around center
 		.move({ x: -30, y: 15 }); // Then move to final position
@@ -73,7 +73,7 @@ const centeringInChains = (): Solid => {
 	// Pattern B: Transform, then center
 	// Good for: Centering complex assemblies after composition
 	const centerLast = Solid.UNION(
-		Solid.cube(10, 20, 5, 'cyan'),
+		Solid.cube(10, 20, 5, { color: 'cyan' }),
 		Solid.cylinder(3, 25, { color: 'cyan' }).rotate({ x: 90 })
 	)
 		.rotate({ z: 30 }) // Rotate the assembly
@@ -81,7 +81,7 @@ const centeringInChains = (): Solid => {
 		.move({ x: 30, y: 15 }); // Position it
 
 	// Pattern C: Selective centering (center only specific axes)
-	const selectiveCentering = Solid.cube(8, 15, 6, 'orange')
+	const selectiveCentering = Solid.cube(8, 15, 6, { color: 'orange' })
 		.align('bottom') // Place bottom face on Y=0
 		.center({ x: true, z: true }) // Center horizontally only (Y unchanged)
 		.move({ y: -15 }); // Move down
@@ -99,7 +99,7 @@ const absoluteVsRelative = (): Solid => {
 	// Absolute positioning with .at(x, y, z)
 	// Always requires all three parameters
 	// Each .at() call REPLACES previous position (last one wins)
-	const absoluteCube = Solid.cube(8, 8, 8, 'purple')
+	const absoluteCube = Solid.cube(8, 8, 8, { color: 'purple' })
 		.at(0, 0, 0) // Position at origin
 		.at(10, 5, 0) // REPLACES previous - now at (10, 5, 0)
 		.at(-30, 10, 0); // REPLACES again - final position
@@ -108,7 +108,7 @@ const absoluteVsRelative = (): Solid => {
 	// Relative positioning with .move({ x?, y?, z? })
 	// Parameters are optional, only specified axes move
 	// Each .move() call ACCUMULATES (adds to previous position)
-	const relativeCube = Solid.cube(8, 8, 8, 'lime')
+	const relativeCube = Solid.cube(8, 8, 8, { color: 'lime' })
 		.move({ x: 10 }) // Move right 10 units
 		.move({ y: 5 }) // Move up 5 units
 		.move({ x: -5, z: 3 }); // Move left 5, forward 3
@@ -116,7 +116,7 @@ const absoluteVsRelative = (): Solid => {
 
 	// Mixed: .at() then .move()
 	// Common pattern: Place at specific location, then fine-tune
-	const mixedCube = Solid.cube(8, 8, 8, 'yellow')
+	const mixedCube = Solid.cube(8, 8, 8, { color: 'yellow' })
 		.at(30, 0, 0) // Place at absolute position
 		.move({ y: 10, z: 2 }); // Fine-tune with relative offset
 	// Result: Position is (30, 10, 2)
@@ -133,7 +133,7 @@ const absoluteVsRelative = (): Solid => {
 const alignmentWorkflow = (): Solid => {
 	// Build a tower from the ground up
 	// Pattern: align('bottom') to place base at Y=0, then stack with .move()
-	const base = Solid.cube(15, 5, 15, 'brown')
+	const base = Solid.cube(15, 5, 15, { color: 'brown' })
 		.align('bottom') // Bottom face at Y=0
 		.center({ x: true, z: true }); // Center horizontally
 
@@ -148,17 +148,17 @@ const alignmentWorkflow = (): Solid => {
 		.center({ x: true, z: true });
 
 	// Align different faces for wall placement
-	const leftWall = Solid.cube(2, 20, 15, 'blue')
+	const leftWall = Solid.cube(2, 20, 15, { color: 'blue' })
 		.align('right') // Right face at X=0
 		.move({ x: -7.5 }) // Offset to tower edge
 		.align('bottom')
-		.move({ y: 5 });
+		.move({ y: 5, x: 2 });
 
-	const rightWall = Solid.cube(2, 20, 15, 'blue')
+	const rightWall = Solid.cube(2, 20, 15, { color: 'blue' })
 		.align('left') // Left face at X=0
 		.move({ x: 7.5 }) // Offset to tower edge
 		.align('bottom')
-		.move({ y: 5 });
+		.move({ y: 5, x: -2 });
 
 	return Solid.MERGE([base, column, roof, leftWall, rightWall]);
 };
@@ -172,16 +172,19 @@ const alignmentWorkflow = (): Solid => {
 const completeWorkflow = (): Solid => {
 	// Create a window component with proper transform chain
 	const createWindow = (width: number, height: number): Solid => {
-		const frame = Solid.cube(width, height, 2, 'brown');
-		const opening = Solid.cube(width - 2, height - 2, 3, 'brown').center({ x: true, y: true }); // Center opening in frame
-		const crossbar = Solid.cube(0.8, height, 2, 'brown').center({ x: true, y: true });
+		const frame = Solid.cube(width, height, 2, { color: 'brown' });
+		const opening = Solid.cube(width - 2, height - 2, 3, { color: 'brown' }).center({
+			x: true,
+			y: true
+		}); // Center opening in frame
+		const crossbar = Solid.cube(0.8, height, 2, { color: 'brown' }).center({ x: true, y: true });
 
 		const frameWithOpening = Solid.SUBTRACT(frame, opening);
 		return Solid.UNION(frameWithOpening, crossbar);
 	};
 
 	// Wall with windows following complete transform pattern
-	const wall = Solid.cube(60, 30, 3, 'lightgray')
+	const wall = Solid.cube(60, 30, 3, { color: 'lightgray' })
 		.align('bottom') // 1. Align to ground
 		.center({ x: true, z: true }); // 2. Center horizontally
 

@@ -249,7 +249,7 @@ Some primitives automatically call `normalize()` after creation to ensure clean 
 const sphere = Solid.sphere(5, { color: 'blue' }); // normalize() called internally
 
 // Manual normalization (rarely needed)
-const custom = Solid.cube(10, 10, 10, 'red').scale({ x: 2, y: 0.5 }).normalize(); // Fix potential issues from extreme scaling
+const custom = Solid.cube(10, 10, 10, { color: 'red' }).scale({ x: 2, y: 0.5 }).normalize(); // Fix potential issues from extreme scaling
 ```
 
 ### Centering & Alignment
@@ -263,7 +263,7 @@ const bounds = solid.getBounds();
 // Returns: { width, height, depth, min: Vector3, max: Vector3, center: Vector3 }
 
 // Example: Get dimensions for calculations
-const box = Solid.cube(10, 20, 5, 'blue');
+const box = Solid.cube(10, 20, 5, { color: 'blue' });
 const { width, height, depth } = box.getBounds();
 console.log(`Box dimensions: ${width} × ${height} × ${depth}`);
 ```
@@ -281,7 +281,7 @@ solid.center({ x: true }); // Center on X-axis only
 
 // Example: Center a complex shape
 const myShape = Solid.SUBTRACT(
-	Solid.cube(10, 20, 5, 'red'),
+	Solid.cube(10, 20, 5, { color: 'red' }),
 	Solid.cylinder(3, 25, { color: 'red' }).rotate({ x: 90 })
 ).center(); // Centers the result at origin
 ```
@@ -299,7 +299,7 @@ solid.align('front'); // Front face at Z=0
 solid.align('back'); // Back face at Z=0
 
 // Example: Build from the ground up
-const tower = Solid.cube(10, 50, 10, 'gray')
+const tower = Solid.cube(10, 50, 10, { color: 'gray' })
 	.align('bottom') // Place on Y=0 plane
 	.center({ x: true, z: true }); // Center horizontally and depth
 ```
@@ -309,7 +309,7 @@ const tower = Solid.cube(10, 50, 10, 'gray')
 All methods follow fluent API pattern and can be chained:
 
 ```typescript
-const piece = Solid.cube(20, 10, 5, 'blue')
+const piece = Solid.cube(20, 10, 5, { color: 'blue' })
 	.center() // Center at origin first
 	.move({ x: 50 }) // Then move to final position
 	.rotate({ z: 45 }); // And rotate
@@ -411,7 +411,7 @@ import { Solid } from '$lib/3d/Solid';
 import type { ComponentsMap } from '$stores/componentStore';
 
 export const myPart = (width: number, height: number): Solid => {
-	const base = Solid.cube(width, height, 1, 'blue');
+	const base = Solid.cube(width, height, 1, { color: 'blue' });
 	const hole = Solid.cylinder(2, 5, { color: 'blue' }).rotate({ x: 90 });
 
 	return Solid.SUBTRACT(base, hole);
@@ -428,8 +428,8 @@ export const components: ComponentsMap = {
 
 ```typescript
 // Hollow box example - static SUBTRACT method
-const outer = Solid.cube(20, 20, 20, 'red');
-const inner = Solid.cube(16, 16, 16, 'red');
+const outer = Solid.cube(20, 20, 20, { color: 'red' });
+const inner = Solid.cube(16, 16, 16, { color: 'red' });
 const result = Solid.SUBTRACT(outer, inner); // Returns new Solid
 ```
 
@@ -438,15 +438,15 @@ const result = Solid.SUBTRACT(outer, inner); // Returns new Solid
 ```typescript
 // Window component with negative opening
 export const window = (width: number, height: number): Solid => {
-	const frame = Solid.cube(width, height, 3, 'brown');
-	const opening = Solid.cube(width - 4, height - 4, 10, 'gray').setNegative(); // Marks as negative
-	const bar = Solid.cube(1, height, 2, 'brown');
+	const frame = Solid.cube(width, height, 3, { color: 'brown' });
+	const opening = Solid.cube(width - 4, height - 4, 10, { color: 'gray' }).setNegative(); // Marks as negative
+	const bar = Solid.cube(1, height, 2, { color: 'brown' });
 
 	return Solid.MERGE([frame, opening, bar]); // MERGE respects negative flags
 };
 
 // Usage: Window's negative opening cuts into wall
-const wall = Solid.cube(20, 20, 1, 'gray');
+const wall = Solid.cube(20, 20, 1, { color: 'gray' });
 const win = window(5, 8).move({ x: 10, y: 5 });
 return Solid.UNION(wall, win); // Combines wall and window (with its hole)
 ```
@@ -464,7 +464,7 @@ See `projects/sample/_context.ts`:
 The `Solid` class provides three static grid methods for creating 1D, 2D, and 3D arrays:
 
 ```typescript
-const brick = Solid.cube(3, 1, 1, 'red');
+const brick = Solid.cube(3, 1, 1, { color: 'red' });
 
 // 1D grid along X-axis
 const row = Solid.GRID_X(brick, { cols: 10, spacing: 1 });
@@ -518,7 +518,7 @@ These constants can be used with the `angle` parameter of circular geometries (c
 
 ```typescript
 Solid.cube(width: number, height: number, depth: number, color?: string)
-// Example: Solid.cube(10, 20, 5, 'red')
+// Example: Solid.cube(10, 20, 5, { color: 'red' })
 ```
 
 **Cylinder:**
@@ -655,7 +655,7 @@ const bracket = Solid.profilePrism(10, (shape) => {
   shape.lineTo(5, 20);
   shape.lineTo(0, 20);
   shape.lineTo(0, 0);
-}, 'blue');
+}, { color: 'blue' });
 
 // Full Shape API available: lineTo, bezierCurveTo, quadraticCurveTo, arc, etc.
 ```
@@ -706,7 +706,7 @@ const roundedRect = Solid.profilePrismFromPath(10, [
   curve(5, 90),      // Left turn
   straight(10),      // Left edge
   curve(5, 90)       // Final turn back to start
-], 'blue'); // Automatically closes back to origin
+], { color: 'blue' }); // Automatically closes back to origin
 
 // Example: S-curve
 const sCurve = Solid.profilePrismFromPath(8, [
@@ -715,7 +715,7 @@ const sCurve = Solid.profilePrismFromPath(8, [
   straight(5),
   curve(5, -90),     // Left turn (negative angle)
   straight(10)
-], 'red');
+], { color: 'red' });
 
 // Example: Sharp corners using zero-radius curves
 const triangle = Solid.profilePrismFromPath(4, [
@@ -725,7 +725,7 @@ const triangle = Solid.profilePrismFromPath(4, [
   curve(0, 120),     // Another sharp corner
   straight(15),
   curve(0, 120)      // Close with sharp corner
-], 'orange');
+], { color: 'orange' });
 
 // Example: Race track (oval)
 const raceTrack = Solid.profilePrismFromPath(3, [
@@ -733,7 +733,7 @@ const raceTrack = Solid.profilePrismFromPath(3, [
   curve(8, 180),     // Semicircle turn
   straight(30),      // Back straightaway
   curve(8, 180)      // Return semicircle
-], 'green');
+], { color: 'green' });
 ```
 
 **Path Segment Types:**
@@ -911,13 +911,13 @@ const quarterVase = Solid.revolutionSolidFromPath([
 ```typescript
 // Rounded corners using sphere subtraction
 const roundedCube = Solid.SUBTRACT(
-	Solid.cube(20, 20, 20, 'red'),
+	Solid.cube(20, 20, 20, { color: 'red' }),
 	Solid.sphere(3, { color: 'red' }).move({ x: 10, y: 10, z: 10 })
 );
 
 // Chamfered edge using cone
 const chamferedBlock = Solid.SUBTRACT(
-	Solid.cube(15, 15, 15, 'blue'),
+	Solid.cube(15, 15, 15, { color: 'blue' }),
 	Solid.cone(4, 8, { color: 'blue' }).rotate({ x: 90 })
 );
 
@@ -997,7 +997,7 @@ import { cacheFunction } from '$lib/cacheFunction';
 // Original function
 const expensiveComponent = (width: number, height: number): Solid => {
 	// Complex CSG operations...
-	const base = Solid.cube(width, height, 2, 'gray');
+	const base = Solid.cube(width, height, 2, { color: 'gray' });
 	const cutouts = Solid.cylinder(5, height + 1, { color: 'gray' });
 	return Solid.SUBTRACT(base, cutouts);
 };
@@ -1019,7 +1019,7 @@ import { cacheInlineFunction } from '$lib/cacheFunction';
 // For arrow functions or when function.name isn't available
 const cachedPart = cacheInlineFunction('myPart', (size: number) => {
 	return Solid.SUBTRACT(
-		Solid.cube(size, size, size, 'red'),
+		Solid.cube(size, size, size, { color: 'red' }),
 		Solid.cylinder(size / 2, size * 2, { color: 'red' })
 	);
 });
@@ -1028,8 +1028,8 @@ const cachedPart = cacheInlineFunction('myPart', (size: number) => {
 export const Wall = cacheInlineFunction(
 	'Wall',
 	(length: number, config?: { includeFootPath?: boolean }): Solid => {
-		const wall = Solid.cube(length, 20, 2, 'green');
-		const header = Solid.cube(length, 4, 8, 'green').move({ y: 10 });
+		const wall = Solid.cube(length, 20, 2, { color: 'green' });
+		const header = Solid.cube(length, 4, 8, { color: 'green' }).move({ y: 10 });
 		// ... complex zigzag pattern with multiple subtractions
 		let result = Solid.UNION(wall, header);
 
@@ -1070,7 +1070,7 @@ import { Solid } from '$lib/3d/Solid';
 
 // Cached wall component (expensive CSG operations with zigzag pattern)
 export const Wall = cacheInlineFunction('Wall', (length: number): Solid => {
-	let wall = Solid.cube(length, 20, 2, 'green');
+	let wall = Solid.cube(length, 20, 2, { color: 'green' });
 	// ... complex CSG operations with zigzag pattern
 	return wall.align('bottom');
 });
@@ -1100,7 +1100,7 @@ import { Solid } from '$lib/3d/Solid';
 // Cache the expensive base brick
 const brick = cacheFunction((width: number, height: number, depth: number) => {
 	return Solid.SUBTRACT(
-		Solid.cube(width, height, depth, 'red'),
+		Solid.cube(width, height, depth, { color: 'red' }),
 		Solid.cylinder(0.5, height * 2, { color: 'red' }),
 		Solid.cylinder(0.5, height * 2, { color: 'red' }).move({ x: width - 1 })
 	);

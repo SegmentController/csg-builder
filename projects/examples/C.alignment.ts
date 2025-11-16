@@ -26,7 +26,7 @@ import type { ComponentsMap } from '$stores/componentStore';
  * Use case: Build models from the ground up (bottom), hang from ceiling (top)
  */
 export const bottomAligned = (): Solid => {
-	return Solid.cube(12, 15, 8, 'orange').align('bottom'); // Bottom face at Y=0
+	return Solid.cube(12, 15, 8, { color: 'orange' }).align('bottom'); // Bottom face at Y=0
 };
 
 /**

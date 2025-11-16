@@ -35,7 +35,7 @@ import { addToComponentStore } from '$stores/componentStore';
 const dynamicSpacing = (): Solid => {
 	// Create a complex shape with unknown total dimensions
 	const element = Solid.UNION(
-		Solid.cube(8, 12, 4, 'teal'),
+		Solid.cube(8, 12, 4, { color: 'teal' }),
 		Solid.cylinder(3, 15, { color: 'teal' }).move({ y: 6 })
 	);
 
@@ -58,7 +58,7 @@ const dynamicSpacing = (): Solid => {
 	});
 
 	// Visual reference: Show bounding box of single element
-	const boundingBox = Solid.cube(width, height, depth, 'red')
+	const boundingBox = Solid.cube(width, height, depth, { color: 'red' })
 		.at(center.x, center.y, center.z)
 		.move({ x: -30 });
 
@@ -87,7 +87,7 @@ const programmaticGrid = (): Solid => {
 				const color = colors[level];
 
 				// Create cube with calculated height
-				const cube = Solid.cube(3, height, 3, color)
+				const cube = Solid.cube(3, height, 3, { color })
 					.align('bottom')
 					.move({
 						x: col * 5,
@@ -110,7 +110,7 @@ const programmaticGrid = (): Solid => {
  */
 const hollowGrid = (): Solid => {
 	// Create a solid 3D grid
-	const cube = Solid.cube(6, 6, 6, 'purple');
+	const cube = Solid.cube(6, 6, 6, { color: 'purple' });
 	const solidGrid = Solid.GRID_XYZ(cube, {
 		cols: 4,
 		rows: 4,
@@ -134,36 +134,39 @@ const hollowGrid = (): Solid => {
  * Create a classical building facade with columns and arches.
  */
 const columnGrid = (): Solid => {
-	// Create a single column with base, shaft, and capital
-	const createColumn = (): Solid => {
-		const base = Solid.cube(4, 2, 4, 'gray').align('bottom');
-		const shaft = Solid.cylinder(1.5, 20, { color: 'lightgray' })
-			.align('bottom')
-			.move({ y: 2 })
-			.center({ x: true, z: true });
-		const capital = Solid.cube(4, 3, 4, 'gray')
-			.align('bottom')
-			.move({ y: 22 })
-			.center({ x: true, z: true });
+	// Create base (bottom part of column)
+	const base = Solid.cube(4, 2, 4, { color: 'gray' }).align('bottom').center({ x: true, z: true });
 
-		return Solid.MERGE([base, shaft, capital]);
-	};
+	// Create shaft (middle cylindrical part)
+	const shaft = Solid.cylinder(1.5, 20, { color: 'lightgray' })
+		.center({ x: true, z: true })
+		.align('bottom')
+		.move({ y: 2 });
+
+	// Create capital (top decorative part)
+	const capital = Solid.cube(4, 3, 4, { color: 'gray' })
+		.center({ x: true, z: true })
+		.align('bottom')
+		.move({ y: 22 });
+
+	// Merge into single column
+	const singleColumn = Solid.MERGE([base, shaft, capital]);
 
 	// Create column grid (4 columns in a row)
-	const columns = Solid.GRID_X(createColumn(), { cols: 4, spacing: 10 })
+	const columns = Solid.GRID_X(singleColumn, { cols: 4, spacing: 10 })
 		.align('left')
 		.center({ z: true });
 
 	// Create floor platform
-	const platform = Solid.cube(50, 1, 15, 'brown')
+	const platform = Solid.cube(50, 1, 15, { color: 'brown' })
 		.align('bottom')
 		.center({ x: true, z: true })
-		.move({ y: -0.5 });
+		.move({ y: -0.5, x: 22.5 });
 
 	// Create entablature (horizontal beam on top)
-	const entablature = Solid.cube(50, 4, 12, 'gray')
+	const entablature = Solid.cube(50, 4, 12, { color: 'gray' })
 		.align('bottom')
-		.move({ y: 25 })
+		.move({ y: 25, x: -22.5 })
 		.center({ x: true, z: true });
 
 	return Solid.MERGE([platform, columns, entablature]);
@@ -185,7 +188,7 @@ const stadiumSeating = (): Solid => {
 
 	for (let tier = 0; tier < tiers; tier++) {
 		// Create a seat (simple cube)
-		const seat = Solid.cube(1.5, 1.5, 2, 'blue');
+		const seat = Solid.cube(1.5, 1.5, 2, { color: 'blue' });
 
 		// Create a row of seats for this tier
 		const row = Solid.GRID_X(seat, {
@@ -203,7 +206,7 @@ const stadiumSeating = (): Solid => {
 	}
 
 	// Add a field/stage at the front
-	const field = Solid.cube(30, 0.5, 15, 'green')
+	const field = Solid.cube(30, 0.5, 15, { color: 'green' })
 		.align('bottom')
 		.move({ y: -1, z: -10 })
 		.center({ x: true });

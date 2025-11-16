@@ -43,7 +43,7 @@ import { addToComponentStore } from '$stores/componentStore';
 // Define the expensive component function (lots of CSG operations)
 const createExpensiveBrick = (width: number, height: number, depth: number): Solid => {
 	// Complex brick with multiple features (expensive CSG operations)
-	const body = Solid.cube(width, height, depth, 'red');
+	const body = Solid.cube(width, height, depth, { color: 'red' });
 
 	// Add holes on sides (expensive subtraction)
 	const hole = Solid.cylinder(height * 0.15, width * 1.2, { color: 'red' }).rotate({ z: 90 });
@@ -54,10 +54,10 @@ const createExpensiveBrick = (width: number, height: number, depth: number): Sol
 	);
 
 	// Add decorative grooves (more expensive operations)
-	const groove1 = Solid.cube(width * 0.9, height * 0.1, depth * 0.05, 'red')
+	const groove1 = Solid.cube(width * 0.9, height * 0.1, depth * 0.05, { color: 'red' })
 		.center({ x: true, y: true })
 		.move({ z: -depth * 0.5 });
-	const groove2 = Solid.cube(width * 0.9, height * 0.1, depth * 0.05, 'red')
+	const groove2 = Solid.cube(width * 0.9, height * 0.1, depth * 0.05, { color: 'red' })
 		.center({ x: true, y: true })
 		.move({ z: depth * 0.5 });
 
@@ -98,7 +98,7 @@ const inlineCaching = (): Solid => {
 
 		// Fluted shaft (expensive - multiple subtractions)
 		let flutedShaft = shaft;
-		for (let index = 0; index < 8; index++) {
+		for (let index = 0; index < 4; index++) {
 			const flute = Solid.cylinder(radius * 0.15, height * 0.72, { color: 'lightgray' })
 				.align('bottom')
 				.move({ x: radius * 0.8, y: height * 0.09 })
@@ -134,7 +134,7 @@ const inlineCaching = (): Solid => {
 const cachedInGrids = (): Solid => {
 	// Create an expensive decorative tile
 	const cachedTile = cacheInlineFunction('DecorativeTile', (size: number): Solid => {
-		const base = Solid.cube(size, size, 1, 'blue');
+		const base = Solid.cube(size, size, 1, { color: 'blue' });
 
 		// Add decorative pattern (expensive)
 		const circle = Solid.cylinder(size * 0.3, 2, { color: 'blue' })
@@ -171,11 +171,11 @@ const cachedInGrids = (): Solid => {
 const hierarchicalCaching = (): Solid => {
 	// Level 1: Cache individual parts
 	const cachedWindow = cacheInlineFunction('Window', (width: number, height: number): Solid => {
-		const frame = Solid.cube(width, height, 2, 'brown');
-		const glass = Solid.cube(width - 1, height - 1, 1, 'cyan')
+		const frame = Solid.cube(width, height, 2, { color: 'brown' });
+		const glass = Solid.cube(width - 1, height - 1, 1, { color: 'cyan' })
 			.center({ x: true, y: true })
 			.move({ z: 0.5 });
-		const divider = Solid.cube(0.5, height, 2, 'brown').center({ x: true, y: true });
+		const divider = Solid.cube(0.5, height, 2, { color: 'brown' }).center({ x: true, y: true });
 		return Solid.MERGE([frame, glass, divider]);
 	});
 
@@ -183,7 +183,7 @@ const hierarchicalCaching = (): Solid => {
 	const cachedWallWithWindows = cacheInlineFunction(
 		'WallWithWindows',
 		(wallWidth: number, wallHeight: number): Solid => {
-			const wall = Solid.cube(wallWidth, wallHeight, 3, 'lightgray');
+			const wall = Solid.cube(wallWidth, wallHeight, 3, { color: 'lightgray' });
 
 			// Use cached windows - each window(6, 8) call returns cached result
 			const window1 = cachedWindow(6, 8)
@@ -223,7 +223,7 @@ const realWorldOptimization = (): Solid => {
 
 	// 2. Cache building blocks
 	const cachedPost = cacheInlineFunction('Post', (height: number): Solid => {
-		const post = Solid.cube(2, height, 2, 'brown').align('bottom');
+		const post = Solid.cube(2, height, 2, { color: 'brown' }).align('bottom');
 		const ornament = cachedOrnament().move({ y: height }).center({ x: true, z: true }); // Reuses cached ornament
 		return Solid.MERGE([post, ornament]);
 	});
@@ -231,7 +231,9 @@ const realWorldOptimization = (): Solid => {
 	// 3. Cache assemblies
 	const cachedRailing = cacheInlineFunction('Railing', (length: number): Solid => {
 		const posts = Solid.GRID_X(cachedPost(8), { cols: 5, spacing: length / 4 - 2 }).align('left');
-		const rail = Solid.cube(length, 1, 1, 'brown').align('bottom').move({ y: 6, z: 0.5 });
+		const rail = Solid.cube(length, 1, 1, { color: 'brown' })
+			.align('bottom')
+			.move({ y: 6, z: 0.5 });
 		return Solid.MERGE([posts, rail]);
 	});
 
@@ -239,7 +241,9 @@ const realWorldOptimization = (): Solid => {
 	const railing1 = cachedRailing(30).move({ x: -15, z: -8 }); // Computed
 	const railing2 = cachedRailing(30).move({ x: -15, z: 8 }); // Cached!
 
-	const platform = Solid.cube(30, 1, 18, 'gray').align('bottom').center({ x: true, z: true });
+	const platform = Solid.cube(60, 1, 18, { color: 'gray' })
+		.align('bottom')
+		.center({ x: true, z: true });
 
 	return Solid.MERGE([platform, railing1, railing2]);
 };
@@ -292,7 +296,7 @@ const realWorldOptimization = (): Solid => {
  * WHEN NOT TO CACHE:
  *
  * 1. Simple operations:
- *    - const cube = () => Solid.cube(10, 10, 10, 'red')
+ *    - const cube = () => Solid.cube(10, 10, 10, { color: 'red' })
  *    - Creating a cube is faster than cache lookup
  *
  * 2. Unique parameters every call:
