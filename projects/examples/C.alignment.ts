@@ -69,7 +69,7 @@ export const centered = (): Solid => {
  */
 
 export const components: ComponentsMap = {
-	'C. Alignment: Bottom': bottomAligned,
-	'C. Alignment: Top': topAligned,
-	'C. Alignment: Center': centered
+	'C1. Alignment: Bottom': bottomAligned,
+	'C2. Alignment: Top': topAligned,
+	'C3. Alignment: Center': centered
 };

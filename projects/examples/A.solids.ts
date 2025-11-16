@@ -75,10 +75,10 @@ export const hexagonalPrism = (): Solid => {
  * 💡 This map is passed to addToComponentStore() in index.ts to register all components
  */
 export const components: ComponentsMap = {
-	'A. Solids: Cube': cube,
-	'A. Solids: Cylinder': cylinder,
-	'A. Solids: Sphere': sphere,
-	'A. Solids: Cone': cone,
-	'A. Solids: Triangle Prism': trianglePrism,
-	'A. Solids: Hexagonal Prism': hexagonalPrism
+	'A1. Solids: Cube': cube,
+	'A2. Solids: Cylinder': cylinder,
+	'A3. Solids: Sphere': sphere,
+	'A4. Solids: Cone': cone,
+	'A5. Solids: Triangle Prism': trianglePrism,
+	'A6. Solids: Hexagonal Prism': hexagonalPrism
 };

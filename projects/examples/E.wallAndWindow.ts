@@ -180,8 +180,8 @@ export const brickWallWithWindow = (): Solid => {
  * - Multi-solid return: window() returns Solid[] (array shown in UI)
  */
 export const components: ComponentsMap = {
-	'E. Wall: Brick Item': brickItem,
-	'E. Wall: Brick Wall': () => brickWall(2, 2),
-	'E. Wall: Window': () => window(15, 30, 3),
-	'E. Wall: Brick Wall with Window': () => brickWallWithWindow()
+	'E1. Wall: Brick Item': brickItem,
+	'E2. Wall: Brick Wall': () => brickWall(2, 2),
+	'E3. Wall: Window': () => window(15, 30, 3),
+	'E4. Wall: Brick Wall with Window': () => brickWallWithWindow()
 };

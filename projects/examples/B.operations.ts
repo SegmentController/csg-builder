@@ -58,7 +58,7 @@ export const intersect = (): Solid => {
 };
 
 export const components: ComponentsMap = {
-	'B. Operations: Union': union,
-	'B. Operations: Subtract': subtract,
-	'B. Operations: Intersect': intersect
+	'B1. Operations: Union': union,
+	'B2. Operations: Subtract': subtract,
+	'B3. Operations: Intersect': intersect
 };

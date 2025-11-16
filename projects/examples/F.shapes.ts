@@ -170,8 +170,8 @@ export const raceTrack = (): Solid => {
  */
 
 export const components: ComponentsMap = {
-	'F. Shapes: Arrow': arrow,
-	'F. Shapes: Star': star,
-	'F. Shapes: L Profile With Holes': lProfileWithHoles,
-	'F. Shapes: Race Track': raceTrack
+	'F1. Shapes: Arrow': arrow,
+	'F2. Shapes: Star': star,
+	'F3. Shapes: L Profile With Holes': lProfileWithHoles,
+	'F4. Shapes: Race Track': raceTrack
 };

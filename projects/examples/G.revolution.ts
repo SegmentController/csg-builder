@@ -116,6 +116,6 @@ export const quarterChessPawn = (): Solid => {
  */
 
 export const components: ComponentsMap = {
-	'G. ShapeRevolution: Chess Pawn': chessPawn,
-	'G. ShapeRevolution: Quarter Pawn': quarterChessPawn
+	'G1. ShapeRevolution: Chess Pawn': chessPawn,
+	'G2. ShapeRevolution: Quarter Pawn': quarterChessPawn
 };

@@ -71,7 +71,7 @@ export const conePartial = (): Solid => {
  */
 
 export const components: ComponentsMap = {
-	'D. Partials: Cylinder 90°': cylinderPartial,
-	'D. Partials: Sphere 180°': spherePartial,
-	'D. Partials: Cone 270°': conePartial
+	'D1. Partials: Cylinder 90°': cylinderPartial,
+	'D2. Partials: Sphere 180°': spherePartial,
+	'D3. Partials: Cone 270°': conePartial
 };
