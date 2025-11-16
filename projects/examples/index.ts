@@ -2,8 +2,9 @@
  * Examples Project - Component Registry
  *
  * This file demonstrates the component registration pattern used in CSG Builder.
- * Examples are organized alphabetically (A → G) in a progressive learning sequence:
+ * Examples are organized alphabetically (A → M) in a progressive learning sequence:
  *
+ * FOUNDATIONAL (A-G):
  * A. Basic Primitives (Foundation)
  * B. CSG Operations (Boolean operations: union, subtract, intersect)
  * C. Alignment & Positioning (Centering, edge alignment, transforms)
@@ -11,6 +12,14 @@
  * E. Complex Composition (Multi-component patterns, grids, negative solids)
  * F. Custom Profile Prisms (2D profiles extruded to 3D)
  * G. Revolution Solids (Rotational symmetry: chess pieces, vases)
+ *
+ * ADVANCED (H-M):
+ * H. Scaling Fundamentals (Uniform, axis-specific, cumulative scaling)
+ * I. Complex Transform Chains (Order of operations, positioning patterns)
+ * J. 3D Grid Patterns (GRID_XYZ, spacing, volumetric arrays)
+ * K. Advanced 3D Spatial Arrangements (Programmatic generation, getBounds)
+ * L. Performance & Caching (cacheFunction, optimization patterns)
+ * M. Complex Multi-Concept Composition (Production-ready complete structures)
  *
  * All components are registered via addToComponentStore() and become available in the UI dropdown.
  */
@@ -24,6 +33,12 @@ import { components as partialsComponents } from './D.partials';
 import { components as wallAndWindowComponents } from './E.wallAndWindow';
 import { components as shapesComponents } from './F.shapes';
 import { components as revolutionComponents } from './G.revolution';
+import { components as scalingComponents } from './H.scaling';
+import { components as transformsComponents } from './I.transforms';
+import { components as grid3dComponents } from './J.grid3d';
+import { components as patterns3dComponents } from './K.patterns3d';
+import { components as optimizationComponents } from './L.optimization';
+import { components as compositionComponents } from './M.composition';
 
 // Register all example components in the global component store
 // The spread operator merges all component maps into a single object
@@ -34,5 +49,11 @@ addToComponentStore({
 	...partialsComponents,
 	...wallAndWindowComponents,
 	...shapesComponents,
-	...revolutionComponents
+	...revolutionComponents,
+	...scalingComponents,
+	...transformsComponents,
+	...grid3dComponents,
+	...patterns3dComponents,
+	...optimizationComponents,
+	...compositionComponents
 });

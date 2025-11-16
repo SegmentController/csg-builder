@@ -12,7 +12,9 @@ The codebase includes two fully-documented example projects that serve as both w
 
 ### **projects/examples/** - Progressive Learning Examples
 
-A series of 8 tutorial files (A through G) demonstrating CSG Builder syntax progressively:
+A series of 13 tutorial files (A through M) demonstrating CSG Builder syntax from basics to production patterns:
+
+**Foundational Examples (A-G):**
 
 - **A.solids.ts** - Basic primitives (cube, cylinder, sphere, cone, prisms)
 - **B.operations.ts** - CSG boolean operations (union, subtract, intersect)
@@ -22,6 +24,15 @@ A series of 8 tutorial files (A through G) demonstrating CSG Builder syntax prog
 - **F.shapes.ts** - Custom profile prisms (2D to 3D extrusion)
 - **G.revolution.ts** - Revolution solids (lathe geometry)
 
+**Advanced Examples (H-M):**
+
+- **H.scaling.ts** - Scaling fundamentals (uniform, axis-specific, cumulative)
+- **I.transforms.ts** - Complex transform chains and order-of-operations
+- **J.grid3d.ts** - 3D grid patterns with GRID_XYZ and spacing
+- **K.patterns3d.ts** - Advanced spatial arrangements (programmatic generation, getBounds)
+- **L.optimization.ts** - Performance optimization and caching patterns
+- **M.composition.ts** - Complete production-ready structures combining all concepts
+
 Each file contains comprehensive inline comments explaining:
 
 - Syntax patterns and method signatures
@@ -29,7 +40,7 @@ Each file contains comprehensive inline comments explaining:
 - Common pitfalls and best practices
 - Use cases and practical examples
 
-**Start here** to learn CSG Builder syntax from basics to advanced techniques.
+**Start with A-G** to learn CSG Builder fundamentals, then continue with **H-M** for advanced techniques and production patterns.
 
 ### **projects/castle/** - Production-Ready Architecture Example
 
