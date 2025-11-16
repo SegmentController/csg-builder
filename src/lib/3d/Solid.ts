@@ -130,6 +130,16 @@ export class Solid {
 		depth: number,
 		options?: { color?: string }
 	): Solid => {
+		// Validate dimensions
+		if (width <= 0 || height <= 0 || depth <= 0)
+			throw new Error(
+				`Cube dimensions must be positive (got width: ${width}, height: ${height}, depth: ${depth})`
+			);
+		if (!Number.isFinite(width) || !Number.isFinite(height) || !Number.isFinite(depth))
+			throw new Error(
+				`Cube dimensions must be finite (got width: ${width}, height: ${height}, depth: ${depth})`
+			);
+
 		const color = options?.color ?? 'gray';
 		return new Solid(
 			this.geometryToBrush(new BoxGeometry(width, height, depth)),
@@ -146,6 +156,22 @@ export class Solid {
 			topRadius?: number;
 		}
 	): Solid => {
+		// Validate dimensions
+		if (radius <= 0 || height <= 0)
+			throw new Error(
+				`Cylinder dimensions must be positive (got radius: ${radius}, height: ${height})`
+			);
+		if (!Number.isFinite(radius) || !Number.isFinite(height))
+			throw new Error(
+				`Cylinder dimensions must be finite (got radius: ${radius}, height: ${height})`
+			);
+		if (options?.topRadius !== undefined) {
+			if (options.topRadius <= 0)
+				throw new Error(`Cylinder topRadius must be positive (got ${options.topRadius})`);
+			if (!Number.isFinite(options.topRadius))
+				throw new Error(`Cylinder topRadius must be finite (got ${options.topRadius})`);
+		}
+
 		const color = options?.color ?? 'gray';
 		const angle = options?.angle ?? 360;
 
@@ -188,6 +214,10 @@ export class Solid {
 			segments?: number;
 		}
 	): Solid => {
+		// Validate dimensions
+		if (radius <= 0) throw new Error(`Sphere radius must be positive (got ${radius})`);
+		if (!Number.isFinite(radius)) throw new Error(`Sphere radius must be finite (got ${radius})`);
+
 		const color = options?.color ?? 'gray';
 		const angle = options?.angle ?? 360;
 
@@ -228,6 +258,14 @@ export class Solid {
 			segments?: number;
 		}
 	): Solid => {
+		// Validate dimensions
+		if (radius <= 0 || height <= 0)
+			throw new Error(
+				`Cone dimensions must be positive (got radius: ${radius}, height: ${height})`
+			);
+		if (!Number.isFinite(radius) || !Number.isFinite(height))
+			throw new Error(`Cone dimensions must be finite (got radius: ${radius}, height: ${height})`);
+
 		const color = options?.color ?? 'gray';
 		const angle = options?.angle ?? 360;
 
@@ -271,6 +309,22 @@ export class Solid {
 			topRadius?: number;
 		}
 	): Solid => {
+		// Validate dimensions
+		if (sides < 3) throw new Error(`Prism must have at least 3 sides (got ${sides})`);
+		if (!Number.isInteger(sides)) throw new Error(`Prism sides must be an integer (got ${sides})`);
+		if (radius <= 0 || height <= 0)
+			throw new Error(
+				`Prism dimensions must be positive (got radius: ${radius}, height: ${height})`
+			);
+		if (!Number.isFinite(radius) || !Number.isFinite(height))
+			throw new Error(`Prism dimensions must be finite (got radius: ${radius}, height: ${height})`);
+		if (options?.topRadius !== undefined) {
+			if (options.topRadius <= 0)
+				throw new Error(`Prism topRadius must be positive (got ${options.topRadius})`);
+			if (!Number.isFinite(options.topRadius))
+				throw new Error(`Prism topRadius must be finite (got ${options.topRadius})`);
+		}
+
 		const color = options?.color ?? 'gray';
 		const angle = options?.angle ?? 360;
 
