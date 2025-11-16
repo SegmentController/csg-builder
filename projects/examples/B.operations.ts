@@ -22,8 +22,8 @@ import type { ComponentsMap } from '$stores/componentStore';
  * ⚠️ Returns NEW Solid - original solids remain unchanged (immutable)
  */
 export const union = (): Solid => {
-	const cube1 = Solid.cube(10, 10, 10, 'blue');
-	const cube2 = Solid.cube(10, 10, 10, 'blue').move({ x: 5, y: 5, z: -5 }); // 🔗 Chained move
+	const cube1 = Solid.cube(10, 10, 10, { color: 'blue' });
+	const cube2 = Solid.cube(10, 10, 10, { color: 'blue' }).move({ x: 5, y: 5, z: -5 }); // 🔗 Chained move
 
 	return Solid.UNION(cube1, cube2); // Overlapping cubes merged
 };
@@ -37,7 +37,7 @@ export const union = (): Solid => {
  * 🔗 Notice: .rotate() chained before CSG operation to position the hole
  */
 export const subtract = (): Solid => {
-	const base = Solid.cube(15, 15, 15, 'red'); // Starting shape
+	const base = Solid.cube(15, 15, 15, { color: 'red' }); // Starting shape
 	const hole = Solid.cylinder(4, 20, { color: 'red' }).rotate({ x: 90 }); // Rotated 90° around X-axis
 
 	return Solid.SUBTRACT(base, hole); // Cube with cylindrical hole through it
@@ -58,7 +58,7 @@ export const intersect = (): Solid => {
 };
 
 export const components: ComponentsMap = {
-	'B. Operations: Union': union,
-	'B. Operations: Subtract': subtract,
-	'B. Operations: Intersect': intersect
+	'B1. Operations: Union': union,
+	'B2. Operations: Subtract': subtract,
+	'B3. Operations: Intersect': intersect
 };

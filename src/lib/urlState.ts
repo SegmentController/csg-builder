@@ -64,9 +64,7 @@ export const parseComponentFromURL = (): string | undefined => {
 
 	// Remove query params if present
 	const queryStart = componentName.indexOf('?');
-	if (queryStart !== -1) {
-		componentName = componentName.slice(0, Math.max(0, queryStart));
-	}
+	if (queryStart !== -1) componentName = componentName.slice(0, Math.max(0, queryStart));
 
 	return decodeURIComponent(componentName);
 };

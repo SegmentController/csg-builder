@@ -19,7 +19,7 @@ import type { ComponentsMap } from '$stores/componentStore';
  * Parameters: width (X), height (Y), depth (Z), color
  */
 export const cube = (): Solid => {
-	return Solid.cube(10, 10, 10, 'red'); // 10×10×10 red cube
+	return Solid.cube(10, 10, 10, { color: 'red' }); // 10×10×10 red cube
 };
 
 /**
@@ -75,10 +75,10 @@ export const hexagonalPrism = (): Solid => {
  * 💡 This map is passed to addToComponentStore() in index.ts to register all components
  */
 export const components: ComponentsMap = {
-	'A. Solids: Cube': cube,
-	'A. Solids: Cylinder': cylinder,
-	'A. Solids: Sphere': sphere,
-	'A. Solids: Cone': cone,
-	'A. Solids: Triangle Prism': trianglePrism,
-	'A. Solids: Hexagonal Prism': hexagonalPrism
+	'A1. Solids: Cube': cube,
+	'A2. Solids: Cylinder': cylinder,
+	'A3. Solids: Sphere': sphere,
+	'A4. Solids: Cone': cone,
+	'A5. Solids: Triangle Prism': trianglePrism,
+	'A6. Solids: Hexagonal Prism': hexagonalPrism
 };

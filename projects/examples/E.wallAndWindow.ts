@@ -47,7 +47,7 @@ const brickItem = (): Solid => {
 		2 * BRICK_WIDTH + 2 * BRICK_GAP_WIDTH,
 		2 * BRICK_HEIGHT + 2 * BRICK_GAP_WIDTH,
 		BRICK_DEPTH - BRICK_GAP_DEPTH,
-		'red'
+		{ color: 'red' }
 	);
 
 	// Calculate row positions for brick relief pattern
@@ -121,25 +121,22 @@ export const brickWall = (cx: number, cy: number): Solid =>
  * ⚠️ setNegative() only affects MERGE operations, not direct SUBTRACT
  */
 export const window = (width: number, height: number, depth: number): Solid[] => {
-	const frame = Solid.cube(width, height, depth, 'brown');
+	const frame = Solid.cube(width, height, depth, { color: 'brown' });
 	const BORDER = 2;
 
 	// Step 1: Create hollow frame (internal operation, frame - opening)
-	const opening = Solid.cube(width - BORDER * 2, height - BORDER * 2, depth * 4, 'gray');
+	const opening = Solid.cube(width - BORDER * 2, height - BORDER * 2, depth * 4, { color: 'gray' });
 	const hollowFrame = Solid.SUBTRACT(frame, opening);
 
 	// Step 2: Create negative hole that will cut through walls when window is placed
 	// 💡 .setNegative() marks this solid for subtraction in MERGE operation
-	const externalHole = Solid.cube(
-		width - BORDER * 2,
-		height - BORDER * 2,
-		depth * 4,
-		'gray'
-	).setNegative();
+	const externalHole = Solid.cube(width - BORDER * 2, height - BORDER * 2, depth * 4, {
+		color: 'gray'
+	}).setNegative();
 
 	// Step 3: Create bars that will be added AFTER the negative hole
-	const verticalBar = Solid.cube(BORDER, height, depth - 1, 'brown').move({ z: -0.5 });
-	const horizontalBar = Solid.cube(width, BORDER, depth - 1, 'brown').move({ z: -0.5 });
+	const verticalBar = Solid.cube(BORDER, height, depth - 1, { color: 'brown' }).move({ z: -0.5 });
+	const horizontalBar = Solid.cube(width, BORDER, depth - 1, { color: 'brown' }).move({ z: -0.5 });
 
 	// ⚠️ CRITICAL ORDER: [hollowFrame (positive), externalHole (NEGATIVE), bars (positive)]
 	// MERGE will process: (frame - externalHole) + bars
@@ -180,8 +177,8 @@ export const brickWallWithWindow = (): Solid => {
  * - Multi-solid return: window() returns Solid[] (array shown in UI)
  */
 export const components: ComponentsMap = {
-	'E. Wall: Brick Item': brickItem,
-	'E. Wall: Brick Wall': () => brickWall(2, 2),
-	'E. Wall: Window': () => window(15, 30, 3),
-	'E. Wall: Brick Wall with Window': () => brickWallWithWindow()
+	'E1. Wall: Brick Item': brickItem,
+	'E2. Wall: Brick Wall': () => brickWall(2, 2),
+	'E3. Wall: Window': () => window(15, 30, 3),
+	'E4. Wall: Brick Wall with Window': () => brickWallWithWindow()
 };

@@ -124,8 +124,28 @@ export class Solid {
 		return result;
 	}
 
-	static cube = (width: number, height: number, depth: number, color: string = 'gray'): Solid =>
-		new Solid(this.geometryToBrush(new BoxGeometry(width, height, depth)), color).normalize();
+	static cube = (
+		width: number,
+		height: number,
+		depth: number,
+		options?: { color?: string }
+	): Solid => {
+		// Validate dimensions
+		if (width <= 0 || height <= 0 || depth <= 0)
+			throw new Error(
+				`Cube dimensions must be positive (got width: ${width}, height: ${height}, depth: ${depth})`
+			);
+		if (!Number.isFinite(width) || !Number.isFinite(height) || !Number.isFinite(depth))
+			throw new Error(
+				`Cube dimensions must be finite (got width: ${width}, height: ${height}, depth: ${depth})`
+			);
+
+		const color = options?.color ?? 'gray';
+		return new Solid(
+			this.geometryToBrush(new BoxGeometry(width, height, depth)),
+			color
+		).normalize();
+	};
 
 	static cylinder = (
 		radius: number,
@@ -136,6 +156,22 @@ export class Solid {
 			topRadius?: number;
 		}
 	): Solid => {
+		// Validate dimensions
+		if (radius <= 0 || height <= 0)
+			throw new Error(
+				`Cylinder dimensions must be positive (got radius: ${radius}, height: ${height})`
+			);
+		if (!Number.isFinite(radius) || !Number.isFinite(height))
+			throw new Error(
+				`Cylinder dimensions must be finite (got radius: ${radius}, height: ${height})`
+			);
+		if (options?.topRadius !== undefined) {
+			if (options.topRadius <= 0)
+				throw new Error(`Cylinder topRadius must be positive (got ${options.topRadius})`);
+			if (!Number.isFinite(options.topRadius))
+				throw new Error(`Cylinder topRadius must be finite (got ${options.topRadius})`);
+		}
+
 		const color = options?.color ?? 'gray';
 		const angle = options?.angle ?? 360;
 
@@ -162,7 +198,7 @@ export class Solid {
 		if (wedgePoints.length === 0) return fullCylinder;
 
 		// Create wedge prism (make it taller to ensure complete cut)
-		const wedgeCutter = this.profilePrismFromPoints(height * 1.5, wedgePoints, color)
+		const wedgeCutter = this.profilePrismFromPoints(height * 1.5, wedgePoints, { color })
 			.rotate({ x: 90 })
 			.move({ y: height * 0.75 }); // Center wedge on Y-axis
 
@@ -178,6 +214,10 @@ export class Solid {
 			segments?: number;
 		}
 	): Solid => {
+		// Validate dimensions
+		if (radius <= 0) throw new Error(`Sphere radius must be positive (got ${radius})`);
+		if (!Number.isFinite(radius)) throw new Error(`Sphere radius must be finite (got ${radius})`);
+
 		const color = options?.color ?? 'gray';
 		const angle = options?.angle ?? 360;
 
@@ -201,7 +241,7 @@ export class Solid {
 		if (wedgePoints.length === 0) return fullSphere;
 
 		// Create wedge prism tall enough to cut through entire sphere diameter
-		const wedgeCutter = this.profilePrismFromPoints(radius * 4, wedgePoints, color)
+		const wedgeCutter = this.profilePrismFromPoints(radius * 4, wedgePoints, { color })
 			.rotate({ x: 90 }) // Rotate to align with sphere
 			.move({ y: radius * 2 }); // Center wedge on Y-axis
 
@@ -218,6 +258,14 @@ export class Solid {
 			segments?: number;
 		}
 	): Solid => {
+		// Validate dimensions
+		if (radius <= 0 || height <= 0)
+			throw new Error(
+				`Cone dimensions must be positive (got radius: ${radius}, height: ${height})`
+			);
+		if (!Number.isFinite(radius) || !Number.isFinite(height))
+			throw new Error(`Cone dimensions must be finite (got radius: ${radius}, height: ${height})`);
+
 		const color = options?.color ?? 'gray';
 		const angle = options?.angle ?? 360;
 
@@ -243,7 +291,7 @@ export class Solid {
 		if (wedgePoints.length === 0) return fullCone;
 
 		// Create wedge prism (make it taller to ensure complete cut)
-		const wedgeCutter = this.profilePrismFromPoints(height * 1.5, wedgePoints, color)
+		const wedgeCutter = this.profilePrismFromPoints(height * 1.5, wedgePoints, { color })
 			.rotate({ x: 90 })
 			.move({ y: height * 0.75 }); // Center wedge on Y-axis
 
@@ -261,6 +309,22 @@ export class Solid {
 			topRadius?: number;
 		}
 	): Solid => {
+		// Validate dimensions
+		if (sides < 3) throw new Error(`Prism must have at least 3 sides (got ${sides})`);
+		if (!Number.isInteger(sides)) throw new Error(`Prism sides must be an integer (got ${sides})`);
+		if (radius <= 0 || height <= 0)
+			throw new Error(
+				`Prism dimensions must be positive (got radius: ${radius}, height: ${height})`
+			);
+		if (!Number.isFinite(radius) || !Number.isFinite(height))
+			throw new Error(`Prism dimensions must be finite (got radius: ${radius}, height: ${height})`);
+		if (options?.topRadius !== undefined) {
+			if (options.topRadius <= 0)
+				throw new Error(`Prism topRadius must be positive (got ${options.topRadius})`);
+			if (!Number.isFinite(options.topRadius))
+				throw new Error(`Prism topRadius must be finite (got ${options.topRadius})`);
+		}
+
 		const color = options?.color ?? 'gray';
 		const angle = options?.angle ?? 360;
 
@@ -287,7 +351,7 @@ export class Solid {
 		if (wedgePoints.length === 0) return fullPrism;
 
 		// Create wedge prism (make it taller to ensure complete cut)
-		const wedgeCutter = this.profilePrismFromPoints(height * 1.5, wedgePoints, color)
+		const wedgeCutter = this.profilePrismFromPoints(height * 1.5, wedgePoints, { color })
 			.rotate({ x: 90 })
 			.move({ y: height * 0.75 }); // Center wedge on Y-axis
 
@@ -327,8 +391,9 @@ export class Solid {
 	static profilePrism = (
 		height: number,
 		profileBuilder: (shape: Shape) => void,
-		color: string = 'gray'
+		options?: { color?: string }
 	): Solid => {
+		const color = options?.color ?? 'gray';
 		const shape = new Shape();
 		profileBuilder(shape);
 
@@ -362,7 +427,7 @@ export class Solid {
 	static profilePrismFromPoints = (
 		height: number,
 		points: [number, number][],
-		color: string = 'gray'
+		options?: { color?: string }
 	): Solid => {
 		if (points.length < 3) {
 			throw new Error('profilePrismFromPoints requires at least 3 points');
@@ -384,7 +449,7 @@ export class Solid {
 				// Auto-close: connect back to start
 				shape.lineTo(startX, startY);
 			},
-			color
+			options
 		);
 	};
 
@@ -425,7 +490,7 @@ export class Solid {
 	static profilePrismFromPath = (
 		height: number,
 		segments: PathSegment[],
-		color: string = 'gray'
+		options?: { color?: string }
 	): Solid => {
 		if (segments.length === 0) {
 			throw new Error('profilePrismFromPath requires at least one segment');
@@ -517,7 +582,7 @@ export class Solid {
 				// Auto-close: connect back to origin
 				shape.lineTo(0, 0);
 			},
-			color
+			options
 		);
 	};
 
@@ -600,7 +665,7 @@ export class Solid {
 		// Create wedge prism (make it taller to ensure complete cut through entire profile)
 		// The wedge needs to extend through the entire height range of the profile
 		const wedgeHeight = Math.max(profileHeight * 2, maxRadius * 4);
-		const wedgeCutter = this.profilePrismFromPoints(wedgeHeight, wedgePoints, color)
+		const wedgeCutter = this.profilePrismFromPoints(wedgeHeight, wedgePoints, { color })
 			.rotate({ x: 90 }) // Rotate to align with Y-axis (revolution axis)
 			.move({ y: profileCenter + wedgeHeight / 2 }); // Center the wedge on the profile (rotation makes extrusion go negative, so add half height)
 
@@ -920,14 +985,17 @@ export class Solid {
 
 	// Explicit CSG operations
 	public static MERGE(solids: Solid[]): Solid {
-		return solids.reduce((accumulator, solid) => {
-			const resultBrush = Solid.evaluator.evaluate(
-				accumulator.brush,
-				solid.brush,
-				solid.isNegative ? SUBTRACTION : ADDITION
-			);
-			return new Solid(resultBrush, accumulator._color);
-		}, Solid.emptyCube);
+		return solids.reduce(
+			(accumulator, solid) => {
+				const resultBrush = Solid.evaluator.evaluate(
+					accumulator.brush,
+					solid.brush,
+					solid.isNegative ? SUBTRACTION : ADDITION
+				);
+				return new Solid(resultBrush, accumulator._color);
+			},
+			Solid.emptyCube.setColor(solids[0]?._color ?? 'gray')
+		);
 	}
 
 	public static SUBTRACT(source: Solid, ...others: Solid[]): Solid {

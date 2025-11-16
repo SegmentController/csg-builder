@@ -32,7 +32,5 @@ export const addToComponentStore = (componentsMap: ComponentsMap) => {
 	components.sort((a, b) => a.name.localeCompare(b.name));
 
 	// Notify Svelte wrapper if callback is set
-	if (onComponentsChanged) {
-		onComponentsChanged();
-	}
+	if (onComponentsChanged) onComponentsChanged();
 };

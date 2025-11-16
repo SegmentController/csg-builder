@@ -1,6 +1,6 @@
 {
 	"name": "csg-builder",
-	"version": "1.4.0",
+	"version": "1.4.1",
 	"type": "module",
 	"main": "build/index.js",
 	"engines": {
