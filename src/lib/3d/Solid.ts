@@ -166,8 +166,8 @@ export class Solid {
 				`Cylinder dimensions must be finite (got radius: ${radius}, height: ${height})`
 			);
 		if (options?.topRadius !== undefined) {
-			if (options.topRadius <= 0)
-				throw new Error(`Cylinder topRadius must be positive (got ${options.topRadius})`);
+			if (options.topRadius < 0)
+				throw new Error(`Cylinder topRadius must be non-negative (got ${options.topRadius})`);
 			if (!Number.isFinite(options.topRadius))
 				throw new Error(`Cylinder topRadius must be finite (got ${options.topRadius})`);
 		}
@@ -319,8 +319,8 @@ export class Solid {
 		if (!Number.isFinite(radius) || !Number.isFinite(height))
 			throw new Error(`Prism dimensions must be finite (got radius: ${radius}, height: ${height})`);
 		if (options?.topRadius !== undefined) {
-			if (options.topRadius <= 0)
-				throw new Error(`Prism topRadius must be positive (got ${options.topRadius})`);
+			if (options.topRadius < 0)
+				throw new Error(`Prism topRadius must be non-negative (got ${options.topRadius})`);
 			if (!Number.isFinite(options.topRadius))
 				throw new Error(`Prism topRadius must be finite (got ${options.topRadius})`);
 		}
@@ -403,6 +403,9 @@ export class Solid {
 			curveSegments: 12,
 			steps: 1
 		});
+
+		// Center geometry along extrusion axis before rotation
+		geometry.translate(0, 0, -height / 2);
 
 		// Rotate so extrusion direction (Z-axis) becomes height (Y-axis)
 		return new Solid(this.geometryToBrush(geometry), color).normalize().rotate({ x: 90 });
@@ -922,6 +925,14 @@ export class Solid {
 
 	// Centering method
 	public center(axes?: { x?: boolean; y?: boolean; z?: boolean }): Solid {
+		// First, bake all transformations (position, rotation, scale) into geometry
+		this.brush.geometry.applyMatrix4(this.brush.matrix);
+		this.brush.position.set(0, 0, 0);
+		this.brush.rotation.set(0, 0, 0);
+		this.brush.scale.set(1, 1, 1);
+		this.brush.updateMatrixWorld();
+
+		// Now get fresh bounds (geometry-only, no transformations)
 		const bounds = this.getBounds();
 
 		// Default to all axes if no parameter provided
@@ -934,48 +945,46 @@ export class Solid {
 		const translateZ = centerZ ? -bounds.center.z : 0;
 
 		this.brush.geometry.translate(translateX, translateY, translateZ);
-
-		if (centerX) this.brush.position.x = 0;
-		if (centerY) this.brush.position.y = 0;
-		if (centerZ) this.brush.position.z = 0;
-
 		this.brush.updateMatrixWorld();
+
 		return this;
 	}
 
 	// Edge alignment method
 	public align(direction: 'bottom' | 'top' | 'left' | 'right' | 'front' | 'back'): Solid {
+		// First, bake all transformations (position, rotation, scale) into geometry
+		this.brush.geometry.applyMatrix4(this.brush.matrix);
+		this.brush.position.set(0, 0, 0);
+		this.brush.rotation.set(0, 0, 0);
+		this.brush.scale.set(1, 1, 1);
+		this.brush.updateMatrixWorld();
+
+		// Now get fresh bounds (geometry-only, no transformations)
 		const bounds = this.getBounds();
 
 		switch (direction) {
 			case 'bottom': {
 				this.brush.geometry.translate(0, -bounds.min.y, 0);
-				this.brush.position.y = 0;
 				break;
 			}
 			case 'top': {
 				this.brush.geometry.translate(0, -bounds.max.y, 0);
-				this.brush.position.y = 0;
 				break;
 			}
 			case 'left': {
 				this.brush.geometry.translate(-bounds.min.x, 0, 0);
-				this.brush.position.x = 0;
 				break;
 			}
 			case 'right': {
 				this.brush.geometry.translate(-bounds.max.x, 0, 0);
-				this.brush.position.x = 0;
 				break;
 			}
 			case 'front': {
 				this.brush.geometry.translate(0, 0, -bounds.min.z);
-				this.brush.position.z = 0;
 				break;
 			}
 			case 'back': {
 				this.brush.geometry.translate(0, 0, -bounds.max.z);
-				this.brush.position.z = 0;
 				break;
 			}
 		}
