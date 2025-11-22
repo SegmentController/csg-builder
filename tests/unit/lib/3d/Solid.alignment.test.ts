@@ -1,6 +1,8 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it } from 'vitest';
+
 import { Solid } from '$lib/3d/Solid';
-import { expectBoundsEqual, expectValidVertexCount, expectCloseTo } from '../../../setup';
+
+import { expectBoundsEqual, expectCloseTo, expectValidVertexCount } from '../../../setup';
 
 describe('Solid - Alignment and Bounds', () => {
 	describe('getBounds()', () => {
@@ -118,7 +120,9 @@ describe('Solid - Alignment and Bounds', () => {
 		});
 
 		it('should center cube on x and y axes', () => {
-			const cube = Solid.cube(10, 10, 10).move({ x: 20, y: 30, z: 40 }).center({ x: true, y: true });
+			const cube = Solid.cube(10, 10, 10)
+				.move({ x: 20, y: 30, z: 40 })
+				.center({ x: true, y: true });
 			const bounds = cube.getBounds();
 
 			expectCloseTo(bounds.center.x, 0, 1);
@@ -126,7 +130,9 @@ describe('Solid - Alignment and Bounds', () => {
 		});
 
 		it('should center cube on x and z axes', () => {
-			const cube = Solid.cube(10, 10, 10).move({ x: 20, y: 30, z: 40 }).center({ x: true, z: true });
+			const cube = Solid.cube(10, 10, 10)
+				.move({ x: 20, y: 30, z: 40 })
+				.center({ x: true, z: true });
 			const bounds = cube.getBounds();
 
 			expectCloseTo(bounds.center.x, 0, 1);
@@ -134,7 +140,9 @@ describe('Solid - Alignment and Bounds', () => {
 		});
 
 		it('should center cube on y and z axes', () => {
-			const cube = Solid.cube(10, 10, 10).move({ x: 20, y: 30, z: 40 }).center({ y: true, z: true });
+			const cube = Solid.cube(10, 10, 10)
+				.move({ x: 20, y: 30, z: 40 })
+				.center({ y: true, z: true });
 			const bounds = cube.getBounds();
 
 			expectCloseTo(bounds.center.y, 0, 1);
@@ -142,7 +150,9 @@ describe('Solid - Alignment and Bounds', () => {
 		});
 
 		it('should center cube on all axes with explicit flags', () => {
-			const cube = Solid.cube(10, 10, 10).move({ x: 20, y: 30, z: 40 }).center({ x: true, y: true, z: true });
+			const cube = Solid.cube(10, 10, 10)
+				.move({ x: 20, y: 30, z: 40 })
+				.center({ x: true, y: true, z: true });
 			const bounds = cube.getBounds();
 
 			expectCloseTo(bounds.center.x, 0, 1);
@@ -302,7 +312,10 @@ describe('Solid - Alignment and Bounds', () => {
 
 	describe('Combined Alignment Operations', () => {
 		it('should combine center and align', () => {
-			const cube = Solid.cube(10, 20, 30).move({ x: 50, y: 60, z: 70 }).center({ x: true, z: true }).align('bottom');
+			const cube = Solid.cube(10, 20, 30)
+				.move({ x: 50, y: 60, z: 70 })
+				.center({ x: true, z: true })
+				.align('bottom');
 
 			const bounds = cube.getBounds();
 
@@ -332,7 +345,11 @@ describe('Solid - Alignment and Bounds', () => {
 		});
 
 		it('should align multiple sides sequentially', () => {
-			const cube = Solid.cube(10, 20, 30).move({ x: 50, y: 60, z: 70 }).align('bottom').align('left').align('front');
+			const cube = Solid.cube(10, 20, 30)
+				.move({ x: 50, y: 60, z: 70 })
+				.align('bottom')
+				.align('left')
+				.align('front');
 
 			const bounds = cube.getBounds();
 

@@ -24,6 +24,7 @@ export default [
 			'build',
 			'docs',
 			'.svelte-kit',
+			'vitest.config.*',
 			'package',
 			'**/.env',
 			'**/.env.*',

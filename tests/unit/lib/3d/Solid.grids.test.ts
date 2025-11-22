@@ -1,6 +1,8 @@
-import { describe, it, expect } from 'vitest';
+import { describe, expect, it } from 'vitest';
+
 import { Solid } from '$lib/3d/Solid';
-import { expectValidVertexCount, expectCloseTo } from '../../../setup';
+
+import { expectCloseTo, expectValidVertexCount } from '../../../setup';
 
 describe('Solid - Grid Operations', () => {
 	describe('GRID_X() - 1D Grid', () => {

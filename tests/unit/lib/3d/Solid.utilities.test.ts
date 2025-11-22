@@ -1,5 +1,7 @@
-import { describe, it, expect } from 'vitest';
+import { describe, expect, it } from 'vitest';
+
 import { Solid } from '$lib/3d/Solid';
+
 import { expectValidVertexCount } from '../../../setup';
 
 describe('Solid - Utility Methods', () => {
@@ -129,10 +131,7 @@ describe('Solid - Utility Methods', () => {
 		});
 
 		it('should allow color changes multiple times', () => {
-			const cube = Solid.cube(10, 10, 10)
-				.setColor('red')
-				.setColor('blue')
-				.setColor('green');
+			const cube = Solid.cube(10, 10, 10).setColor('red').setColor('blue').setColor('green');
 
 			expectValidVertexCount(cube);
 		});
@@ -364,10 +363,7 @@ describe('Solid - Utility Methods', () => {
 		});
 
 		it('should preserve color through transformations', () => {
-			const cube = Solid.cube(10, 10, 10)
-				.setColor('purple')
-				.rotate({ z: 45 })
-				.scale({ all: 2 });
+			const cube = Solid.cube(10, 10, 10).setColor('purple').rotate({ z: 45 }).scale({ all: 2 });
 
 			expectValidVertexCount(cube);
 		});

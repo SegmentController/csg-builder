@@ -1,6 +1,8 @@
-import { describe, it, expect } from 'vitest';
+import { describe, expect, it } from 'vitest';
+
 import { Solid } from '$lib/3d/Solid';
-import { expectBoundsEqual, expectValidVertexCount, expectCloseTo } from '../../../setup';
+
+import { expectBoundsEqual, expectCloseTo, expectValidVertexCount } from '../../../setup';
 
 describe('Solid - Primitive Creation', () => {
 	describe('cube()', () => {

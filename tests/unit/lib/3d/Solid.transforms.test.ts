@@ -1,6 +1,8 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it } from 'vitest';
+
 import { Solid } from '$lib/3d/Solid';
-import { expectBoundsEqual, expectValidVertexCount, expectCloseTo } from '../../../setup';
+
+import { expectCloseTo, expectValidVertexCount } from '../../../setup';
 
 describe('Solid - Transformations', () => {
 	describe('at() - Absolute Positioning', () => {
@@ -407,7 +409,7 @@ describe('Solid - Transformations', () => {
 
 			// After 90 degree z rotation, width and depth may swap
 			// But total volume-related dimensions should be preserved
-			const dimensions = [bounds.width, bounds.height, bounds.depth].sort();
+			const dimensions = [bounds.width, bounds.height, bounds.depth].toSorted();
 			expectCloseTo(dimensions[0], 10, 1);
 			expectCloseTo(dimensions[1], 20, 1);
 			expectCloseTo(dimensions[2], 30, 1);

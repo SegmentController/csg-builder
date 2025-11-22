@@ -1,7 +1,9 @@
-import { describe, it, expect } from 'vitest';
+import { describe, expect, it } from 'vitest';
+
 import { Solid } from '$lib/3d/Solid';
 import { generateBinaryStlFromVertices, getBinaryStlSizeKbFromVertices } from '$lib/3d/stl';
-import { parseStlBinary, expectCloseTo } from '../../../setup';
+
+import { expectCloseTo, parseStlBinary } from '../../../setup';
 
 describe('STL Export', () => {
 	describe('generateBinaryStlFromVertices()', () => {

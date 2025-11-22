@@ -1,5 +1,6 @@
 import { expect } from 'vitest';
-import type { Solid } from '$lib/3d/Solid';
+
+import { Solid } from '$lib/3d/Solid';
 
 /**
  * Default tolerance for floating point comparisons
@@ -59,7 +60,6 @@ export function expectValidVertexCount(solid: Solid, minVertices = 9) {
  */
 export function expectImmutability(original: Solid, afterOperation: Solid) {
 	const originalVertices = original.getVertices();
-	const afterVertices = afterOperation.getVertices();
 
 	// They should be different instances
 	expect(original).not.toBe(afterOperation);
@@ -93,8 +93,8 @@ export function parseStlBinary(buffer: Uint8Array) {
 	}> = [];
 
 	// Parse each triangle (50 bytes each)
-	for (let i = 0; i < triangleCount; i++) {
-		const offset = 84 + i * 50;
+	for (let index = 0; index < triangleCount; index++) {
+		const offset = 84 + index * 50;
 
 		const normal = {
 			x: dataView.getFloat32(offset, true),
@@ -134,7 +134,6 @@ export function parseStlBinary(buffer: Uint8Array) {
  * Helper to create a simple test fixture - a unit cube
  */
 export function createUnitCube() {
-	const { Solid } = require('$lib/3d/Solid');
 	return Solid.cube(1, 1, 1);
 }
 
@@ -142,7 +141,6 @@ export function createUnitCube() {
  * Helper to create a simple test fixture - a unit cylinder
  */
 export function createUnitCylinder() {
-	const { Solid } = require('$lib/3d/Solid');
 	return Solid.cylinder(1, 1);
 }
 
@@ -150,6 +148,5 @@ export function createUnitCylinder() {
  * Helper to create a simple test fixture - a unit sphere
  */
 export function createUnitSphere() {
-	const { Solid } = require('$lib/3d/Solid');
 	return Solid.sphere(1);
 }

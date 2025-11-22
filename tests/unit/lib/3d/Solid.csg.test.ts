@@ -1,6 +1,8 @@
-import { describe, it, expect } from 'vitest';
+import { describe, expect, it } from 'vitest';
+
 import { Solid } from '$lib/3d/Solid';
-import { expectImmutability, expectValidVertexCount, expectCloseTo } from '../../../setup';
+
+import { expectCloseTo, expectImmutability, expectValidVertexCount } from '../../../setup';
 
 describe('Solid - CSG Operations', () => {
 	describe('SUBTRACT()', () => {
@@ -299,9 +301,9 @@ describe('Solid - CSG Operations', () => {
 			const unionResult = Solid.UNION(cube1, cube2);
 
 			// Should have similar vertex counts
-			expect(Math.abs(mergeResult.getVertices().length - unionResult.getVertices().length)).toBeLessThan(
-				100
-			);
+			expect(
+				Math.abs(mergeResult.getVertices().length - unionResult.getVertices().length)
+			).toBeLessThan(100);
 		});
 
 		it('should be chainable with other operations', () => {

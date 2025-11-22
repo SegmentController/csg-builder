@@ -1,6 +1,8 @@
-import { describe, it, expect } from 'vitest';
-import { Solid, straight, curve } from '$lib/3d/Solid';
-import { expectValidVertexCount, expectCloseTo } from '../../../setup';
+import { describe, expect, it } from 'vitest';
+
+import { curve, Solid, straight } from '$lib/3d/Solid';
+
+import { expectCloseTo, expectValidVertexCount } from '../../../setup';
 
 describe('Solid - Custom Profiles', () => {
 	describe('profilePrism()', () => {
