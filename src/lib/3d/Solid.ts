@@ -986,6 +986,8 @@ export class Solid {
 
 	// Explicit CSG operations
 	public static MERGE(solids: Solid[]): Solid {
+		if (solids.length > 0 && solids[0].isNegative)
+			throw new Error('First solid in MERGE cannot be negative');
 		return solids.reduce(
 			(accumulator, solid) => {
 				const resultBrush = Solid.evaluator.evaluate(
@@ -1019,11 +1021,20 @@ export class Solid {
 
 	public static GRID_XYZ(
 		solid: Solid,
-		options: { cols: number; rows: number; levels: number; spacing?: [number, number, number] }
+		options: {
+			cols: number;
+			rows: number;
+			levels: number;
+			spacing?: number | [number, number, number];
+		}
 	): Solid {
 		const solids: Solid[] = [];
 		const { width, height, depth } = solid.getBounds();
-		const [spacingX, spacingY, spacingZ] = options.spacing ?? [0, 0, 0];
+		const spacingArray =
+			typeof options.spacing === 'number'
+				? [options.spacing, options.spacing, options.spacing]
+				: (options.spacing ?? [0, 0, 0]);
+		const [spacingX, spacingY, spacingZ] = spacingArray;
 
 		for (let x = 0; x < options.cols; x++)
 			for (let y = 0; y < options.rows; y++)
@@ -1031,8 +1042,8 @@ export class Solid {
 					solids.push(
 						solid.clone().move({
 							x: x * (width + spacingX),
-							y: y * (height + spacingY),
-							z: z * (depth + spacingZ)
+							y: z * (height + spacingY),
+							z: y * (depth + spacingZ)
 						})
 					);
 
@@ -1047,7 +1058,7 @@ export class Solid {
 			cols: options.cols,
 			rows: options.rows,
 			levels: 1,
-			spacing: options.spacing ? [options.spacing[0], options.spacing[1], 0] : undefined
+			spacing: options.spacing ? [options.spacing[0], 0, options.spacing[1]] : undefined
 		});
 	}
 
