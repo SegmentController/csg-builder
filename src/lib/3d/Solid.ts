@@ -166,8 +166,8 @@ export class Solid {
 				`Cylinder dimensions must be finite (got radius: ${radius}, height: ${height})`
 			);
 		if (options?.topRadius !== undefined) {
-			if (options.topRadius <= 0)
-				throw new Error(`Cylinder topRadius must be positive (got ${options.topRadius})`);
+			if (options.topRadius < 0)
+				throw new Error(`Cylinder topRadius must be non-negative (got ${options.topRadius})`);
 			if (!Number.isFinite(options.topRadius))
 				throw new Error(`Cylinder topRadius must be finite (got ${options.topRadius})`);
 		}
@@ -198,9 +198,9 @@ export class Solid {
 		if (wedgePoints.length === 0) return fullCylinder;
 
 		// Create wedge prism (make it taller to ensure complete cut)
-		const wedgeCutter = this.profilePrismFromPoints(height * 1.5, wedgePoints, { color })
-			.rotate({ x: 90 })
-			.move({ y: height * 0.75 }); // Center wedge on Y-axis
+		const wedgeCutter = this.profilePrismFromPoints(height * 1.5, wedgePoints, { color }).move({
+			y: height * 0.75
+		}); // Center wedge on Y-axis
 
 		// Subtract wedge from cylinder to create closed partial geometry
 		return Solid.SUBTRACT(fullCylinder, wedgeCutter);
@@ -241,9 +241,9 @@ export class Solid {
 		if (wedgePoints.length === 0) return fullSphere;
 
 		// Create wedge prism tall enough to cut through entire sphere diameter
-		const wedgeCutter = this.profilePrismFromPoints(radius * 4, wedgePoints, { color })
-			.rotate({ x: 90 }) // Rotate to align with sphere
-			.move({ y: radius * 2 }); // Center wedge on Y-axis
+		const wedgeCutter = this.profilePrismFromPoints(radius * 4, wedgePoints, { color }).move({
+			y: radius * 2
+		}); // Center wedge on Y-axis
 
 		// Subtract wedge from sphere to create closed partial geometry
 		return Solid.SUBTRACT(fullSphere, wedgeCutter);
@@ -291,9 +291,9 @@ export class Solid {
 		if (wedgePoints.length === 0) return fullCone;
 
 		// Create wedge prism (make it taller to ensure complete cut)
-		const wedgeCutter = this.profilePrismFromPoints(height * 1.5, wedgePoints, { color })
-			.rotate({ x: 90 })
-			.move({ y: height * 0.75 }); // Center wedge on Y-axis
+		const wedgeCutter = this.profilePrismFromPoints(height * 1.5, wedgePoints, { color }).move({
+			y: height * 0.75
+		}); // Center wedge on Y-axis
 
 		// Subtract wedge from cone to create closed partial geometry
 		return Solid.SUBTRACT(fullCone, wedgeCutter);
@@ -319,8 +319,8 @@ export class Solid {
 		if (!Number.isFinite(radius) || !Number.isFinite(height))
 			throw new Error(`Prism dimensions must be finite (got radius: ${radius}, height: ${height})`);
 		if (options?.topRadius !== undefined) {
-			if (options.topRadius <= 0)
-				throw new Error(`Prism topRadius must be positive (got ${options.topRadius})`);
+			if (options.topRadius < 0)
+				throw new Error(`Prism topRadius must be non-negative (got ${options.topRadius})`);
 			if (!Number.isFinite(options.topRadius))
 				throw new Error(`Prism topRadius must be finite (got ${options.topRadius})`);
 		}
@@ -351,9 +351,9 @@ export class Solid {
 		if (wedgePoints.length === 0) return fullPrism;
 
 		// Create wedge prism (make it taller to ensure complete cut)
-		const wedgeCutter = this.profilePrismFromPoints(height * 1.5, wedgePoints, { color })
-			.rotate({ x: 90 })
-			.move({ y: height * 0.75 }); // Center wedge on Y-axis
+		const wedgeCutter = this.profilePrismFromPoints(height * 1.5, wedgePoints, { color }).move({
+			y: height * 0.75
+		}); // Center wedge on Y-axis
 
 		// Subtract wedge from prism to create closed partial geometry
 		return Solid.SUBTRACT(fullPrism, wedgeCutter);
@@ -404,7 +404,11 @@ export class Solid {
 			steps: 1
 		});
 
-		return new Solid(this.geometryToBrush(geometry), color).normalize();
+		// Center geometry along extrusion axis before rotation
+		geometry.translate(0, 0, -height / 2);
+
+		// Rotate so extrusion direction (Z-axis) becomes height (Y-axis)
+		return new Solid(this.geometryToBrush(geometry), color).normalize().rotate({ x: 90 });
 	};
 
 	/**
@@ -665,9 +669,9 @@ export class Solid {
 		// Create wedge prism (make it taller to ensure complete cut through entire profile)
 		// The wedge needs to extend through the entire height range of the profile
 		const wedgeHeight = Math.max(profileHeight * 2, maxRadius * 4);
-		const wedgeCutter = this.profilePrismFromPoints(wedgeHeight, wedgePoints, { color })
-			.rotate({ x: 90 }) // Rotate to align with Y-axis (revolution axis)
-			.move({ y: profileCenter + wedgeHeight / 2 }); // Center the wedge on the profile (rotation makes extrusion go negative, so add half height)
+		const wedgeCutter = this.profilePrismFromPoints(wedgeHeight, wedgePoints, { color }).move({
+			y: profileCenter + wedgeHeight / 2
+		}); // Center the wedge on the profile
 
 		// Subtract wedge from full revolution to create closed partial geometry
 		return Solid.SUBTRACT(fullRevolution, wedgeCutter);
@@ -921,6 +925,14 @@ export class Solid {
 
 	// Centering method
 	public center(axes?: { x?: boolean; y?: boolean; z?: boolean }): Solid {
+		// First, bake all transformations (position, rotation, scale) into geometry
+		this.brush.geometry.applyMatrix4(this.brush.matrix);
+		this.brush.position.set(0, 0, 0);
+		this.brush.rotation.set(0, 0, 0);
+		this.brush.scale.set(1, 1, 1);
+		this.brush.updateMatrixWorld();
+
+		// Now get fresh bounds (geometry-only, no transformations)
 		const bounds = this.getBounds();
 
 		// Default to all axes if no parameter provided
@@ -933,48 +945,46 @@ export class Solid {
 		const translateZ = centerZ ? -bounds.center.z : 0;
 
 		this.brush.geometry.translate(translateX, translateY, translateZ);
-
-		if (centerX) this.brush.position.x = 0;
-		if (centerY) this.brush.position.y = 0;
-		if (centerZ) this.brush.position.z = 0;
-
 		this.brush.updateMatrixWorld();
+
 		return this;
 	}
 
 	// Edge alignment method
 	public align(direction: 'bottom' | 'top' | 'left' | 'right' | 'front' | 'back'): Solid {
+		// First, bake all transformations (position, rotation, scale) into geometry
+		this.brush.geometry.applyMatrix4(this.brush.matrix);
+		this.brush.position.set(0, 0, 0);
+		this.brush.rotation.set(0, 0, 0);
+		this.brush.scale.set(1, 1, 1);
+		this.brush.updateMatrixWorld();
+
+		// Now get fresh bounds (geometry-only, no transformations)
 		const bounds = this.getBounds();
 
 		switch (direction) {
 			case 'bottom': {
 				this.brush.geometry.translate(0, -bounds.min.y, 0);
-				this.brush.position.y = 0;
 				break;
 			}
 			case 'top': {
 				this.brush.geometry.translate(0, -bounds.max.y, 0);
-				this.brush.position.y = 0;
 				break;
 			}
 			case 'left': {
 				this.brush.geometry.translate(-bounds.min.x, 0, 0);
-				this.brush.position.x = 0;
 				break;
 			}
 			case 'right': {
 				this.brush.geometry.translate(-bounds.max.x, 0, 0);
-				this.brush.position.x = 0;
 				break;
 			}
 			case 'front': {
 				this.brush.geometry.translate(0, 0, -bounds.min.z);
-				this.brush.position.z = 0;
 				break;
 			}
 			case 'back': {
 				this.brush.geometry.translate(0, 0, -bounds.max.z);
-				this.brush.position.z = 0;
 				break;
 			}
 		}
@@ -985,6 +995,8 @@ export class Solid {
 
 	// Explicit CSG operations
 	public static MERGE(solids: Solid[]): Solid {
+		if (solids.length > 0 && solids[0].isNegative)
+			throw new Error('First solid in MERGE cannot be negative');
 		return solids.reduce(
 			(accumulator, solid) => {
 				const resultBrush = Solid.evaluator.evaluate(
@@ -1018,11 +1030,20 @@ export class Solid {
 
 	public static GRID_XYZ(
 		solid: Solid,
-		options: { cols: number; rows: number; levels: number; spacing?: [number, number, number] }
+		options: {
+			cols: number;
+			rows: number;
+			levels: number;
+			spacing?: number | [number, number, number];
+		}
 	): Solid {
 		const solids: Solid[] = [];
 		const { width, height, depth } = solid.getBounds();
-		const [spacingX, spacingY, spacingZ] = options.spacing ?? [0, 0, 0];
+		const spacingArray =
+			typeof options.spacing === 'number'
+				? [options.spacing, options.spacing, options.spacing]
+				: (options.spacing ?? [0, 0, 0]);
+		const [spacingX, spacingY, spacingZ] = spacingArray;
 
 		for (let x = 0; x < options.cols; x++)
 			for (let y = 0; y < options.rows; y++)
@@ -1030,8 +1051,8 @@ export class Solid {
 					solids.push(
 						solid.clone().move({
 							x: x * (width + spacingX),
-							y: y * (height + spacingY),
-							z: z * (depth + spacingZ)
+							y: z * (height + spacingY),
+							z: y * (depth + spacingZ)
 						})
 					);
 
@@ -1046,7 +1067,7 @@ export class Solid {
 			cols: options.cols,
 			rows: options.rows,
 			levels: 1,
-			spacing: options.spacing ? [options.spacing[0], options.spacing[1], 0] : undefined
+			spacing: options.spacing ? [options.spacing[0], 0, options.spacing[1]] : undefined
 		});
 	}
 

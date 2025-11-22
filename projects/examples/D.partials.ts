@@ -8,7 +8,6 @@
  * Key concepts:
  * - Options object syntax: { color: 'blue', angle: 90 }
  * - Angle in degrees: 0-360 (default 360 = full circle)
- * - Angle constants: Solid.DEG_90, DEG_180, DEG_270, DEG_360
  * - Internal implementation: Uses CSG subtraction to create closed, manifold shapes
  * - ⚠️ Only works with circular primitives (cylinder, sphere, cone, prism)
  *
@@ -24,7 +23,6 @@ import type { ComponentsMap } from '$stores/componentStore';
  * angle: 90 creates a 90° section of the cylinder
  *
  * 💡 Use case: Architectural corners, pipe elbows, rounded edges
- * 💡 Can also use: angle: Solid.DEG_90 (predefined constant)
  */
 export const cylinderPartial = (): Solid => {
 	return Solid.cylinder(8, 10, { color: 'blue', angle: 90 }); // Quarter cylinder
@@ -59,12 +57,12 @@ export const conePartial = (): Solid => {
  *   Solid.prism(6, 8, 10, { color: 'purple', angle: 180 })
  *   Solid.trianglePrism(8, 10, { color: 'cyan', angle: 90 })
  *
- * - Angle constants available:
- *   Solid.DEG_45 = 45    // Eighth of circle
- *   Solid.DEG_90 = 90    // Quarter circle
- *   Solid.DEG_180 = 180  // Half circle
- *   Solid.DEG_270 = 270  // Three-quarters
- *   Solid.DEG_360 = 360  // Full circle (default)
+ * - Common angle values:
+ *   45  = Eighth of circle
+ *   90  = Quarter circle
+ *   180 = Half circle
+ *   270 = Three-quarters
+ *   360 = Full circle (default)
  *
  * - Performance: angle >= 360 skips CSG operations (optimized)
  * - Partial geometries are true CSG solids - can be used in UNION, SUBTRACT, etc.

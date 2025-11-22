@@ -154,9 +154,9 @@ const hexNut = Solid.SUBTRACT(
 	Solid.cylinder(4, 6, { color: 'gray' })
 ).center();
 
-// Partial geometries with angle parameter
-const pieSlice = Solid.cylinder(10, 2, { color: 'red', angle: Solid.DEG_90 });
-const hemisphere = Solid.sphere(8, { color: 'cyan', angle: Solid.DEG_180 });
+// Partial geometries with angle parameter (in degrees)
+const pieSlice = Solid.cylinder(10, 2, { color: 'red', angle: 90 });
+const hemisphere = Solid.sphere(8, { color: 'cyan', angle: 180 });
 ```
 
 ### Example: Custom Profile Prisms
@@ -281,7 +281,7 @@ const quarterVase = Solid.revolutionSolidFromPoints(
 		[4, 10],
 		[0, 10]
 	],
-	{ angle: Solid.DEG_90, color: 'purple' }
+	{ angle: 90, color: 'purple' }
 );
 ```
 
@@ -325,7 +325,6 @@ const w3 = Wall(30); // Different params, new computation
 **Profiles:** `profilePrism(h,builder,opts)`, `profilePrismFromPoints(h,points,opts)`, `profilePrismFromPath(h,segments,opts)`
 **Revolution:** `revolutionSolid(builder,opts)`, `revolutionSolidFromPoints(points,opts)`, `revolutionSolidFromPath(segments,opts)`
 **Path Factories:** `straight(length)`, `curve(radius,angle)` - positive=right, negative=left, 0=sharp
-**Angle Constants:** `DEG_45`, `DEG_90`, `DEG_180`, `DEG_270`, `DEG_360`
 
 **Transforms (chainable):** `at(x,y,z)` absolute, `move({x?,y?,z?})` relative, `rotate({x?,y?,z?})` degrees, `scale({all?,x?,y?,z?})` multiplicative
 

@@ -118,10 +118,6 @@ npm run export --silent -- Box > box.stl
 
 ## Primitives API
 
-### Angle Constants
-
-`Solid.DEG_45`, `Solid.DEG_90`, `Solid.DEG_180`, `Solid.DEG_270`, `Solid.DEG_360`
-
 ### Basic Shapes
 
 ```typescript
