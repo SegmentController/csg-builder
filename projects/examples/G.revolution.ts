@@ -66,7 +66,6 @@ export const chessPawn = (): Solid => {
  * - angle: 90 creates quarter section
  * - angle: 180 creates half section
  * - angle: 270 creates three-quarter section
- * - Can use constants: Solid.DEG_90, DEG_180, DEG_270, DEG_360
  *
  * 💡 Use cases: Cut-away views, architectural sections, decorative elements
  * 💡 Partial revolutions are closed solids (not hollow or open-edged)
