@@ -1,14 +1,14 @@
 import { writeFloatLE, writeInt16LE, writeInt32LE } from '$lib/buffer';
 
-export const getBinaryStlSizeKbFromVertices = (verticesLength: number) =>
-	Math.round((80 + 4 + 50 * (verticesLength / 9)) / 1024);
+export const getBinaryStlSizeKbFromVertices = (vertices: Float32Array) =>
+	(80 + 4 + 50 * (vertices.length / 9)) / 1024;
 
 export const generateBinaryStlFromVertices = (vertices: Float32Array): Uint8Array => {
+	// Validate input: vertices array cannot be empty
+	if (vertices.length === 0) throw new Error('Vertices array cannot be empty');
+
 	// Validate input: vertices array must contain complete triangles (9 values per triangle)
-	if (vertices.length % 9 !== 0)
-		throw new Error(
-			`Invalid vertices array: length must be divisible by 9 (got ${vertices.length})`
-		);
+	if (vertices.length % 9 !== 0) throw new Error('Vertices length must be divisible by 9');
 
 	const buffer = new Uint8Array(80 + 4 + 50 * (vertices.length / 9));
 
