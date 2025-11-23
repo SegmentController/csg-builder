@@ -38,7 +38,7 @@ export const basicCircle = (): Solid => {
  */
 export const gearTeeth = (): Solid => {
 	// Create center disk first
-	const disk = Solid.cylinder(15, 10, { color: 'gray' }).align('bottom');
+	const disk = Solid.cylinder(15, 8, { color: 'gray' }).align('bottom');
 
 	// Create a tooth shape - must extend in +X direction to face outward when rotated
 	// Width (X) should be larger than depth (Z) so tooth points radially
@@ -46,7 +46,7 @@ export const gearTeeth = (): Solid => {
 		.center({ x: true, z: true })
 		.align('bottom')
 		.rotate({ y: 180 })
-		.move({ y: -5 }); // Position on top of disk
+		.move({ y: -6 }); // Position on top of disk
 
 	// Arrange teeth in circle (rotates outward by default, positions at radius)
 	const teeth = Solid.ARRAY_CIRCULAR(tooth, {
@@ -68,13 +68,12 @@ export const boltHoles = (): Solid => {
 	const plate = Solid.cylinder(30, 5, { color: 'blue' }).align('bottom');
 
 	// Create hole pattern (negative solids)
-	const hole = Solid.cylinder(2, 10, { color: 'blue' }).setNegative();
-
+	const hole = Solid.cylinder(2, 12, { color: 'blue' });
 	const holePattern = Solid.ARRAY_CIRCULAR(hole, {
 		count: 8,
 		radius: 20,
 		rotateElements: false // Holes don't need rotation
-	});
+	}).setNegative();
 
 	// Center hole
 	const centerHole = Solid.cylinder(5, 10, { color: 'blue' }).setNegative();
@@ -92,12 +91,13 @@ export const wheelSpokes = (): Solid => {
 	// Create a spoke
 	const spoke = Solid.cube(1, 20, 2, { color: 'silver' })
 		.center({ x: true, z: true })
+		.rotate({ y: 45 })
 		.align('bottom');
 
 	// Arrange spokes (rotates from center)
 	const spokes = Solid.ARRAY_CIRCULAR(spoke, {
-		count: 12,
-		radius: 0 // No radial offset, just rotation
+		count: 8,
+		radius: 11 // No radial offset, just rotation
 	});
 
 	// Add rim
@@ -205,21 +205,20 @@ export const rosette = (): Solid => {
  */
 export const ventGrille = (): Solid => {
 	// Base panel
-	const panel = Solid.cube(40, 30, 2, { color: 'gray' }).center().align('bottom');
+	const panel = Solid.cube(30, 2, 30, { color: 'gray' }).center().align('bottom');
 
 	// Ventilation slot (negative) - center for proper rotation
-	const slot = Solid.cube(1, 10, 0.5, { color: 'gray' })
-		.setNegative()
+	const slot = Solid.cube(2, 10, 0.5, { color: 'gray' })
 		.center({ x: true, z: true })
-		.align('bottom');
+		.align('front');
 
 	// Create arc pattern (90° arc)
 	const slotPattern = Solid.ARRAY_CIRCULAR(slot, {
-		count: 9,
+		count: 11,
 		radius: 12, // Distance from center
 		startAngle: -45,
 		endAngle: 45 // 90° total arc
-	});
+	}).setNegative();
 
 	return Solid.MERGE([panel, slotPattern]);
 };
