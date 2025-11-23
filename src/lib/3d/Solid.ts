@@ -12,6 +12,11 @@ import {
 	SphereGeometry,
 	Vector3
 } from 'three';
+import helvetikerFont from 'three/examples/fonts/helvetiker_regular.typeface.json';
+import { RoundedBoxGeometry } from 'three/examples/jsm/geometries/RoundedBoxGeometry.js';
+import { TextGeometry } from 'three/examples/jsm/geometries/TextGeometry.js';
+import type { Font } from 'three/examples/jsm/loaders/FontLoader.js';
+import { FontLoader } from 'three/examples/jsm/loaders/FontLoader.js';
 import { STLLoader } from 'three/examples/jsm/loaders/STLLoader.js';
 import { SVGLoader } from 'three/examples/jsm/loaders/SVGLoader.js';
 import { ADDITION, Brush, Evaluator, INTERSECTION, SUBTRACTION } from 'three-bvh-csg';
@@ -56,6 +61,16 @@ export class Solid {
 	// ============================================================================
 
 	private static evaluator: Evaluator = new Evaluator();
+	private static defaultFont: Font | undefined = undefined;
+
+	// Helper to load and cache the default font for text geometry
+	private static getDefaultFont(): Font {
+		if (!this.defaultFont) {
+			const loader = new FontLoader();
+			this.defaultFont = loader.parse(helvetikerFont);
+		}
+		return this.defaultFont;
+	}
 
 	// Helper to convert degrees to radians
 	private static degreesToRadians = (degrees: number): number => degrees * (Math.PI / 180);
@@ -133,11 +148,13 @@ export class Solid {
 	private static geometryToBrush(
 		geometry:
 			| BoxGeometry
+			| RoundedBoxGeometry
 			| CylinderGeometry
 			| SphereGeometry
 			| ConeGeometry
 			| ExtrudeGeometry
 			| LatheGeometry
+			| TextGeometry
 			| BufferGeometry
 	): Brush {
 		const result = new Brush(geometry.translate(0, 0, 0));
@@ -168,6 +185,44 @@ export class Solid {
 		const color = options?.color ?? 'gray';
 		return new Solid(
 			this.geometryToBrush(new BoxGeometry(width, height, depth)),
+			color
+		).normalize();
+	};
+
+	static roundedBox = (
+		width: number,
+		height: number,
+		depth: number,
+		options?: {
+			color?: string;
+			radius?: number;
+			segments?: number;
+		}
+	): Solid => {
+		// Validate dimensions (check finite first, then positive)
+		if (!Number.isFinite(width) || !Number.isFinite(height) || !Number.isFinite(depth))
+			throw new Error(
+				`RoundedBox dimensions must be finite (got width: ${width}, height: ${height}, depth: ${depth})`
+			);
+		if (width <= 0 || height <= 0 || depth <= 0)
+			throw new Error(
+				`RoundedBox dimensions must be positive (got width: ${width}, height: ${height}, depth: ${depth})`
+			);
+
+		const color = options?.color ?? 'gray';
+		const radius = options?.radius ?? Math.min(width, height, depth) * 0.1;
+		const segments = options?.segments ?? 2;
+
+		// Validate radius is within bounds
+		const maxRadius = Math.min(width, height, depth) / 2;
+		if (radius > maxRadius)
+			throw new Error(
+				`RoundedBox radius (${radius}) cannot exceed half of smallest dimension (${maxRadius})`
+			);
+		if (radius < 0) throw new Error(`RoundedBox radius must be non-negative (got ${radius})`);
+
+		return new Solid(
+			this.geometryToBrush(new RoundedBoxGeometry(width, height, depth, segments, radius)),
 			color
 		).normalize();
 	};
@@ -387,6 +442,46 @@ export class Solid {
 			color?: string;
 		}
 	): Solid => this.prism(3, radius, height, options);
+
+	static text = (
+		text: string,
+		options?: {
+			color?: string;
+			size?: number;
+			height?: number;
+			curveSegments?: number;
+			bevelEnabled?: boolean;
+		}
+	): Solid => {
+		// Validate text parameter
+		if (!text || text.length === 0) throw new Error('Text cannot be empty');
+
+		const color = options?.color ?? 'gray';
+		const size = options?.size ?? 10;
+		const height = options?.height ?? 2;
+		const curveSegments = options?.curveSegments ?? 12;
+		const bevelEnabled = options?.bevelEnabled ?? false;
+
+		// Get the default font
+		const font = this.getDefaultFont();
+
+		// Create text geometry
+		// Note: TextGeometry's 'depth' parameter is what we call 'height' (extrusion depth)
+		const geometry = new TextGeometry(text, {
+			font,
+			size,
+			depth: height,
+			curveSegments,
+			bevelEnabled
+		});
+
+		// Create solid and normalize
+		const solid = new Solid(this.geometryToBrush(geometry), color).normalize();
+
+		// Center text on XZ plane and align to bottom (Y=0)
+		// This makes text easier to position and orient consistently
+		return solid.center({ x: true, z: true }).align('bottom');
+	};
 
 	// ============================================================================
 	// SECTION 4.5: Import Methods (Static)
