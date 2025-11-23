@@ -8,6 +8,7 @@ import {
 	CylinderGeometry,
 	ExtrudeGeometry,
 	LatheGeometry,
+	Matrix4,
 	Shape,
 	SphereGeometry,
 	Vector3
@@ -1509,6 +1510,91 @@ export class Solid {
 
 		// Merge all solids into one
 		return Solid.MERGE(solids);
+	}
+
+	/**
+	 * Mirrors a solid across a specified axis plane.
+	 *
+	 * Creates a reflected copy of the geometry across the plane perpendicular to the specified axis.
+	 * The original solid is not modified - a new mirrored Solid is returned.
+	 *
+	 * **Mirroring behavior:**
+	 * - 'X': Mirrors across YZ plane (flips X coordinates)
+	 * - 'Y': Mirrors across XZ plane (flips Y coordinates)
+	 * - 'Z': Mirrors across XY plane (flips Z coordinates)
+	 *
+	 * **Common use cases:**
+	 * - Creating bilateral symmetry with UNION
+	 * - Mirroring asymmetric parts
+	 * - Creating full 3D symmetry by chaining multiple MIRROR calls
+	 *
+	 * @param solid - The solid to mirror
+	 * @param axis - The axis perpendicular to the mirror plane ('X', 'Y', or 'Z')
+	 * @returns A new Solid with mirrored geometry
+	 *
+	 * @example
+	 * // Create a simple asymmetric shape and mirror it
+	 * const shape = Solid.cube(10, 5, 3).move({ x: 5 });
+	 * const mirrored = Solid.MIRROR(shape, 'X');
+	 *
+	 * @example
+	 * // Create bilateral symmetry
+	 * const half = Solid.cube(10, 20, 5).move({ x: 10 });
+	 * const symmetric = Solid.UNION(half, Solid.MIRROR(half, 'X'));
+	 *
+	 * @example
+	 * // Create full 3D symmetry by chaining mirrors
+	 * const quarter = Solid.cylinder(5, 10).move({ x: 10, z: 10 });
+	 * const halfX = Solid.UNION(quarter, Solid.MIRROR(quarter, 'X'));
+	 * const full = Solid.UNION(halfX, Solid.MIRROR(halfX, 'Z'));
+	 *
+	 * @example
+	 * // Mirror works with negative solids for composition
+	 * const hole = Solid.cylinder(2, 20).move({ x: 5 }).setNegative();
+	 * const holes = Solid.MERGE([
+	 *   Solid.cube(30, 30, 5),
+	 *   hole,
+	 *   Solid.MIRROR(hole, 'X')
+	 * ]);
+	 */
+	public static MIRROR(solid: Solid, axis: 'X' | 'Y' | 'Z'): Solid {
+		// Validate axis
+		if (!['X', 'Y', 'Z'].includes(axis)) {
+			throw new Error(`axis must be 'X', 'Y', or 'Z' (got '${axis}')`);
+		}
+
+		// Clone the solid to avoid modifying the original
+		const mirrored = solid.clone();
+
+		// Brush.clone() doesn't deep clone geometry, so we need to clone it manually
+		mirrored.brush.geometry = mirrored.brush.geometry.clone();
+
+		// Update matrix before baking to ensure it's current
+		mirrored.brush.updateMatrixWorld();
+
+		// Bake all transformations (position, rotation, scale) into geometry
+		mirrored.brush.geometry.applyMatrix4(mirrored.brush.matrix);
+		mirrored.brush.position.set(0, 0, 0);
+		mirrored.brush.rotation.set(0, 0, 0);
+		mirrored.brush.scale.set(1, 1, 1);
+		mirrored.brush.updateMatrixWorld();
+
+		// Apply negative scale to the specified axis to mirror the geometry
+		const scaleX = axis === 'X' ? -1 : 1;
+		const scaleY = axis === 'Y' ? -1 : 1;
+		const scaleZ = axis === 'Z' ? -1 : 1;
+
+		// Create scale matrix and apply it to geometry
+		const scaleMatrix = new Matrix4().makeScale(scaleX, scaleY, scaleZ);
+		mirrored.brush.geometry.applyMatrix4(scaleMatrix);
+
+		// Invalidate bounding box so it gets recalculated
+		// eslint-disable-next-line unicorn/no-null
+		mirrored.brush.geometry.boundingBox = null;
+		mirrored.brush.updateMatrixWorld();
+
+		// Return the mirrored solid
+		return mirrored;
 	}
 
 	// ============================================================================

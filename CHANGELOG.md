@@ -6,6 +6,17 @@ All notable changes to this project will be documented in this file.
 
 ### Features
 
+#### Mirror Operations
+
+- **MIRROR Method**: Create reflections and symmetric objects across axis planes
+  - New `Solid.MIRROR(solid, axis)` static method for mirroring geometry
+  - Axis options: 'X' (YZ plane), 'Y' (XZ plane), 'Z' (XY plane)
+  - Returns mirrored copy (combine with UNION for bilateral symmetry)
+  - Immutable operation - does not modify original solid
+  - Works with all primitives, CSG results, and negative solids
+  - Supports chaining for multi-axis symmetry (quadrant, octant)
+  - Common use cases: symmetric gears, arches, propellers, organic forms
+
 #### Import Capabilities
 
 - **STL File Import**: Load external STL files (binary and ASCII formats) as Solid components
@@ -27,6 +38,13 @@ All notable changes to this project will be documented in this file.
   - Grid arrays from imported geometries
 
 #### New Examples
+
+- Added comprehensive tutorial `P.mirror.ts` with 7 example components
+  - Simple mirroring and bilateral symmetry
+  - Quadrant and octant (full 3D) symmetry
+  - Symmetric gears with mirrored tooth patterns
+  - Mirrored holes and mounting patterns
+  - Architectural archway with symmetric pillars
 
 - Added comprehensive tutorial `N-importing.ts` with 14 example components
   - STL import basics, transformations, and boolean operations

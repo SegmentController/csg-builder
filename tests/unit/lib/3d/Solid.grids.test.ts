@@ -384,4 +384,257 @@ describe('Solid - Grid Operations', () => {
 			expectValidVertexCount(grid);
 		});
 	});
+
+	describe('MIRROR() - Reflection Operations', () => {
+		describe('Basic Mirroring', () => {
+			it('should mirror across X axis (YZ plane)', () => {
+				const cube = Solid.cube(10, 5, 3, { color: 'blue' }).move({ x: 5 });
+				const mirrored = Solid.MIRROR(cube, 'X');
+
+				expectValidVertexCount(mirrored);
+
+				// Mirrored cube should have same dimensions
+				const originalBounds = cube.getBounds();
+				const mirroredBounds = mirrored.getBounds();
+				expectCloseTo(originalBounds.width, mirroredBounds.width, 0.5);
+				expectCloseTo(originalBounds.height, mirroredBounds.height, 0.5);
+				expectCloseTo(originalBounds.depth, mirroredBounds.depth, 0.5);
+
+				// Center X should be negated
+				expectCloseTo(mirroredBounds.center.x, -originalBounds.center.x, 0.5);
+			});
+
+			it('should mirror across Y axis (XZ plane)', () => {
+				const cube = Solid.cube(5, 10, 3, { color: 'red' }).move({ y: 5 });
+				const mirrored = Solid.MIRROR(cube, 'Y');
+
+				expectValidVertexCount(mirrored);
+
+				const originalBounds = cube.getBounds();
+				const mirroredBounds = mirrored.getBounds();
+				expectCloseTo(originalBounds.width, mirroredBounds.width, 0.5);
+				expectCloseTo(originalBounds.height, mirroredBounds.height, 0.5);
+				expectCloseTo(originalBounds.depth, mirroredBounds.depth, 0.5);
+
+				// Center Y should be negated
+				expectCloseTo(mirroredBounds.center.y, -originalBounds.center.y, 0.5);
+			});
+
+			it('should mirror across Z axis (XY plane)', () => {
+				const cube = Solid.cube(5, 3, 10, { color: 'green' }).move({ z: 5 });
+				const mirrored = Solid.MIRROR(cube, 'Z');
+
+				expectValidVertexCount(mirrored);
+
+				const originalBounds = cube.getBounds();
+				const mirroredBounds = mirrored.getBounds();
+				expectCloseTo(originalBounds.width, mirroredBounds.width, 0.5);
+				expectCloseTo(originalBounds.height, mirroredBounds.height, 0.5);
+				expectCloseTo(originalBounds.depth, mirroredBounds.depth, 0.5);
+
+				// Center Z should be negated
+				expectCloseTo(mirroredBounds.center.z, -originalBounds.center.z, 0.5);
+			});
+		});
+
+		describe('Symmetry Composition', () => {
+			it('should create bilateral symmetry with UNION', () => {
+				const half = Solid.cube(10, 20, 5, { color: 'blue' }).move({ x: 10 });
+				const symmetric = Solid.UNION(half, Solid.MIRROR(half, 'X'));
+
+				expectValidVertexCount(symmetric);
+
+				// Symmetric object should be centered around origin
+				const bounds = symmetric.getBounds();
+				expectCloseTo(bounds.center.x, 0, 1);
+			});
+
+			it('should create full 3D symmetry by chaining mirrors', () => {
+				const quarter = Solid.cube(5, 5, 5, { color: 'red' }).move({ x: 10, z: 10 });
+				const halfX = Solid.UNION(quarter, Solid.MIRROR(quarter, 'X'));
+				const full = Solid.UNION(halfX, Solid.MIRROR(halfX, 'Z'));
+
+				expectValidVertexCount(full);
+
+				// Full symmetric object should be centered
+				const bounds = full.getBounds();
+				expectCloseTo(bounds.center.x, 0, 1);
+				expectCloseTo(bounds.center.z, 0, 1);
+			});
+
+			it('should create octant symmetry (mirror all 3 axes)', () => {
+				const octant = Solid.cube(5, 5, 5, { color: 'purple' }).move({ x: 10, y: 10, z: 10 });
+				const mirrorX = Solid.UNION(octant, Solid.MIRROR(octant, 'X'));
+				const mirrorY = Solid.UNION(mirrorX, Solid.MIRROR(mirrorX, 'Y'));
+				const mirrorZ = Solid.UNION(mirrorY, Solid.MIRROR(mirrorY, 'Z'));
+
+				expectValidVertexCount(mirrorZ);
+
+				const bounds = mirrorZ.getBounds();
+				expectCloseTo(bounds.center.x, 0, 1);
+				expectCloseTo(bounds.center.y, 0, 1);
+				expectCloseTo(bounds.center.z, 0, 1);
+			});
+		});
+
+		describe('Different Primitives', () => {
+			it('should mirror cylinders', () => {
+				const cylinder = Solid.cylinder(5, 10, { color: 'blue' }).move({ x: 10 });
+				const mirrored = Solid.MIRROR(cylinder, 'X');
+
+				expectValidVertexCount(mirrored);
+			});
+
+			it('should mirror spheres', () => {
+				const sphere = Solid.sphere(5, { color: 'red' }).move({ y: 10 });
+				const mirrored = Solid.MIRROR(sphere, 'Y');
+
+				expectValidVertexCount(mirrored);
+			});
+
+			it('should mirror cones', () => {
+				const cone = Solid.cone(5, 10, { color: 'green' }).move({ z: 10 });
+				const mirrored = Solid.MIRROR(cone, 'Z');
+
+				expectValidVertexCount(mirrored);
+			});
+
+			it('should mirror complex CSG shapes', () => {
+				const base = Solid.cube(10, 10, 5, { color: 'gray' });
+				const hole = Solid.cylinder(2, 10, { color: 'gray' });
+				const shape = Solid.SUBTRACT(base, hole).move({ x: 15 });
+
+				const mirrored = Solid.MIRROR(shape, 'X');
+
+				expectValidVertexCount(mirrored);
+			});
+		});
+
+		describe('Negative Solids', () => {
+			it('should mirror negative solids', () => {
+				const hole = Solid.cylinder(2, 20, { color: 'blue' }).move({ x: 5 }).setNegative();
+				const mirrored = Solid.MIRROR(hole, 'X');
+
+				expectValidVertexCount(mirrored);
+				expect(mirrored._isNegative).toBe(true);
+			});
+
+			it('should work with negative solids in MERGE', () => {
+				const base = Solid.cube(30, 30, 5, { color: 'gray' });
+				const hole = Solid.cylinder(2, 10, { color: 'gray' }).move({ x: 5 }).setNegative();
+				const result = Solid.MERGE([base, hole, Solid.MIRROR(hole, 'X')]);
+
+				expectValidVertexCount(result);
+			});
+		});
+
+		describe('Transformed Solids', () => {
+			it('should mirror rotated solids', () => {
+				const shape = Solid.cube(10, 5, 3, { color: 'blue' }).rotate({ z: 45 }).move({ x: 10 });
+				const mirrored = Solid.MIRROR(shape, 'X');
+
+				expectValidVertexCount(mirrored);
+			});
+
+			it('should mirror scaled solids', () => {
+				const shape = Solid.cube(10, 5, 3, { color: 'red' })
+					.scale({ x: 2, y: 0.5 })
+					.move({ y: 10 });
+				const mirrored = Solid.MIRROR(shape, 'Y');
+
+				expectValidVertexCount(mirrored);
+			});
+
+			it('should mirror complex transformed solids', () => {
+				const shape = Solid.cylinder(5, 10, { color: 'green' })
+					.rotate({ x: 45 })
+					.scale({ all: 1.5 })
+					.move({ x: 5, y: 5, z: 5 });
+				const mirrored = Solid.MIRROR(shape, 'X');
+
+				expectValidVertexCount(mirrored);
+			});
+		});
+
+		describe('Immutability', () => {
+			it('should not mutate original solid', () => {
+				const cube = Solid.cube(10, 10, 10, { color: 'blue' }).move({ x: 5 });
+				const originalVertices = cube.getVertices().length;
+				const originalBounds = cube.getBounds();
+
+				Solid.MIRROR(cube, 'X');
+
+				expect(cube.getVertices().length).toBe(originalVertices);
+				expectCloseTo(cube.getBounds().center.x, originalBounds.center.x, 0.1);
+			});
+
+			it('should be chainable', () => {
+				const cube = Solid.cube(10, 10, 10, { color: 'blue' }).move({ x: 5 });
+				const mirrored = Solid.MIRROR(cube, 'X').rotate({ y: 45 }).scale({ all: 2 });
+
+				expectValidVertexCount(mirrored);
+			});
+		});
+
+		describe('Error Handling', () => {
+			it('should throw error for invalid axis', () => {
+				const cube = Solid.cube(10, 10, 10, { color: 'blue' });
+
+				expect(() => {
+					// @ts-expect-error - Testing invalid axis
+					Solid.MIRROR(cube, 'W');
+				}).toThrow("axis must be 'X', 'Y', or 'Z'");
+			});
+
+			it('should throw error for lowercase axis', () => {
+				const cube = Solid.cube(10, 10, 10, { color: 'blue' });
+
+				expect(() => {
+					// @ts-expect-error - Testing lowercase axis
+					Solid.MIRROR(cube, 'x');
+				}).toThrow("axis must be 'X', 'Y', or 'Z'");
+			});
+		});
+
+		describe('Edge Cases', () => {
+			it('should mirror centered solid', () => {
+				const cube = Solid.cube(10, 10, 10, { color: 'blue' }).center();
+				const mirrored = Solid.MIRROR(cube, 'X');
+
+				expectValidVertexCount(mirrored);
+
+				// Centered solid mirrored should remain in same position
+				const bounds = mirrored.getBounds();
+				expectCloseTo(bounds.center.x, 0, 0.5);
+			});
+
+			it('should mirror aligned solid', () => {
+				const cube = Solid.cube(10, 10, 10, { color: 'red' }).align('bottom');
+				const mirrored = Solid.MIRROR(cube, 'Y');
+
+				expectValidVertexCount(mirrored);
+			});
+
+			it('should mirror very small solid', () => {
+				const tiny = Solid.cube(0.5, 0.5, 0.5, { color: 'green' }).move({ x: 1 });
+				const mirrored = Solid.MIRROR(tiny, 'X');
+
+				expectValidVertexCount(mirrored);
+			});
+
+			it('should mirror very large solid', () => {
+				const large = Solid.cube(100, 100, 100, { color: 'blue' }).move({ z: 50 });
+				const mirrored = Solid.MIRROR(large, 'Z');
+
+				expectValidVertexCount(mirrored);
+			});
+
+			it('should mirror partial cylinder', () => {
+				const partial = Solid.cylinder(10, 5, { color: 'orange', angle: 180 }).move({ x: 10 });
+				const mirrored = Solid.MIRROR(partial, 'X');
+
+				expectValidVertexCount(mirrored);
+			});
+		});
+	});
 });

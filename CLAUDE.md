@@ -429,6 +429,61 @@ const rosette = Solid.UNION(innerRing, outerRing);
 - Decorative: Medallions, rosettes, clock markers, mandalas
 - Functional: Turbine blades, fan blades, ventilation slots, spokes
 
+### Mirror Operations
+
+Create reflections and symmetric objects by mirroring across axis planes:
+
+```typescript
+// Simple mirror - creates reflected copy
+const shape = Solid.cube(10, 5, 3, { color: 'blue' }).move({ x: 8 });
+const mirrored = Solid.MIRROR(shape, 'X');
+
+// Bilateral symmetry - combine original + mirror
+const half = Solid.cube(10, 20, 5, { color: 'brown' }).move({ x: 10 });
+const symmetric = Solid.UNION(half, Solid.MIRROR(half, 'X'));
+
+// Full 3D symmetry - chain multiple mirrors
+const quarter = Solid.cube(5, 5, 5, { color: 'red' }).move({ x: 10, z: 10 });
+const halfX = Solid.UNION(quarter, Solid.MIRROR(quarter, 'X'));
+const full = Solid.UNION(halfX, Solid.MIRROR(halfX, 'Z'));
+
+// Works with negative solids
+const hole = Solid.cylinder(2, 10, { color: 'blue' }).move({ x: 5 }).setNegative();
+const holes = Solid.MERGE([
+	Solid.cube(30, 30, 5, { color: 'blue' }),
+	hole,
+	Solid.MIRROR(hole, 'X')
+]);
+
+// Archway with symmetric pillars
+const pillar = Solid.cube(5, 30, 8, { color: 'brown' }).move({ x: 15 }).align('bottom');
+const arch = Solid.UNION(pillar, Solid.MIRROR(pillar, 'X'));
+```
+
+**Axis Parameter:**
+
+- `'X'`: Mirrors across YZ plane (flips X coordinates) - for left/right symmetry
+- `'Y'`: Mirrors across XZ plane (flips Y coordinates) - for top/bottom symmetry
+- `'Z'`: Mirrors across XY plane (flips Z coordinates) - for front/back symmetry
+
+**Key Behaviors:**
+
+- Returns **only the mirrored copy** (not combined with original)
+- Use `UNION(original, MIRROR(original, axis))` for bilateral symmetry
+- Bakes all transformations before mirroring (position, rotation, scale)
+- Preserves negative flag - mirrored negative solids remain negative
+- Works with all primitives, CSG results, and complex shapes
+- Can chain mirrors for multi-axis symmetry
+- Immutable - does not modify original solid
+
+**Common Use Cases:**
+
+- Mechanical: Symmetric gears, propellers, mirror-image parts
+- Architectural: Arches, symmetric facades, bilateral structures
+- Organic: Butterflies, leaves, faces (bilateral symmetry)
+- Decorative: Symmetric patterns, medallions, ornaments
+- Functional: Mirrored mounting holes, symmetric assemblies
+
 ## Performance - Caching
 
 ```typescript
@@ -487,7 +542,7 @@ const w3 = Wall(30); // Different params, new computation
 
 ### Grids & Arrays (static, immutable)
 
-`GRID_X(solid,{cols,spacing?})`, `GRID_XY(solid,{cols,rows,spacing?})`, `GRID_XYZ(solid,{cols,rows,levels,spacing?})`, `ARRAY_CIRCULAR(solid,{count,radius,startAngle?,endAngle?,rotateElements?})`
+`GRID_X(solid,{cols,spacing?})`, `GRID_XY(solid,{cols,rows,spacing?})`, `GRID_XYZ(solid,{cols,rows,levels,spacing?})`, `ARRAY_CIRCULAR(solid,{count,radius,startAngle?,endAngle?,rotateElements?})`, `MIRROR(solid,axis)`
 
 ### Alignment (chainable)
 

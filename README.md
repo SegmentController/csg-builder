@@ -19,7 +19,9 @@ CSG Builder allows you to create 3D meshes using TypeScript code with a React-li
 - **Import Capabilities** - Import STL files and SVG paths, use them in CSG operations like any primitive
 - **Partial Geometries** - Create pie slices, hemispheres, and wedges with CSG-based angle cutting
 - **Static CSG Operations** - Immutable SUBTRACT, UNION, INTERSECT, and MERGE operations for complex geometries
+- **Mirror Operations** - Create reflections and symmetric objects across axis planes (X, Y, Z)
 - **Grid Arrays** - Create 1D, 2D, and 3D arrays with static GRID_X, GRID_XY, GRID_XYZ methods
+- **Circular Arrays** - Create polar patterns and radial arrangements with ARRAY_CIRCULAR
 - **Transformations** - Translate, rotate, and scale objects with chainable methods
 - **Real-Time Preview** - Interactive 3D viewport with orbit controls
 - **STL Export** - Export models in binary STL format for 3D printing
@@ -381,7 +383,12 @@ const w3 = Wall(30); // Different params, new computation
 
 **CSG (static, immutable):** `SUBTRACT(src,...cut)`, `UNION(src,...add)`, `INTERSECT(a,b)`, `MERGE(solids[])` - respects `setNegative()`
 
-**Grids (static, immutable):** `GRID_X(solid,{cols,spacing?})`, `GRID_XY(solid,{cols,rows,spacing?})`, `GRID_XYZ(solid,{cols,rows,levels,spacing?})`
+**Arrays (static, immutable):**
+
+- Grids: `GRID_X(solid,{cols,spacing?})`, `GRID_XY(solid,{cols,rows,spacing?})`, `GRID_XYZ(solid,{cols,rows,levels,spacing?})`
+- Circular: `ARRAY_CIRCULAR(solid,{count,radius,startAngle?,endAngle?,rotateElements?})`
+- Mirror: `MIRROR(solid,axis)` - axis: 'X'|'Y'|'Z'
+
 Spacing: GRID_X=number, GRID_XY=[x,y], GRID_XYZ=[x,y,z]
 
 **Alignment (chainable):** `center({x?,y?,z?}?)`, `align('bottom'|'top'|'left'|'right'|'front'|'back')`, `getBounds()`
@@ -524,16 +531,16 @@ npm run export --silent -- "Brick Wall" > wall.stl
 
 ## Examples & Learning Resources
 
-**projects/examples/** - Progressive tutorial (A-N) with inline docs:
+**projects/examples/** - Progressive tutorial (A-P) with inline docs:
 
 - **A-G:** Primitives, operations, alignment, partials, composition, profiles, revolution
-- **H-N:** Scaling, transforms, 3D grids, patterns, optimization, production composition, import capabilities
+- **H-P:** Scaling, transforms, 3D grids, patterns, optimization, production composition, import capabilities, circular arrays, mirror operations
 
 **projects/castle/** - Production multi-file architecture: modular structure, caching, cross-file dependencies, advanced CSG
 
 **projects/sample/** - Working examples: box, brick wall, window, shapes showcase, chess pieces
 
-Start with examples A-G, then explore H-N for advanced features including STL/SVG imports.
+Start with examples A-G, then explore H-P for advanced features including STL/SVG imports, circular arrays, and mirror operations.
 
 ## Troubleshooting
 

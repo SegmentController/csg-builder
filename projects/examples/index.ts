@@ -21,7 +21,8 @@
  * L. Performance & Caching (cacheFunction, optimization patterns)
  * M. Complex Multi-Concept Composition (Production-ready complete structures)
  * N. Import Capabilities (STL files, SVG paths, boolean operations with imports)
- * X. Circular Arrays (Polar patterns: gears, bolt holes, spokes, decorative)
+ * O. Circular Arrays (Polar patterns: gears, bolt holes, spokes, decorative)
+ * P. Mirror Operations (Reflection and symmetry across axis planes)
  *
  * All components are registered via addToComponentStore() and become available in the UI dropdown.
  */
@@ -43,6 +44,7 @@ import { components as optimizationComponents } from './L.optimization';
 import { components as compositionComponents } from './M.composition';
 import { components as importingComponents } from './N-importing';
 import { components as circularArraysComponents } from './O.circularArrays';
+import { components as mirrorComponents } from './P.mirror';
 
 // Register all example components in the global component store
 // The spread operator merges all component maps into a single object
@@ -61,5 +63,6 @@ addToComponentStore({
 	...optimizationComponents,
 	...compositionComponents,
 	...importingComponents,
-	...circularArraysComponents
+	...circularArraysComponents,
+	...mirrorComponents
 });
