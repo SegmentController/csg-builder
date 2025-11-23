@@ -8,14 +8,14 @@ CSG Builder: TypeScript-based 3D mesh creation using component architecture. Use
 
 ## Learning Resources
 
-### **projects/examples/** - Tutorial Series (A-M)
+### **projects/examples/** - Tutorial Series (A-N)
 
 Progressive examples with comprehensive inline comments:
 
 **Foundational (A-G):** Primitives, operations, alignment, partials, composition, custom profiles, revolution
-**Advanced (H-M):** Scaling, transforms, 3D grids, patterns, optimization, production composition
+**Advanced (H-N):** Scaling, transforms, 3D grids, patterns, optimization, production composition, import capabilities
 
-**Start with A-G for basics, then H-M for advanced patterns.**
+**Start with A-G for basics, then H-N for advanced patterns.**
 
 ### **projects/castle/** - Production Architecture
 
@@ -159,6 +159,99 @@ Solid.revolutionSolidFromPath([straight(5), curve(2, 90), ...], { angle?, color?
 
 **Profile coordinates:** X=radius from center, Y=height, rotates around Y-axis
 
+## Import Capabilities
+
+### STL Import
+
+Load external STL files (binary or ASCII format) as Solid components:
+
+```typescript
+// Import STL file using Vite's import syntax
+import stlData from './model.stl?raw'; // ASCII STL
+// For binary STL, use ?url and fetch as ArrayBuffer
+
+// Create Solid from STL data
+const imported = Solid.fromSTL(stlData, { color: 'blue' });
+
+// Use in boolean operations
+const cube = Solid.cube(20, 20, 20, { color: 'red' });
+const result = Solid.SUBTRACT(cube, imported);
+
+// Transform imported geometry
+const transformed = Solid.fromSTL(stlData, { color: 'green' })
+	.scale({ all: 0.5 })
+	.rotate({ y: 45 })
+	.move({ y: 10 });
+```
+
+**Key points:**
+
+- Supports both binary and ASCII STL formats
+- Automatically normalized for CSG operations
+- Works with all standard Solid methods (transforms, CSG, grids)
+- Uses STLLoader from Three.js (no additional dependencies)
+
+### SVG Path Import
+
+Import SVG path data and extrude into 3D profiles:
+
+```typescript
+// Simple SVG rectangle path
+const rectPath = 'M 0 0 L 20 0 L 20 10 L 0 10 Z';
+const rect = Solid.profilePrismFromSVG(rectPath, 5, { color: 'blue' });
+
+// Complex path with curves (Q = quadratic bezier) - creates wavy pattern
+const curvedPath = 'M 0 5 Q 5 0, 10 5 Q 15 10, 20 5 L 20 10 L 0 10 Z';
+const curved = Solid.profilePrismFromSVG(curvedPath, 8, { color: 'pink' });
+
+// Star shape
+const starPath = 'M 10 0 L 12 8 L 20 8 L 14 13 L 16 21 L 10 16 L 4 21 L 6 13 L 0 8 L 8 8 Z';
+const star = Solid.profilePrismFromSVG(starPath, 3, { color: 'gold' });
+
+// Use in boolean operations
+const plate = Solid.cube(30, 20, 5, { color: 'gray' });
+const result = Solid.SUBTRACT(plate, star);
+```
+
+**SVG Path Commands Supported:**
+
+- M/m - Move to
+- L/l - Line to
+- H/h - Horizontal line
+- V/v - Vertical line
+- C/c - Cubic bezier curve
+- Q/q - Quadratic bezier curve
+- A/a - Arc
+- Z/z - Close path
+
+**Key points:**
+
+- Extrudes SVG path along Y-axis
+- Handles SVG coordinate system (Y-down → Y-up conversion)
+- Works with all CSG operations
+- Perfect for logos, custom profiles, 2D designs
+- Uses SVGLoader from Three.js (no additional dependencies)
+
+### Boolean Operations with Imports
+
+All imported geometries work seamlessly with CSG operations:
+
+```typescript
+// STL + Primitive
+const stl = Solid.fromSTL(stlData, { color: 'red' });
+const cube = Solid.cube(20, 20, 20, { color: 'red' });
+const combined = Solid.UNION(stl, cube);
+
+// SVG + STL
+const svg = Solid.profilePrismFromSVG(path, 5, { color: 'blue' });
+const stl = Solid.fromSTL(data, { color: 'blue' });
+const result = Solid.SUBTRACT(stl, svg);
+
+// Grid from imports
+const imported = Solid.fromSTL(data, { color: 'purple' });
+const grid = Solid.GRID_XY(imported, { cols: 3, rows: 3, spacing: [5, 5] });
+```
+
 ## Component Patterns
 
 ### Basic Component
@@ -233,6 +326,10 @@ const w3 = Wall(30); // Different params, new computation
 ### Factory Methods
 
 `cube(w,h,d,opts)`, `cylinder(r,h,opts)`, `sphere(r,opts)`, `cone(r,h,opts)`, `prism(sides,r,h,opts)`, `trianglePrism(r,h,opts)`
+
+### Import Methods
+
+`fromSTL(data,opts)`, `profilePrismFromSVG(svgPathData,height,opts)`
 
 ### Custom Profiles
 

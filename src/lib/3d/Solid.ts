@@ -2,6 +2,7 @@
 import {
 	Box3,
 	BoxGeometry,
+	BufferAttribute,
 	BufferGeometry,
 	ConeGeometry,
 	CylinderGeometry,
@@ -11,6 +12,8 @@ import {
 	SphereGeometry,
 	Vector3
 } from 'three';
+import { STLLoader } from 'three/examples/jsm/loaders/STLLoader.js';
+import { SVGLoader } from 'three/examples/jsm/loaders/SVGLoader.js';
 import { ADDITION, Brush, Evaluator, INTERSECTION, SUBTRACTION } from 'three-bvh-csg';
 
 import { MathMinMax, MathRoundTo2 } from '$lib/Math';
@@ -35,13 +38,14 @@ import type { PathSegment } from './path-factories';
  * 2. Constructor & Properties             - Lines ~92-111   - Constructor, getters, clone
  * 3. Geometry Conversion                  - Lines ~113-126  - geometryToBrush helper
  * 4. Primitive Factories (static)         - Lines ~128-366  - cube, cylinder, sphere, cone, prism, trianglePrism
- * 5. Custom Profile Methods (static)      - Lines ~368-588  - profilePrism, profilePrismFromPoints, profilePrismFromPath
- * 6. Revolution Methods (static)          - Lines ~590-880  - revolutionSolid, revolutionSolidFromPoints, revolutionSolidFromPath
- * 7. Transform Methods                    - Lines ~882-921  - at, move, rotate, scale
- * 8. Alignment Methods                    - Lines ~923-991  - center, align, getBounds
- * 9. CSG Operations (static)              - Lines ~993-1026 - MERGE, SUBTRACT, UNION, INTERSECT
- * 10. Grid Operations (static)            - Lines ~1028-1078- GRID_XYZ, GRID_XY, GRID_X
- * 11. Utility Methods                     - Lines ~1080+    - normalize, setNegative, setColor, getVertices, getBounds
+ * 4.5. Import Methods (static)            - Lines ~368-450  - fromSTL, profilePrismFromSVG
+ * 5. Custom Profile Methods (static)      - Lines ~452-672  - profilePrism, profilePrismFromPoints, profilePrismFromPath
+ * 6. Revolution Methods (static)          - Lines ~674-992  - revolutionSolid, revolutionSolidFromPoints, revolutionSolidFromPath
+ * 7. Transform Methods                    - Lines ~994-1033 - at, move, rotate, scale
+ * 8. Alignment Methods                    - Lines ~1035-1103- center, align, getBounds
+ * 9. CSG Operations (static)              - Lines ~1105-1138- MERGE, SUBTRACT, UNION, INTERSECT
+ * 10. Grid Operations (static)            - Lines ~1140-1190- GRID_XYZ, GRID_XY, GRID_X
+ * 11. Utility Methods                     - Lines ~1192+    - normalize, setNegative, setColor, getVertices, getBounds
  *
  * ============================================================================
  */
@@ -383,6 +387,162 @@ export class Solid {
 			color?: string;
 		}
 	): Solid => this.prism(3, radius, height, options);
+
+	// ============================================================================
+	// SECTION 4.5: Import Methods (Static)
+	// ============================================================================
+
+	/**
+	 * Creates a Solid from STL file data (binary or ASCII format).
+	 * STL files can be imported using Vite's import syntax with ?raw or ?url.
+	 *
+	 * @param data - STL file data as ArrayBuffer (binary) or string (ASCII)
+	 * @param options - Configuration options
+	 * @param options.color - Material color (default: 'gray')
+	 * @returns Solid created from the imported STL geometry
+	 *
+	 * @example
+	 * // Import STL file via Vite
+	 * import stlData from './model.stl?raw';
+	 *
+	 * // Create component from STL
+	 * const importedModel = Solid.fromSTL(stlData, { color: 'blue' });
+	 *
+	 * @example
+	 * // Use in boolean operations
+	 * const stl = Solid.fromSTL(stlData, { color: 'red' });
+	 * const cube = Solid.cube(20, 20, 20, { color: 'blue' });
+	 * const result = Solid.SUBTRACT(cube, stl);
+	 */
+	static fromSTL = (data: ArrayBuffer | string, options?: { color?: string }): Solid => {
+		const color = options?.color ?? 'gray';
+		const loader = new STLLoader();
+
+		// Parse STL data (loader handles both binary and ASCII formats)
+		let geometry = loader.parse(data);
+
+		// Validate that geometry was created successfully
+		if (!geometry.attributes['position'] || geometry.attributes['position'].count === 0) {
+			throw new Error('Failed to parse STL data - file may be corrupted or invalid');
+		}
+
+		// STL geometries are usually non-indexed, but ensure it's converted
+		// This is required for proper CSG operations
+		if (geometry.index) {
+			geometry = geometry.toNonIndexed();
+		}
+
+		// Ensure geometry has proper normals
+		if (!geometry.attributes['normal']) {
+			geometry.computeVertexNormals();
+		}
+
+		// Add UV coordinates if missing (required for CSG operations)
+		if (!geometry.attributes['uv']) {
+			const vertexCount = geometry.attributes['position'].count;
+			const uvs = new Float32Array(vertexCount * 2);
+			// Simple planar UV mapping (all zeros is acceptable for CSG)
+			for (let index = 0; index < vertexCount; index++) {
+				uvs[index * 2] = 0;
+				uvs[index * 2 + 1] = 0;
+			}
+			geometry.setAttribute('uv', new BufferAttribute(uvs, 2));
+		}
+
+		// Convert to Brush and create Solid
+		const brush = this.geometryToBrush(geometry);
+
+		// STL geometries are already complete - no need to normalize
+		// Normalize() can cause issues with externally loaded geometry
+		return new Solid(brush, color);
+	};
+
+	/**
+	 * Creates a profile prism from an SVG path string.
+	 * The SVG path is extruded along the Y-axis to create a 3D solid.
+	 *
+	 * @param svgPathData - SVG path data string (the 'd' attribute value)
+	 * @param height - Extrusion height along Y-axis
+	 * @param options - Configuration options
+	 * @param options.color - Material color (default: 'gray')
+	 * @returns Solid created from the extruded SVG path
+	 *
+	 * @example
+	 * // Simple rectangle path
+	 * const rect = Solid.profilePrismFromSVG(
+	 *   'M 0 0 L 20 0 L 20 10 L 0 10 Z',
+	 *   5,
+	 *   { color: 'blue' }
+	 * );
+	 *
+	 * @example
+	 * // Curved path with bezier
+	 * const curve = Solid.profilePrismFromSVG(
+	 *   'M 0 0 C 10 0, 10 10, 20 10 L 20 15 L 0 15 Z',
+	 *   8,
+	 *   { color: 'red' }
+	 * );
+	 *
+	 * @example
+	 * // Import SVG and use path
+	 * const svgPath = 'M 10 10 L 50 10 L 50 50 L 10 50 Z';
+	 * const logo = Solid.profilePrismFromSVG(svgPath, 3, { color: 'green' });
+	 */
+	static profilePrismFromSVG = (
+		svgPathData: string,
+		height: number,
+		options?: { color?: string }
+	): Solid => {
+		const color = options?.color ?? 'gray';
+
+		// Wrap path data in minimal SVG structure
+		const svgString = `<svg xmlns="http://www.w3.org/2000/svg"><path d="${svgPathData}"/></svg>`;
+
+		// Parse SVG data
+		const loader = new SVGLoader();
+		const svgData = loader.parse(svgString);
+
+		// Check if we have any paths
+		if (svgData.paths.length === 0) {
+			throw new Error('No paths found in SVG data');
+		}
+
+		// Get shapes from the first path
+		const shapes = SVGLoader.createShapes(svgData.paths[0]);
+
+		if (shapes.length === 0) {
+			throw new Error('No valid shapes extracted from SVG path');
+		}
+
+		// Use the first shape to create extruded geometry
+		const geometry = new ExtrudeGeometry(shapes[0], {
+			depth: height,
+			bevelEnabled: false,
+			curveSegments: 12,
+			steps: 1
+		});
+
+		// Validate that geometry was created successfully
+		if (!geometry.attributes['position'] || geometry.attributes['position'].count === 0) {
+			throw new Error('Failed to create valid geometry from SVG path - check path syntax');
+		}
+
+		// Ensure geometry has proper normals and is computed
+		if (!geometry.attributes['normal']) {
+			geometry.computeVertexNormals();
+		}
+
+		// Center geometry along extrusion axis
+		geometry.translate(0, 0, -height / 2);
+
+		// SVG coordinate system has Y pointing down, Three.js has Y pointing up
+		// Rotate so extrusion direction (Z-axis) becomes height (Y-axis)
+		// and flip to correct the Y-axis orientation
+		return new Solid(this.geometryToBrush(geometry), color)
+			.normalize()
+			.rotate({ x: 90 })
+			.scale({ z: -1 }); // Flip Z to correct for SVG Y-down coordinate system
+	};
 
 	// ============================================================================
 	// SECTION 5: Custom Profile Methods (Static)

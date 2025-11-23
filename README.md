@@ -16,6 +16,7 @@ CSG Builder allows you to create 3D meshes using TypeScript code with a React-li
 - **Primitive Shapes** - Cubes, cylinders, spheres, cones, and polygon prisms with customizable dimensions
 - **Custom Profile Prisms** - Extrude 2D profiles into 3D shapes using points, paths, or Shape API
 - **Body of Revolution** - Create rotationally symmetric objects (chess pieces, vases, bottles) by rotating profiles
+- **Import Capabilities** - Import STL files and SVG paths, use them in CSG operations like any primitive
 - **Partial Geometries** - Create pie slices, hemispheres, and wedges with CSG-based angle cutting
 - **Static CSG Operations** - Immutable SUBTRACT, UNION, INTERSECT, and MERGE operations for complex geometries
 - **Grid Arrays** - Create 1D, 2D, and 3D arrays with static GRID_X, GRID_XY, GRID_XYZ methods
@@ -288,6 +289,55 @@ const quarterVase = Solid.revolutionSolidFromPoints(
 **Profile coords:** X=radius, Y=height. Rotates around Y-axis.
 **Uses:** Chess pieces, vases, bottles, tableware, architectural elements
 
+### Example: Import Capabilities
+
+Load external STL files and SVG paths to use in your designs:
+
+```typescript
+import { Solid } from '$lib/3d/Solid';
+
+// Import STL file using Vite's import syntax
+import stlData from './model.stl?raw'; // ASCII STL
+// For binary STL, use ?url and fetch as ArrayBuffer
+
+// 1. STL IMPORT - Load external 3D models
+const imported = Solid.fromSTL(stlData, { color: 'blue' });
+
+// Use imported geometry in CSG operations
+const cube = Solid.cube(20, 20, 20, { color: 'red' });
+const result = Solid.SUBTRACT(cube, imported);
+
+// Transform imported models
+const transformed = Solid.fromSTL(stlData, { color: 'green' })
+	.scale({ all: 0.5 })
+	.rotate({ y: 45 })
+	.move({ y: 10 });
+
+// 2. SVG PATH IMPORT - Extrude SVG paths into 3D
+const starPath = 'M 10 0 L 12 8 L 20 8 L 14 13 L 16 21 L 10 16 L 4 21 L 6 13 L 0 8 L 8 8 Z';
+const star = Solid.profilePrismFromSVG(starPath, 3, { color: 'gold' });
+
+// Curved SVG paths with quadratic bezier curves (Q)
+const curvedPath = 'M 0 5 Q 5 0, 10 5 Q 15 10, 20 5 L 20 10 L 0 10 Z';
+const curved = Solid.profilePrismFromSVG(curvedPath, 8, { color: 'pink' });
+
+// Use SVG as cutter
+const plate = Solid.cube(30, 20, 5, { color: 'gray' });
+const cutout = Solid.SUBTRACT(plate, star);
+
+// 3. COMBINE IMPORTS - Mix imported and primitive shapes
+const base = Solid.fromSTL(stlData, { color: 'brown' }).align('bottom');
+const decoration = Solid.profilePrismFromSVG('M 0 0 L 5 0 L 5 5 L 0 5 Z', 2, { color: 'brown' });
+const combined = Solid.UNION(base, decoration);
+```
+
+**Supported formats:**
+
+- **STL:** Binary and ASCII formats (via Three.js STLLoader)
+- **SVG:** Path data with M, L, C, Q, A commands (via Three.js SVGLoader)
+- Works with all CSG operations, transformations, and grids
+- No additional dependencies required
+
 ## Performance Optimization
 
 Cache expensive component computations that are called repeatedly:
@@ -322,6 +372,7 @@ const w3 = Wall(30); // Different params, new computation
 ### API Reference
 
 **Primitives:** `cube(w,h,d,opts)`, `cylinder(r,h,opts)`, `sphere(r,opts)`, `cone(r,h,opts)`, `prism(sides,r,h,opts)`, `trianglePrism(r,h,opts)`
+**Import:** `fromSTL(data,opts)`, `profilePrismFromSVG(svgPathData,height,opts)`
 **Profiles:** `profilePrism(h,builder,opts)`, `profilePrismFromPoints(h,points,opts)`, `profilePrismFromPath(h,segments,opts)`
 **Revolution:** `revolutionSolid(builder,opts)`, `revolutionSolidFromPoints(points,opts)`, `revolutionSolidFromPath(segments,opts)`
 **Path Factories:** `straight(length)`, `curve(radius,angle)` - positive=right, negative=left, 0=sharp
@@ -473,16 +524,16 @@ npm run export --silent -- "Brick Wall" > wall.stl
 
 ## Examples & Learning Resources
 
-**projects/examples/** - Progressive tutorial (A-M) with inline docs:
+**projects/examples/** - Progressive tutorial (A-N) with inline docs:
 
 - **A-G:** Primitives, operations, alignment, partials, composition, profiles, revolution
-- **H-M:** Scaling, transforms, 3D grids, patterns, optimization, production composition
+- **H-N:** Scaling, transforms, 3D grids, patterns, optimization, production composition, import capabilities
 
 **projects/castle/** - Production multi-file architecture: modular structure, caching, cross-file dependencies, advanced CSG
 
 **projects/sample/** - Working examples: box, brick wall, window, shapes showcase, chess pieces
 
-Start with examples A-G, then explore castle project for production patterns.
+Start with examples A-G, then explore H-N for advanced features including STL/SVG imports.
 
 ## Troubleshooting
 
