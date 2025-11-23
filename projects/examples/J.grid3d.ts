@@ -135,28 +135,24 @@ const latticeStructure = (): Solid => {
  */
 const checkerboard3D = (): Solid => {
 	// Create two cube types (light and dark)
-	const lightCube = Solid.sphere(2.5, { color: 'white' });
-	const darkCube = Solid.cube(5, 5, 5, { color: 'black' });
+	const sphere = Solid.sphere(2.5, { color: 'white' });
+	const cube = Solid.cube(5, 5, 5, { color: 'black' });
 
 	// Strategy: Create alternating layers
 	// Layer 1 (bottom): Start with light cube
 	const layer1 = Solid.MERGE([
 		// Light cubes at even positions
-		Solid.GRID_XY(lightCube, { cols: 3, rows: 3 }).move({ x: 0, y: 0, z: 0 }),
-		// Dark cubes fill gaps
-		Solid.GRID_XY(darkCube, { cols: 2, rows: 2 }).move({ x: 5, y: 5, z: 0 })
+		Solid.GRID_XY(sphere, { cols: 3, rows: 3 }).move({ x: 0, y: 0, z: 0 })
 	]);
 
 	// Layer 2 (middle): Start with dark cube (inverted pattern)
 	const layer2 = Solid.MERGE([
-		Solid.GRID_XY(darkCube, { cols: 3, rows: 3 }).move({ x: 0, y: 0, z: 5 }),
-		Solid.GRID_XY(lightCube, { cols: 2, rows: 2 }).move({ x: 5, y: 5, z: 5 })
+		Solid.GRID_XY(cube, { cols: 3, rows: 3 }).move({ x: 0, y: 5, z: 0 })
 	]);
 
 	// Layer 3 (top): Same as layer 1
 	const layer3 = Solid.MERGE([
-		Solid.GRID_XY(lightCube, { cols: 3, rows: 3 }).move({ x: 0, y: 0, z: 10 }),
-		Solid.GRID_XY(darkCube, { cols: 2, rows: 2 }).move({ x: 5, y: 5, z: 10 })
+		Solid.GRID_XY(sphere, { cols: 3, rows: 3 }).move({ x: 0, y: 10, z: 0 })
 	]);
 
 	return Solid.MERGE([layer1, layer2, layer3]).center();

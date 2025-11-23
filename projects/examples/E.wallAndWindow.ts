@@ -103,7 +103,7 @@ const brickItem = (): Solid => {
  * 💡 Can also specify spacing: { cols: 5, rows: 3, spacing: [1, 0.5] }
  */
 export const brickWall = (cx: number, cy: number): Solid =>
-	Solid.GRID_XY(brickItem(), { cols: cx, rows: cy });
+	Solid.GRID_XYZ(brickItem(), { cols: cx, rows: 1, levels: cy });
 
 /**
  * WINDOW - Multi-solid component with negative hole

@@ -198,9 +198,8 @@ export class Solid {
 		if (wedgePoints.length === 0) return fullCylinder;
 
 		// Create wedge prism (make it taller to ensure complete cut)
-		const wedgeCutter = this.profilePrismFromPoints(height * 1.5, wedgePoints, { color }).move({
-			y: height * 0.75
-		}); // Center wedge on Y-axis
+		// Both cylinder and wedge are centered at Y=0, so no positioning needed
+		const wedgeCutter = this.profilePrismFromPoints(height * 2, wedgePoints, { color });
 
 		// Subtract wedge from cylinder to create closed partial geometry
 		return Solid.SUBTRACT(fullCylinder, wedgeCutter);
@@ -241,9 +240,8 @@ export class Solid {
 		if (wedgePoints.length === 0) return fullSphere;
 
 		// Create wedge prism tall enough to cut through entire sphere diameter
-		const wedgeCutter = this.profilePrismFromPoints(radius * 4, wedgePoints, { color }).move({
-			y: radius * 2
-		}); // Center wedge on Y-axis
+		// Both sphere and wedge are centered at Y=0, so no positioning needed
+		const wedgeCutter = this.profilePrismFromPoints(radius * 4, wedgePoints, { color });
 
 		// Subtract wedge from sphere to create closed partial geometry
 		return Solid.SUBTRACT(fullSphere, wedgeCutter);
@@ -291,9 +289,8 @@ export class Solid {
 		if (wedgePoints.length === 0) return fullCone;
 
 		// Create wedge prism (make it taller to ensure complete cut)
-		const wedgeCutter = this.profilePrismFromPoints(height * 1.5, wedgePoints, { color }).move({
-			y: height * 0.75
-		}); // Center wedge on Y-axis
+		// Both cone and wedge are centered at Y=0, so no positioning needed
+		const wedgeCutter = this.profilePrismFromPoints(height * 2, wedgePoints, { color });
 
 		// Subtract wedge from cone to create closed partial geometry
 		return Solid.SUBTRACT(fullCone, wedgeCutter);
@@ -351,9 +348,8 @@ export class Solid {
 		if (wedgePoints.length === 0) return fullPrism;
 
 		// Create wedge prism (make it taller to ensure complete cut)
-		const wedgeCutter = this.profilePrismFromPoints(height * 1.5, wedgePoints, { color }).move({
-			y: height * 0.75
-		}); // Center wedge on Y-axis
+		// Both prism and wedge are centered at Y=0, so no positioning needed
+		const wedgeCutter = this.profilePrismFromPoints(height * 2, wedgePoints, { color });
 
 		// Subtract wedge from prism to create closed partial geometry
 		return Solid.SUBTRACT(fullPrism, wedgeCutter);
@@ -670,8 +666,8 @@ export class Solid {
 		// The wedge needs to extend through the entire height range of the profile
 		const wedgeHeight = Math.max(profileHeight * 2, maxRadius * 4);
 		const wedgeCutter = this.profilePrismFromPoints(wedgeHeight, wedgePoints, { color }).move({
-			y: profileCenter + wedgeHeight / 2
-		}); // Center the wedge on the profile
+			y: profileCenter
+		}); // Center the wedge on the profile center
 
 		// Subtract wedge from full revolution to create closed partial geometry
 		return Solid.SUBTRACT(fullRevolution, wedgeCutter);

@@ -117,12 +117,9 @@ const inlineCaching = (): Solid => {
 	const column1 = cachedColumn(20, 2).move({ x: -15 });
 
 	// Second call: Cached result (same params)
-	const column2 = cachedColumn(20, 2).move({ x: 0 });
+	const column2 = cachedColumn(20, 2).move({ x: 15 });
 
-	// Third call: Cached result (same params again)
-	const column3 = cachedColumn(20, 2).move({ x: 15 });
-
-	return Solid.MERGE([column1, column2, column3]);
+	return Solid.MERGE([column1, column2]);
 };
 
 /**
