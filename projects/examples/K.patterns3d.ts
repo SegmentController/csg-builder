@@ -166,8 +166,8 @@ const columnGrid = (): Solid => {
 	// Create entablature (horizontal beam on top)
 	const entablature = Solid.cube(50, 4, 12, { color: 'gray' })
 		.align('bottom')
-		.move({ y: 25, x: -22.5 })
-		.center({ x: true, z: true });
+		.move({ y: 25, x: 22.5 })
+		.center({ z: true });
 
 	return Solid.MERGE([platform, columns, entablature]);
 };
