@@ -4,12 +4,7 @@ Analysis of potential improvements and missing features for the CSG Builder proj
 
 ## 🟡 MEDIUM PRIORITY (Quality of Life)
 
-### 1. Missing Primitives
-
-- **Rounded Box** (filleted edges - very common)
-- **Text Extrusion** (3D text via Three.js TextGeometry)
-
-### 2. Missing CSG Operations
+### 1. Missing CSG Operations
 
 - **MIRROR** - Reflect across planes
 - **CHAMFER/FILLET** - Edge rounding (critical for manufacturing)

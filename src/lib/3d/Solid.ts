@@ -42,15 +42,15 @@ import type { PathSegment } from './path-factories';
  * 1. Static Utilities (private)          - Lines ~45-90    - evaluator, degreesToRadians, generateWedgePoints
  * 2. Constructor & Properties             - Lines ~92-111   - Constructor, getters, clone
  * 3. Geometry Conversion                  - Lines ~113-126  - geometryToBrush helper
- * 4. Primitive Factories (static)         - Lines ~128-366  - cube, cylinder, sphere, cone, prism, trianglePrism
+ * 4. Primitive Factories (static)         - Lines ~128-366  - cube, roundedBox, cylinder, sphere, cone, prism, trianglePrism, text
  * 4.5. Import Methods (static)            - Lines ~368-450  - fromSTL, profilePrismFromSVG
  * 5. Custom Profile Methods (static)      - Lines ~452-672  - profilePrism, profilePrismFromPoints, profilePrismFromPath
  * 6. Revolution Methods (static)          - Lines ~674-992  - revolutionSolid, revolutionSolidFromPoints, revolutionSolidFromPath
  * 7. Transform Methods                    - Lines ~994-1033 - at, move, rotate, scale
  * 8. Alignment Methods                    - Lines ~1035-1103- center, align, getBounds
  * 9. CSG Operations (static)              - Lines ~1105-1138- MERGE, SUBTRACT, UNION, INTERSECT
- * 10. Grid Operations (static)            - Lines ~1140-1190- GRID_XYZ, GRID_XY, GRID_X
- * 11. Utility Methods                     - Lines ~1192+    - normalize, setNegative, setColor, getVertices, getBounds
+ * 10. Grid & Array Operations (static)    - Lines ~1370-1510- GRID_XYZ, GRID_XY, GRID_X, ARRAY_CIRCULAR
+ * 11. Utility Methods                     - Lines ~1512+    - normalize, setNegative, setColor, getVertices, getBounds
  *
  * ============================================================================
  */
@@ -1364,7 +1364,7 @@ export class Solid {
 	}
 
 	// ============================================================================
-	// SECTION 10: Grid Operations (Static)
+	// SECTION 10: Grid & Array Operations (Static)
 	// ============================================================================
 
 	public static GRID_XYZ(
@@ -1417,6 +1417,98 @@ export class Solid {
 			levels: 1,
 			spacing: options.spacing ? [options.spacing, 0, 0] : undefined
 		});
+	}
+
+	/**
+	 * Creates a circular array of solids arranged in a circle
+	 *
+	 * Elements are distributed evenly around a circle in the XZ plane (horizontal, around Y-axis).
+	 * By default, elements rotate to face outward (radial orientation) like gear teeth.
+	 *
+	 * @param solid - The solid to duplicate in a circular pattern
+	 * @param options - Configuration options
+	 * @param options.count - Number of copies to create (must be >= 1)
+	 * @param options.radius - Radius of the circular arrangement (must be > 0)
+	 * @param options.startAngle - Starting angle in degrees (default: 0)
+	 * @param options.endAngle - Ending angle in degrees (default: 360)
+	 * @param options.rotateElements - Whether to rotate elements to face outward (default: true)
+	 *
+	 * @returns A single merged Solid containing all elements in the circular pattern
+	 *
+	 * @example
+	 * // Gear teeth - 24 teeth facing outward
+	 * const tooth = Solid.cube(2, 10, 3).move({ z: 15 });
+	 * const gear = Solid.ARRAY_CIRCULAR(tooth, { count: 24, radius: 15 });
+	 *
+	 * @example
+	 * // Bolt holes in a circle - 8 holes, no rotation needed
+	 * const hole = Solid.cylinder(2, 10).setNegative();
+	 * const pattern = Solid.ARRAY_CIRCULAR(hole, { count: 8, radius: 20, rotateElements: false });
+	 *
+	 * @example
+	 * // Half circle of seats (0° to 180°)
+	 * const seat = Solid.cube(2, 1, 2);
+	 * const seating = Solid.ARRAY_CIRCULAR(seat, { count: 10, radius: 30, startAngle: 0, endAngle: 180 });
+	 */
+	public static ARRAY_CIRCULAR(
+		solid: Solid,
+		options: {
+			count: number;
+			radius: number;
+			startAngle?: number;
+			endAngle?: number;
+			rotateElements?: boolean;
+		}
+	): Solid {
+		// Validate inputs
+		if (!Number.isFinite(options.count) || options.count < 1)
+			throw new Error(`count must be at least 1 (got ${options.count})`);
+		if (!Number.isFinite(options.radius) || options.radius <= 0)
+			throw new Error(`radius must be positive (got ${options.radius})`);
+
+		// Set defaults
+		const startAngle = options.startAngle ?? 0;
+		const endAngle = options.endAngle ?? 360;
+		const rotateElements = options.rotateElements ?? true;
+
+		// Validate angles
+		if (!Number.isFinite(startAngle) || !Number.isFinite(endAngle))
+			throw new Error(`angles must be finite (got start: ${startAngle}, end: ${endAngle})`);
+
+		// Calculate angular spacing
+		const totalAngle = endAngle - startAngle;
+		const angleStep = totalAngle / options.count;
+
+		// Build array of positioned solids
+		const solids: Solid[] = [];
+
+		for (let index = 0; index < options.count; index++) {
+			// Calculate angle for this element (in degrees)
+			const angleDeg = startAngle + index * angleStep;
+			const angleRad = this.degreesToRadians(angleDeg);
+
+			// Calculate position in XZ plane (horizontal circle around Y-axis)
+			const x = options.radius * Math.cos(angleRad);
+			const z = options.radius * Math.sin(angleRad);
+
+			// Clone and transform the solid
+			const element = solid.clone();
+
+			// Get the element's current Y position (preserve vertical positioning)
+			const bounds = element.getBounds();
+			const currentY = bounds.center.y;
+
+			// Rotate element to face outward if requested
+			if (rotateElements) element.rotate({ y: angleDeg });
+
+			// Position the element (preserve Y, set X and Z for circular arrangement)
+			element.at(x, currentY, z);
+
+			solids.push(element);
+		}
+
+		// Merge all solids into one
+		return Solid.MERGE(solids);
 	}
 
 	// ============================================================================
