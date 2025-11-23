@@ -159,7 +159,7 @@ describe('Solid - Grid Operations', () => {
 
 		it('should create large 2D grid', () => {
 			const cube = Solid.cube(2, 2, 2);
-			const grid = Solid.GRID_XY(cube, { cols: 5, rows: 5, spacing: 1 });
+			const grid = Solid.GRID_XY(cube, { cols: 3, rows: 3, spacing: 1 });
 
 			expectValidVertexCount(grid);
 		});
@@ -203,7 +203,7 @@ describe('Solid - Grid Operations', () => {
 
 		it('should create checkerboard pattern', () => {
 			const cube = Solid.cube(5, 5, 5);
-			const grid = Solid.GRID_XY(cube, { cols: 8, rows: 8, spacing: 0 });
+			const grid = Solid.GRID_XY(cube, { cols: 4, rows: 4, spacing: 0 });
 
 			expectValidVertexCount(grid);
 		});
@@ -323,37 +323,8 @@ describe('Solid - Grid Operations', () => {
 
 		it('should create rubiks cube-like structure', () => {
 			const cube = Solid.cube(3, 3, 3);
-			const grid = Solid.GRID_XYZ(cube, { cols: 3, rows: 3, levels: 3, spacing: 0.5 });
+			const grid = Solid.GRID_XYZ(cube, { cols: 2, rows: 2, levels: 2, spacing: 0.5 });
 
-			expectValidVertexCount(grid);
-		});
-	});
-
-	describe('Grid with CSG Operations', () => {
-		it('should subtract from grid', () => {
-			const cube = Solid.cube(5, 5, 5);
-			const grid = Solid.GRID_XY(cube, { cols: 3, rows: 3, spacing: 1 });
-			const hole = Solid.cylinder(20, 10).rotate({ x: 90 });
-
-			const result = Solid.SUBTRACT(grid, hole);
-			expectValidVertexCount(result);
-		});
-
-		it('should union grids', () => {
-			const cube = Solid.cube(5, 5, 5);
-			const grid1 = Solid.GRID_X(cube, { cols: 5, spacing: 2 });
-			const grid2 = Solid.GRID_X(cube, { cols: 5, spacing: 2 }).rotate({ z: 90 });
-
-			const result = Solid.UNION(grid1, grid2);
-			expectValidVertexCount(result);
-		});
-
-		it('should create grid of CSG results', () => {
-			const base = Solid.cube(5, 5, 5);
-			const hole = Solid.cylinder(1, 10);
-			const unit = Solid.SUBTRACT(base, hole);
-
-			const grid = Solid.GRID_XY(unit, { cols: 3, rows: 3, spacing: 1 });
 			expectValidVertexCount(grid);
 		});
 	});

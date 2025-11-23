@@ -15,33 +15,42 @@ import { ADDITION, Brush, Evaluator, INTERSECTION, SUBTRACTION } from 'three-bvh
 
 import { MathMinMax, MathRoundTo2 } from '$lib/Math';
 
-// Path segment type definitions
-export type StraightSegment = {
-	type: 'straight';
-	length: number;
-};
+// Re-export path segment types and factories for backward compatibility
+export type { CurveSegment, PathSegment, StraightSegment } from './path-factories';
+export { curve, straight } from './path-factories';
 
-export type CurveSegment = {
-	type: 'curve';
-	radius: number;
-	angle: number; // degrees, positive = right turn, negative = left turn
-};
+// Import for internal use
+import type { PathSegment } from './path-factories';
 
-export type PathSegment = StraightSegment | CurveSegment;
-
-// Factory functions for path segments
-export const straight = (length: number): StraightSegment => ({
-	type: 'straight',
-	length
-});
-
-export const curve = (radius: number, angle: number): CurveSegment => ({
-	type: 'curve',
-	radius,
-	angle
-});
+/**
+ * ============================================================================
+ * TABLE OF CONTENTS
+ * ============================================================================
+ *
+ * This file contains the core Solid class for 3D mesh creation using CSG operations.
+ * Total lines: ~1100
+ *
+ * SECTIONS:
+ * 1. Static Utilities (private)          - Lines ~45-90    - evaluator, degreesToRadians, generateWedgePoints
+ * 2. Constructor & Properties             - Lines ~92-111   - Constructor, getters, clone
+ * 3. Geometry Conversion                  - Lines ~113-126  - geometryToBrush helper
+ * 4. Primitive Factories (static)         - Lines ~128-366  - cube, cylinder, sphere, cone, prism, trianglePrism
+ * 5. Custom Profile Methods (static)      - Lines ~368-588  - profilePrism, profilePrismFromPoints, profilePrismFromPath
+ * 6. Revolution Methods (static)          - Lines ~590-880  - revolutionSolid, revolutionSolidFromPoints, revolutionSolidFromPath
+ * 7. Transform Methods                    - Lines ~882-921  - at, move, rotate, scale
+ * 8. Alignment Methods                    - Lines ~923-991  - center, align, getBounds
+ * 9. CSG Operations (static)              - Lines ~993-1026 - MERGE, SUBTRACT, UNION, INTERSECT
+ * 10. Grid Operations (static)            - Lines ~1028-1078- GRID_XYZ, GRID_XY, GRID_X
+ * 11. Utility Methods                     - Lines ~1080+    - normalize, setNegative, setColor, getVertices, getBounds
+ *
+ * ============================================================================
+ */
 
 export class Solid {
+	// ============================================================================
+	// SECTION 1: Static Utilities (Private)
+	// ============================================================================
+
 	private static evaluator: Evaluator = new Evaluator();
 
 	// Helper to convert degrees to radians
@@ -88,6 +97,10 @@ export class Solid {
 		return points;
 	}
 
+	// ============================================================================
+	// SECTION 2: Constructor & Properties
+	// ============================================================================
+
 	public brush: Brush;
 	private _color: string;
 	private _isNegative: boolean;
@@ -109,6 +122,10 @@ export class Solid {
 
 	public clone = (): Solid => new Solid(this.brush.clone(true), this._color, this._isNegative);
 
+	// ============================================================================
+	// SECTION 3: Geometry Conversion Helper
+	// ============================================================================
+
 	private static geometryToBrush(
 		geometry:
 			| BoxGeometry
@@ -124,20 +141,24 @@ export class Solid {
 		return result;
 	}
 
+	// ============================================================================
+	// SECTION 4: Primitive Factories (Static)
+	// ============================================================================
+
 	static cube = (
 		width: number,
 		height: number,
 		depth: number,
 		options?: { color?: string }
 	): Solid => {
-		// Validate dimensions
-		if (width <= 0 || height <= 0 || depth <= 0)
-			throw new Error(
-				`Cube dimensions must be positive (got width: ${width}, height: ${height}, depth: ${depth})`
-			);
+		// Validate dimensions (check finite first, then positive)
 		if (!Number.isFinite(width) || !Number.isFinite(height) || !Number.isFinite(depth))
 			throw new Error(
 				`Cube dimensions must be finite (got width: ${width}, height: ${height}, depth: ${depth})`
+			);
+		if (width <= 0 || height <= 0 || depth <= 0)
+			throw new Error(
+				`Cube dimensions must be positive (got width: ${width}, height: ${height}, depth: ${depth})`
 			);
 
 		const color = options?.color ?? 'gray';
@@ -156,20 +177,20 @@ export class Solid {
 			topRadius?: number;
 		}
 	): Solid => {
-		// Validate dimensions
-		if (radius <= 0 || height <= 0)
-			throw new Error(
-				`Cylinder dimensions must be positive (got radius: ${radius}, height: ${height})`
-			);
+		// Validate dimensions (check finite first, then positive)
 		if (!Number.isFinite(radius) || !Number.isFinite(height))
 			throw new Error(
 				`Cylinder dimensions must be finite (got radius: ${radius}, height: ${height})`
 			);
+		if (radius <= 0 || height <= 0)
+			throw new Error(
+				`Cylinder dimensions must be positive (got radius: ${radius}, height: ${height})`
+			);
 		if (options?.topRadius !== undefined) {
-			if (options.topRadius < 0)
-				throw new Error(`Cylinder topRadius must be non-negative (got ${options.topRadius})`);
 			if (!Number.isFinite(options.topRadius))
 				throw new Error(`Cylinder topRadius must be finite (got ${options.topRadius})`);
+			if (options.topRadius < 0)
+				throw new Error(`Cylinder topRadius must be non-negative (got ${options.topRadius})`);
 		}
 
 		const color = options?.color ?? 'gray';
@@ -213,9 +234,9 @@ export class Solid {
 			segments?: number;
 		}
 	): Solid => {
-		// Validate dimensions
-		if (radius <= 0) throw new Error(`Sphere radius must be positive (got ${radius})`);
+		// Validate dimensions (check finite first, then positive)
 		if (!Number.isFinite(radius)) throw new Error(`Sphere radius must be finite (got ${radius})`);
+		if (radius <= 0) throw new Error(`Sphere radius must be positive (got ${radius})`);
 
 		const color = options?.color ?? 'gray';
 		const angle = options?.angle ?? 360;
@@ -256,13 +277,13 @@ export class Solid {
 			segments?: number;
 		}
 	): Solid => {
-		// Validate dimensions
+		// Validate dimensions (check finite first, then positive)
+		if (!Number.isFinite(radius) || !Number.isFinite(height))
+			throw new Error(`Cone dimensions must be finite (got radius: ${radius}, height: ${height})`);
 		if (radius <= 0 || height <= 0)
 			throw new Error(
 				`Cone dimensions must be positive (got radius: ${radius}, height: ${height})`
 			);
-		if (!Number.isFinite(radius) || !Number.isFinite(height))
-			throw new Error(`Cone dimensions must be finite (got radius: ${radius}, height: ${height})`);
 
 		const color = options?.color ?? 'gray';
 		const angle = options?.angle ?? 360;
@@ -306,20 +327,20 @@ export class Solid {
 			topRadius?: number;
 		}
 	): Solid => {
-		// Validate dimensions
+		// Validate dimensions (check finite first, then positive/constraints)
 		if (sides < 3) throw new Error(`Prism must have at least 3 sides (got ${sides})`);
 		if (!Number.isInteger(sides)) throw new Error(`Prism sides must be an integer (got ${sides})`);
+		if (!Number.isFinite(radius) || !Number.isFinite(height))
+			throw new Error(`Prism dimensions must be finite (got radius: ${radius}, height: ${height})`);
 		if (radius <= 0 || height <= 0)
 			throw new Error(
 				`Prism dimensions must be positive (got radius: ${radius}, height: ${height})`
 			);
-		if (!Number.isFinite(radius) || !Number.isFinite(height))
-			throw new Error(`Prism dimensions must be finite (got radius: ${radius}, height: ${height})`);
 		if (options?.topRadius !== undefined) {
-			if (options.topRadius < 0)
-				throw new Error(`Prism topRadius must be non-negative (got ${options.topRadius})`);
 			if (!Number.isFinite(options.topRadius))
 				throw new Error(`Prism topRadius must be finite (got ${options.topRadius})`);
+			if (options.topRadius < 0)
+				throw new Error(`Prism topRadius must be non-negative (got ${options.topRadius})`);
 		}
 
 		const color = options?.color ?? 'gray';
@@ -362,6 +383,10 @@ export class Solid {
 			color?: string;
 		}
 	): Solid => this.prism(3, radius, height, options);
+
+	// ============================================================================
+	// SECTION 5: Custom Profile Methods (Static)
+	// ============================================================================
 
 	/**
 	 * Creates a custom profile prism by extruding a 2D shape along the Z-axis.
@@ -585,6 +610,10 @@ export class Solid {
 			options
 		);
 	};
+
+	// ============================================================================
+	// SECTION 6: Revolution Methods (Static)
+	// ============================================================================
 
 	/**
 	 * Creates a body of revolution by rotating a 2D profile around the Y-axis.
@@ -878,8 +907,17 @@ export class Solid {
 		);
 	};
 
+	// ============================================================================
+	// SECTION 7: Transform Methods
+	// ============================================================================
+
 	// Absolute positioning
 	public at(x: number, y: number, z: number): Solid {
+		// Validate coordinates
+		if (!Number.isFinite(x) || !Number.isFinite(y) || !Number.isFinite(z)) {
+			throw new TypeError(`Position coordinates must be finite (got x: ${x}, y: ${y}, z: ${z})`);
+		}
+
 		this.brush.position.set(x, y, z);
 		this.brush.updateMatrixWorld();
 		return this;
@@ -887,6 +925,12 @@ export class Solid {
 
 	// Relative movement with object parameters
 	public move(delta: { x?: number; y?: number; z?: number }): Solid {
+		// Validate and sanitize deltas (getBounds() may return NaN for complex CSG results)
+		// Treat NaN/Infinity as 0 to maintain backward compatibility
+		if (delta.x !== undefined && !Number.isFinite(delta.x)) delta.x = 0;
+		if (delta.y !== undefined && !Number.isFinite(delta.y)) delta.y = 0;
+		if (delta.z !== undefined && !Number.isFinite(delta.z)) delta.z = 0;
+
 		if (delta.x !== undefined) this.brush.position.x += delta.x;
 		if (delta.y !== undefined) this.brush.position.y += delta.y;
 		if (delta.z !== undefined) this.brush.position.z += delta.z;
@@ -898,6 +942,19 @@ export class Solid {
 	private angleToRadian = (degree: number) => degree * (Math.PI / 180);
 
 	public rotate(angles: { x?: number; y?: number; z?: number }): Solid {
+		// Validate all angles
+		const allAngles = [
+			{ value: angles.x, name: 'x' },
+			{ value: angles.y, name: 'y' },
+			{ value: angles.z, name: 'z' }
+		].filter((a) => a.value !== undefined);
+
+		for (const angle of allAngles) {
+			if (!Number.isFinite(angle.value)) {
+				throw new TypeError(`Rotation angle '${angle.name}' must be finite (got ${angle.value})`);
+			}
+		}
+
 		if (angles.x !== undefined) this.brush.rotation.x += this.angleToRadian(angles.x);
 		if (angles.y !== undefined) this.brush.rotation.y += this.angleToRadian(angles.y);
 		if (angles.z !== undefined) this.brush.rotation.z += this.angleToRadian(angles.z);
@@ -907,6 +964,25 @@ export class Solid {
 
 	// Scaling with object parameters (multiplicative)
 	public scale(factors: { all?: number; x?: number; y?: number; z?: number }): Solid {
+		// Validate all factors
+		const allFactors = [
+			{ value: factors.all, name: 'all' },
+			{ value: factors.x, name: 'x' },
+			{ value: factors.y, name: 'y' },
+			{ value: factors.z, name: 'z' }
+		].filter((f) => f.value !== undefined);
+
+		for (const factor of allFactors) {
+			if (!Number.isFinite(factor.value)) {
+				throw new TypeError(`Scale factor '${factor.name}' must be finite (got ${factor.value})`);
+			}
+			if (factor.value === 0) {
+				throw new Error(
+					`Scale factor '${factor.name}' cannot be zero (creates degenerate geometry)`
+				);
+			}
+		}
+
 		if (factors.all !== undefined) {
 			this.brush.scale.x *= factors.all;
 			this.brush.scale.y *= factors.all;
@@ -918,6 +994,10 @@ export class Solid {
 		this.brush.updateMatrixWorld();
 		return this;
 	}
+
+	// ============================================================================
+	// SECTION 8: Alignment Methods
+	// ============================================================================
 
 	// Centering method
 	public center(axes?: { x?: boolean; y?: boolean; z?: boolean }): Solid {
@@ -989,6 +1069,10 @@ export class Solid {
 		return this;
 	}
 
+	// ============================================================================
+	// SECTION 9: CSG Operations (Static)
+	// ============================================================================
+
 	// Explicit CSG operations
 	public static MERGE(solids: Solid[]): Solid {
 		if (solids.length > 0 && solids[0].isNegative)
@@ -1023,6 +1107,10 @@ export class Solid {
 	public static INTERSECT(a: Solid, b: Solid): Solid {
 		return new Solid(Solid.evaluator.evaluate(a.brush, b.brush, INTERSECTION), a._color);
 	}
+
+	// ============================================================================
+	// SECTION 10: Grid Operations (Static)
+	// ============================================================================
 
 	public static GRID_XYZ(
 		solid: Solid,
@@ -1075,6 +1163,10 @@ export class Solid {
 			spacing: options.spacing ? [options.spacing, 0, 0] : undefined
 		});
 	}
+
+	// ============================================================================
+	// SECTION 11: Utility Methods
+	// ============================================================================
 
 	// Geometry normalization
 	private static emptyCube = new Solid(this.geometryToBrush(new BoxGeometry(0, 0, 0)), 'white');
