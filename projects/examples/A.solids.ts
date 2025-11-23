@@ -68,6 +68,34 @@ export const hexagonalPrism = (): Solid => {
 };
 
 /**
+ * Rounded Box - box with filleted/rounded edges
+ * Parameters: width (X), height (Y), depth (Z), options object with color, radius, segments
+ * Note: Radius defaults to 10% of smallest dimension. Segments control rounding quality.
+ */
+export const roundedBox = (): Solid => {
+	return Solid.roundedBox(10, 10, 10, { color: 'teal', radius: 2 }); // 10×10×10 with 2-unit radius
+};
+
+/**
+ * Text - 3D extruded text
+ * Parameters: text string, options object with color, size, height (extrusion depth)
+ * Note: Uses Helvetiker Regular font. Text is centered on XZ plane and aligned to Y=0
+ */
+export const textShape = (): Solid => {
+	return Solid.text('CSG', { color: 'blue', size: 8, height: 3 }); // "CSG" text
+};
+
+/**
+ * Text as Cutter - demonstrates using text in CSG subtraction (embossing/engraving)
+ * Creates a plate with text cut into it
+ */
+export const textCutter = (): Solid => {
+	const plate = Solid.cube(30, 20, 5, { color: 'gray' }).center().align('bottom');
+	const text = Solid.text('HELLO', { size: 4, height: 10, color: 'gray' }).move({ y: 10 });
+	return Solid.SUBTRACT(plate, text);
+};
+
+/**
  * Component registration map
  * Keys: Component names (appear in UI dropdown)
  * Values: Functions that return Solid instances
@@ -80,5 +108,8 @@ export const components: ComponentsMap = {
 	'A3. Solids: Sphere': sphere,
 	'A4. Solids: Cone': cone,
 	'A5. Solids: Triangle Prism': trianglePrism,
-	'A6. Solids: Hexagonal Prism': hexagonalPrism
+	'A6. Solids: Hexagonal Prism': hexagonalPrism,
+	'A7. Solids: Rounded Box': roundedBox,
+	'A8. Solids: Text': textShape,
+	'A9. Solids: Text Cutter': textCutter
 };
