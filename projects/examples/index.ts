@@ -13,13 +13,16 @@
  * F. Custom Profile Prisms (2D profiles extruded to 3D)
  * G. Revolution Solids (Rotational symmetry: chess pieces, vases)
  *
- * ADVANCED (H-M):
+ * ADVANCED (H-X):
  * H. Scaling Fundamentals (Uniform, axis-specific, cumulative scaling)
  * I. Complex Transform Chains (Order of operations, positioning patterns)
  * J. 3D Grid Patterns (GRID_XYZ, spacing, volumetric arrays)
  * K. Advanced 3D Spatial Arrangements (Programmatic generation, getBounds)
  * L. Performance & Caching (cacheFunction, optimization patterns)
  * M. Complex Multi-Concept Composition (Production-ready complete structures)
+ * N. Import Capabilities (STL files, SVG paths, boolean operations with imports)
+ * O. Circular Arrays (Polar patterns: gears, bolt holes, spokes, decorative)
+ * P. Mirror Operations (Reflection and symmetry across axis planes)
  *
  * All components are registered via addToComponentStore() and become available in the UI dropdown.
  */
@@ -39,6 +42,9 @@ import { components as grid3dComponents } from './J.grid3d';
 import { components as patterns3dComponents } from './K.patterns3d';
 import { components as optimizationComponents } from './L.optimization';
 import { components as compositionComponents } from './M.composition';
+import { components as importingComponents } from './N-importing';
+import { components as circularArraysComponents } from './O.circularArrays';
+import { components as mirrorComponents } from './P.mirror';
 
 // Register all example components in the global component store
 // The spread operator merges all component maps into a single object
@@ -55,5 +61,8 @@ addToComponentStore({
 	...grid3dComponents,
 	...patterns3dComponents,
 	...optimizationComponents,
-	...compositionComponents
+	...compositionComponents,
+	...importingComponents,
+	...circularArraysComponents,
+	...mirrorComponents
 });

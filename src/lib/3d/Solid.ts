@@ -2,47 +2,76 @@
 import {
 	Box3,
 	BoxGeometry,
+	BufferAttribute,
 	BufferGeometry,
 	ConeGeometry,
 	CylinderGeometry,
 	ExtrudeGeometry,
 	LatheGeometry,
+	Matrix4,
 	Shape,
 	SphereGeometry,
 	Vector3
 } from 'three';
+import helvetikerFont from 'three/examples/fonts/helvetiker_regular.typeface.json';
+import { RoundedBoxGeometry } from 'three/examples/jsm/geometries/RoundedBoxGeometry.js';
+import { TextGeometry } from 'three/examples/jsm/geometries/TextGeometry.js';
+import type { Font } from 'three/examples/jsm/loaders/FontLoader.js';
+import { FontLoader } from 'three/examples/jsm/loaders/FontLoader.js';
+import { STLLoader } from 'three/examples/jsm/loaders/STLLoader.js';
+import { SVGLoader } from 'three/examples/jsm/loaders/SVGLoader.js';
 import { ADDITION, Brush, Evaluator, INTERSECTION, SUBTRACTION } from 'three-bvh-csg';
 
 import { MathMinMax, MathRoundTo2 } from '$lib/Math';
 
-// Path segment type definitions
-export type StraightSegment = {
-	type: 'straight';
-	length: number;
-};
+// Re-export path segment types and factories for backward compatibility
+export type { CurveSegment, PathSegment, StraightSegment } from './path-factories';
+export { curve, straight } from './path-factories';
 
-export type CurveSegment = {
-	type: 'curve';
-	radius: number;
-	angle: number; // degrees, positive = right turn, negative = left turn
-};
+// Import for internal use
+import type { PathSegment } from './path-factories';
 
-export type PathSegment = StraightSegment | CurveSegment;
-
-// Factory functions for path segments
-export const straight = (length: number): StraightSegment => ({
-	type: 'straight',
-	length
-});
-
-export const curve = (radius: number, angle: number): CurveSegment => ({
-	type: 'curve',
-	radius,
-	angle
-});
+/**
+ * ============================================================================
+ * TABLE OF CONTENTS
+ * ============================================================================
+ *
+ * This file contains the core Solid class for 3D mesh creation using CSG operations.
+ * Total lines: ~1100
+ *
+ * SECTIONS:
+ * 1. Static Utilities (private)          - Lines ~45-90    - evaluator, degreesToRadians, generateWedgePoints
+ * 2. Constructor & Properties             - Lines ~92-111   - Constructor, getters, clone
+ * 3. Geometry Conversion                  - Lines ~113-126  - geometryToBrush helper
+ * 4. Primitive Factories (static)         - Lines ~128-366  - cube, roundedBox, cylinder, sphere, cone, prism, trianglePrism, text
+ * 4.5. Import Methods (static)            - Lines ~368-450  - fromSTL, profilePrismFromSVG
+ * 5. Custom Profile Methods (static)      - Lines ~452-672  - profilePrism, profilePrismFromPoints, profilePrismFromPath
+ * 6. Revolution Methods (static)          - Lines ~674-992  - revolutionSolid, revolutionSolidFromPoints, revolutionSolidFromPath
+ * 7. Transform Methods                    - Lines ~994-1033 - at, move, rotate, scale
+ * 8. Alignment Methods                    - Lines ~1035-1103- center, align, getBounds
+ * 9. CSG Operations (static)              - Lines ~1105-1138- MERGE, SUBTRACT, UNION, INTERSECT
+ * 10. Grid & Array Operations (static)    - Lines ~1370-1510- GRID_XYZ, GRID_XY, GRID_X, ARRAY_CIRCULAR
+ * 11. Utility Methods                     - Lines ~1512+    - normalize, setNegative, setColor, getVertices, getBounds
+ *
+ * ============================================================================
+ */
 
 export class Solid {
+	// ============================================================================
+	// SECTION 1: Static Utilities (Private)
+	// ============================================================================
+
 	private static evaluator: Evaluator = new Evaluator();
+	private static defaultFont: Font | undefined = undefined;
+
+	// Helper to load and cache the default font for text geometry
+	private static getDefaultFont(): Font {
+		if (!this.defaultFont) {
+			const loader = new FontLoader();
+			this.defaultFont = loader.parse(helvetikerFont);
+		}
+		return this.defaultFont;
+	}
 
 	// Helper to convert degrees to radians
 	private static degreesToRadians = (degrees: number): number => degrees * (Math.PI / 180);
@@ -88,6 +117,10 @@ export class Solid {
 		return points;
 	}
 
+	// ============================================================================
+	// SECTION 2: Constructor & Properties
+	// ============================================================================
+
 	public brush: Brush;
 	private _color: string;
 	private _isNegative: boolean;
@@ -109,14 +142,20 @@ export class Solid {
 
 	public clone = (): Solid => new Solid(this.brush.clone(true), this._color, this._isNegative);
 
+	// ============================================================================
+	// SECTION 3: Geometry Conversion Helper
+	// ============================================================================
+
 	private static geometryToBrush(
 		geometry:
 			| BoxGeometry
+			| RoundedBoxGeometry
 			| CylinderGeometry
 			| SphereGeometry
 			| ConeGeometry
 			| ExtrudeGeometry
 			| LatheGeometry
+			| TextGeometry
 			| BufferGeometry
 	): Brush {
 		const result = new Brush(geometry.translate(0, 0, 0));
@@ -124,25 +163,67 @@ export class Solid {
 		return result;
 	}
 
+	// ============================================================================
+	// SECTION 4: Primitive Factories (Static)
+	// ============================================================================
+
 	static cube = (
 		width: number,
 		height: number,
 		depth: number,
 		options?: { color?: string }
 	): Solid => {
-		// Validate dimensions
-		if (width <= 0 || height <= 0 || depth <= 0)
-			throw new Error(
-				`Cube dimensions must be positive (got width: ${width}, height: ${height}, depth: ${depth})`
-			);
+		// Validate dimensions (check finite first, then positive)
 		if (!Number.isFinite(width) || !Number.isFinite(height) || !Number.isFinite(depth))
 			throw new Error(
 				`Cube dimensions must be finite (got width: ${width}, height: ${height}, depth: ${depth})`
+			);
+		if (width <= 0 || height <= 0 || depth <= 0)
+			throw new Error(
+				`Cube dimensions must be positive (got width: ${width}, height: ${height}, depth: ${depth})`
 			);
 
 		const color = options?.color ?? 'gray';
 		return new Solid(
 			this.geometryToBrush(new BoxGeometry(width, height, depth)),
+			color
+		).normalize();
+	};
+
+	static roundedBox = (
+		width: number,
+		height: number,
+		depth: number,
+		options?: {
+			color?: string;
+			radius?: number;
+			segments?: number;
+		}
+	): Solid => {
+		// Validate dimensions (check finite first, then positive)
+		if (!Number.isFinite(width) || !Number.isFinite(height) || !Number.isFinite(depth))
+			throw new Error(
+				`RoundedBox dimensions must be finite (got width: ${width}, height: ${height}, depth: ${depth})`
+			);
+		if (width <= 0 || height <= 0 || depth <= 0)
+			throw new Error(
+				`RoundedBox dimensions must be positive (got width: ${width}, height: ${height}, depth: ${depth})`
+			);
+
+		const color = options?.color ?? 'gray';
+		const radius = options?.radius ?? Math.min(width, height, depth) * 0.1;
+		const segments = options?.segments ?? 2;
+
+		// Validate radius is within bounds
+		const maxRadius = Math.min(width, height, depth) / 2;
+		if (radius > maxRadius)
+			throw new Error(
+				`RoundedBox radius (${radius}) cannot exceed half of smallest dimension (${maxRadius})`
+			);
+		if (radius < 0) throw new Error(`RoundedBox radius must be non-negative (got ${radius})`);
+
+		return new Solid(
+			this.geometryToBrush(new RoundedBoxGeometry(width, height, depth, segments, radius)),
 			color
 		).normalize();
 	};
@@ -156,20 +237,20 @@ export class Solid {
 			topRadius?: number;
 		}
 	): Solid => {
-		// Validate dimensions
-		if (radius <= 0 || height <= 0)
-			throw new Error(
-				`Cylinder dimensions must be positive (got radius: ${radius}, height: ${height})`
-			);
+		// Validate dimensions (check finite first, then positive)
 		if (!Number.isFinite(radius) || !Number.isFinite(height))
 			throw new Error(
 				`Cylinder dimensions must be finite (got radius: ${radius}, height: ${height})`
 			);
+		if (radius <= 0 || height <= 0)
+			throw new Error(
+				`Cylinder dimensions must be positive (got radius: ${radius}, height: ${height})`
+			);
 		if (options?.topRadius !== undefined) {
-			if (options.topRadius < 0)
-				throw new Error(`Cylinder topRadius must be non-negative (got ${options.topRadius})`);
 			if (!Number.isFinite(options.topRadius))
 				throw new Error(`Cylinder topRadius must be finite (got ${options.topRadius})`);
+			if (options.topRadius < 0)
+				throw new Error(`Cylinder topRadius must be non-negative (got ${options.topRadius})`);
 		}
 
 		const color = options?.color ?? 'gray';
@@ -213,9 +294,9 @@ export class Solid {
 			segments?: number;
 		}
 	): Solid => {
-		// Validate dimensions
-		if (radius <= 0) throw new Error(`Sphere radius must be positive (got ${radius})`);
+		// Validate dimensions (check finite first, then positive)
 		if (!Number.isFinite(radius)) throw new Error(`Sphere radius must be finite (got ${radius})`);
+		if (radius <= 0) throw new Error(`Sphere radius must be positive (got ${radius})`);
 
 		const color = options?.color ?? 'gray';
 		const angle = options?.angle ?? 360;
@@ -256,13 +337,13 @@ export class Solid {
 			segments?: number;
 		}
 	): Solid => {
-		// Validate dimensions
+		// Validate dimensions (check finite first, then positive)
+		if (!Number.isFinite(radius) || !Number.isFinite(height))
+			throw new Error(`Cone dimensions must be finite (got radius: ${radius}, height: ${height})`);
 		if (radius <= 0 || height <= 0)
 			throw new Error(
 				`Cone dimensions must be positive (got radius: ${radius}, height: ${height})`
 			);
-		if (!Number.isFinite(radius) || !Number.isFinite(height))
-			throw new Error(`Cone dimensions must be finite (got radius: ${radius}, height: ${height})`);
 
 		const color = options?.color ?? 'gray';
 		const angle = options?.angle ?? 360;
@@ -306,20 +387,20 @@ export class Solid {
 			topRadius?: number;
 		}
 	): Solid => {
-		// Validate dimensions
+		// Validate dimensions (check finite first, then positive/constraints)
 		if (sides < 3) throw new Error(`Prism must have at least 3 sides (got ${sides})`);
 		if (!Number.isInteger(sides)) throw new Error(`Prism sides must be an integer (got ${sides})`);
+		if (!Number.isFinite(radius) || !Number.isFinite(height))
+			throw new Error(`Prism dimensions must be finite (got radius: ${radius}, height: ${height})`);
 		if (radius <= 0 || height <= 0)
 			throw new Error(
 				`Prism dimensions must be positive (got radius: ${radius}, height: ${height})`
 			);
-		if (!Number.isFinite(radius) || !Number.isFinite(height))
-			throw new Error(`Prism dimensions must be finite (got radius: ${radius}, height: ${height})`);
 		if (options?.topRadius !== undefined) {
-			if (options.topRadius < 0)
-				throw new Error(`Prism topRadius must be non-negative (got ${options.topRadius})`);
 			if (!Number.isFinite(options.topRadius))
 				throw new Error(`Prism topRadius must be finite (got ${options.topRadius})`);
+			if (options.topRadius < 0)
+				throw new Error(`Prism topRadius must be non-negative (got ${options.topRadius})`);
 		}
 
 		const color = options?.color ?? 'gray';
@@ -362,6 +443,206 @@ export class Solid {
 			color?: string;
 		}
 	): Solid => this.prism(3, radius, height, options);
+
+	static text = (
+		text: string,
+		options?: {
+			color?: string;
+			size?: number;
+			height?: number;
+			curveSegments?: number;
+			bevelEnabled?: boolean;
+		}
+	): Solid => {
+		// Validate text parameter
+		if (!text || text.length === 0) throw new Error('Text cannot be empty');
+
+		const color = options?.color ?? 'gray';
+		const size = options?.size ?? 10;
+		const height = options?.height ?? 2;
+		const curveSegments = options?.curveSegments ?? 12;
+		const bevelEnabled = options?.bevelEnabled ?? false;
+
+		// Get the default font
+		const font = this.getDefaultFont();
+
+		// Create text geometry
+		// Note: TextGeometry's 'depth' parameter is what we call 'height' (extrusion depth)
+		const geometry = new TextGeometry(text, {
+			font,
+			size,
+			depth: height,
+			curveSegments,
+			bevelEnabled
+		});
+
+		// Create solid and normalize
+		const solid = new Solid(this.geometryToBrush(geometry), color).normalize();
+
+		// Center text on XZ plane and align to bottom (Y=0)
+		// This makes text easier to position and orient consistently
+		return solid.center({ x: true, z: true }).align('bottom');
+	};
+
+	// ============================================================================
+	// SECTION 4.5: Import Methods (Static)
+	// ============================================================================
+
+	/**
+	 * Creates a Solid from STL file data (binary or ASCII format).
+	 * STL files can be imported using Vite's import syntax with ?raw or ?url.
+	 *
+	 * @param data - STL file data as ArrayBuffer (binary) or string (ASCII)
+	 * @param options - Configuration options
+	 * @param options.color - Material color (default: 'gray')
+	 * @returns Solid created from the imported STL geometry
+	 *
+	 * @example
+	 * // Import STL file via Vite
+	 * import stlData from './model.stl?raw';
+	 *
+	 * // Create component from STL
+	 * const importedModel = Solid.fromSTL(stlData, { color: 'blue' });
+	 *
+	 * @example
+	 * // Use in boolean operations
+	 * const stl = Solid.fromSTL(stlData, { color: 'red' });
+	 * const cube = Solid.cube(20, 20, 20, { color: 'blue' });
+	 * const result = Solid.SUBTRACT(cube, stl);
+	 */
+	static fromSTL = (data: ArrayBuffer | string, options?: { color?: string }): Solid => {
+		const color = options?.color ?? 'gray';
+		const loader = new STLLoader();
+
+		// Parse STL data (loader handles both binary and ASCII formats)
+		let geometry = loader.parse(data);
+
+		// Validate that geometry was created successfully
+		if (!geometry.attributes['position'] || geometry.attributes['position'].count === 0) {
+			throw new Error('Failed to parse STL data - file may be corrupted or invalid');
+		}
+
+		// STL geometries are usually non-indexed, but ensure it's converted
+		// This is required for proper CSG operations
+		if (geometry.index) {
+			geometry = geometry.toNonIndexed();
+		}
+
+		// Ensure geometry has proper normals
+		if (!geometry.attributes['normal']) {
+			geometry.computeVertexNormals();
+		}
+
+		// Add UV coordinates if missing (required for CSG operations)
+		if (!geometry.attributes['uv']) {
+			const vertexCount = geometry.attributes['position'].count;
+			const uvs = new Float32Array(vertexCount * 2);
+			// Simple planar UV mapping (all zeros is acceptable for CSG)
+			for (let index = 0; index < vertexCount; index++) {
+				uvs[index * 2] = 0;
+				uvs[index * 2 + 1] = 0;
+			}
+			geometry.setAttribute('uv', new BufferAttribute(uvs, 2));
+		}
+
+		// Convert to Brush and create Solid
+		const brush = this.geometryToBrush(geometry);
+
+		// STL geometries are already complete - no need to normalize
+		// Normalize() can cause issues with externally loaded geometry
+		return new Solid(brush, color);
+	};
+
+	/**
+	 * Creates a profile prism from an SVG path string.
+	 * The SVG path is extruded along the Y-axis to create a 3D solid.
+	 *
+	 * @param svgPathData - SVG path data string (the 'd' attribute value)
+	 * @param height - Extrusion height along Y-axis
+	 * @param options - Configuration options
+	 * @param options.color - Material color (default: 'gray')
+	 * @returns Solid created from the extruded SVG path
+	 *
+	 * @example
+	 * // Simple rectangle path
+	 * const rect = Solid.profilePrismFromSVG(
+	 *   'M 0 0 L 20 0 L 20 10 L 0 10 Z',
+	 *   5,
+	 *   { color: 'blue' }
+	 * );
+	 *
+	 * @example
+	 * // Curved path with bezier
+	 * const curve = Solid.profilePrismFromSVG(
+	 *   'M 0 0 C 10 0, 10 10, 20 10 L 20 15 L 0 15 Z',
+	 *   8,
+	 *   { color: 'red' }
+	 * );
+	 *
+	 * @example
+	 * // Import SVG and use path
+	 * const svgPath = 'M 10 10 L 50 10 L 50 50 L 10 50 Z';
+	 * const logo = Solid.profilePrismFromSVG(svgPath, 3, { color: 'green' });
+	 */
+	static profilePrismFromSVG = (
+		svgPathData: string,
+		height: number,
+		options?: { color?: string }
+	): Solid => {
+		const color = options?.color ?? 'gray';
+
+		// Wrap path data in minimal SVG structure
+		const svgString = `<svg xmlns="http://www.w3.org/2000/svg"><path d="${svgPathData}"/></svg>`;
+
+		// Parse SVG data
+		const loader = new SVGLoader();
+		const svgData = loader.parse(svgString);
+
+		// Check if we have any paths
+		if (svgData.paths.length === 0) {
+			throw new Error('No paths found in SVG data');
+		}
+
+		// Get shapes from the first path
+		const shapes = SVGLoader.createShapes(svgData.paths[0]);
+
+		if (shapes.length === 0) {
+			throw new Error('No valid shapes extracted from SVG path');
+		}
+
+		// Use the first shape to create extruded geometry
+		const geometry = new ExtrudeGeometry(shapes[0], {
+			depth: height,
+			bevelEnabled: false,
+			curveSegments: 12,
+			steps: 1
+		});
+
+		// Validate that geometry was created successfully
+		if (!geometry.attributes['position'] || geometry.attributes['position'].count === 0) {
+			throw new Error('Failed to create valid geometry from SVG path - check path syntax');
+		}
+
+		// Ensure geometry has proper normals and is computed
+		if (!geometry.attributes['normal']) {
+			geometry.computeVertexNormals();
+		}
+
+		// Center geometry along extrusion axis
+		geometry.translate(0, 0, -height / 2);
+
+		// SVG coordinate system has Y pointing down, Three.js has Y pointing up
+		// Rotate so extrusion direction (Z-axis) becomes height (Y-axis)
+		// and flip to correct the Y-axis orientation
+		return new Solid(this.geometryToBrush(geometry), color)
+			.normalize()
+			.rotate({ x: 90 })
+			.scale({ z: -1 }); // Flip Z to correct for SVG Y-down coordinate system
+	};
+
+	// ============================================================================
+	// SECTION 5: Custom Profile Methods (Static)
+	// ============================================================================
 
 	/**
 	 * Creates a custom profile prism by extruding a 2D shape along the Z-axis.
@@ -585,6 +866,10 @@ export class Solid {
 			options
 		);
 	};
+
+	// ============================================================================
+	// SECTION 6: Revolution Methods (Static)
+	// ============================================================================
 
 	/**
 	 * Creates a body of revolution by rotating a 2D profile around the Y-axis.
@@ -878,8 +1163,17 @@ export class Solid {
 		);
 	};
 
+	// ============================================================================
+	// SECTION 7: Transform Methods
+	// ============================================================================
+
 	// Absolute positioning
 	public at(x: number, y: number, z: number): Solid {
+		// Validate coordinates
+		if (!Number.isFinite(x) || !Number.isFinite(y) || !Number.isFinite(z)) {
+			throw new TypeError(`Position coordinates must be finite (got x: ${x}, y: ${y}, z: ${z})`);
+		}
+
 		this.brush.position.set(x, y, z);
 		this.brush.updateMatrixWorld();
 		return this;
@@ -887,6 +1181,12 @@ export class Solid {
 
 	// Relative movement with object parameters
 	public move(delta: { x?: number; y?: number; z?: number }): Solid {
+		// Validate and sanitize deltas (getBounds() may return NaN for complex CSG results)
+		// Treat NaN/Infinity as 0 to maintain backward compatibility
+		if (delta.x !== undefined && !Number.isFinite(delta.x)) delta.x = 0;
+		if (delta.y !== undefined && !Number.isFinite(delta.y)) delta.y = 0;
+		if (delta.z !== undefined && !Number.isFinite(delta.z)) delta.z = 0;
+
 		if (delta.x !== undefined) this.brush.position.x += delta.x;
 		if (delta.y !== undefined) this.brush.position.y += delta.y;
 		if (delta.z !== undefined) this.brush.position.z += delta.z;
@@ -898,6 +1198,19 @@ export class Solid {
 	private angleToRadian = (degree: number) => degree * (Math.PI / 180);
 
 	public rotate(angles: { x?: number; y?: number; z?: number }): Solid {
+		// Validate all angles
+		const allAngles = [
+			{ value: angles.x, name: 'x' },
+			{ value: angles.y, name: 'y' },
+			{ value: angles.z, name: 'z' }
+		].filter((a) => a.value !== undefined);
+
+		for (const angle of allAngles) {
+			if (!Number.isFinite(angle.value)) {
+				throw new TypeError(`Rotation angle '${angle.name}' must be finite (got ${angle.value})`);
+			}
+		}
+
 		if (angles.x !== undefined) this.brush.rotation.x += this.angleToRadian(angles.x);
 		if (angles.y !== undefined) this.brush.rotation.y += this.angleToRadian(angles.y);
 		if (angles.z !== undefined) this.brush.rotation.z += this.angleToRadian(angles.z);
@@ -907,6 +1220,25 @@ export class Solid {
 
 	// Scaling with object parameters (multiplicative)
 	public scale(factors: { all?: number; x?: number; y?: number; z?: number }): Solid {
+		// Validate all factors
+		const allFactors = [
+			{ value: factors.all, name: 'all' },
+			{ value: factors.x, name: 'x' },
+			{ value: factors.y, name: 'y' },
+			{ value: factors.z, name: 'z' }
+		].filter((f) => f.value !== undefined);
+
+		for (const factor of allFactors) {
+			if (!Number.isFinite(factor.value)) {
+				throw new TypeError(`Scale factor '${factor.name}' must be finite (got ${factor.value})`);
+			}
+			if (factor.value === 0) {
+				throw new Error(
+					`Scale factor '${factor.name}' cannot be zero (creates degenerate geometry)`
+				);
+			}
+		}
+
 		if (factors.all !== undefined) {
 			this.brush.scale.x *= factors.all;
 			this.brush.scale.y *= factors.all;
@@ -918,6 +1250,10 @@ export class Solid {
 		this.brush.updateMatrixWorld();
 		return this;
 	}
+
+	// ============================================================================
+	// SECTION 8: Alignment Methods
+	// ============================================================================
 
 	// Centering method
 	public center(axes?: { x?: boolean; y?: boolean; z?: boolean }): Solid {
@@ -989,6 +1325,10 @@ export class Solid {
 		return this;
 	}
 
+	// ============================================================================
+	// SECTION 9: CSG Operations (Static)
+	// ============================================================================
+
 	// Explicit CSG operations
 	public static MERGE(solids: Solid[]): Solid {
 		if (solids.length > 0 && solids[0].isNegative)
@@ -1023,6 +1363,10 @@ export class Solid {
 	public static INTERSECT(a: Solid, b: Solid): Solid {
 		return new Solid(Solid.evaluator.evaluate(a.brush, b.brush, INTERSECTION), a._color);
 	}
+
+	// ============================================================================
+	// SECTION 10: Grid & Array Operations (Static)
+	// ============================================================================
 
 	public static GRID_XYZ(
 		solid: Solid,
@@ -1075,6 +1419,187 @@ export class Solid {
 			spacing: options.spacing ? [options.spacing, 0, 0] : undefined
 		});
 	}
+
+	/**
+	 * Creates a circular array of solids arranged in a circle
+	 *
+	 * Elements are distributed evenly around a circle in the XZ plane (horizontal, around Y-axis).
+	 * By default, elements rotate to face outward (radial orientation) like gear teeth.
+	 *
+	 * @param solid - The solid to duplicate in a circular pattern
+	 * @param options - Configuration options
+	 * @param options.count - Number of copies to create (must be >= 1)
+	 * @param options.radius - Radius of the circular arrangement (must be > 0)
+	 * @param options.startAngle - Starting angle in degrees (default: 0)
+	 * @param options.endAngle - Ending angle in degrees (default: 360)
+	 * @param options.rotateElements - Whether to rotate elements to face outward (default: true)
+	 *
+	 * @returns A single merged Solid containing all elements in the circular pattern
+	 *
+	 * @example
+	 * // Gear teeth - 24 teeth facing outward
+	 * const tooth = Solid.cube(2, 10, 3).move({ z: 15 });
+	 * const gear = Solid.ARRAY_CIRCULAR(tooth, { count: 24, radius: 15 });
+	 *
+	 * @example
+	 * // Bolt holes in a circle - 8 holes, no rotation needed
+	 * const hole = Solid.cylinder(2, 10).setNegative();
+	 * const pattern = Solid.ARRAY_CIRCULAR(hole, { count: 8, radius: 20, rotateElements: false });
+	 *
+	 * @example
+	 * // Half circle of seats (0° to 180°)
+	 * const seat = Solid.cube(2, 1, 2);
+	 * const seating = Solid.ARRAY_CIRCULAR(seat, { count: 10, radius: 30, startAngle: 0, endAngle: 180 });
+	 */
+	public static ARRAY_CIRCULAR(
+		solid: Solid,
+		options: {
+			count: number;
+			radius: number;
+			startAngle?: number;
+			endAngle?: number;
+			rotateElements?: boolean;
+		}
+	): Solid {
+		// Validate inputs
+		if (!Number.isFinite(options.count) || options.count < 1)
+			throw new Error(`count must be at least 1 (got ${options.count})`);
+		if (!Number.isFinite(options.radius) || options.radius <= 0)
+			throw new Error(`radius must be positive (got ${options.radius})`);
+
+		// Set defaults
+		const startAngle = options.startAngle ?? 0;
+		const endAngle = options.endAngle ?? 360;
+		const rotateElements = options.rotateElements ?? true;
+
+		// Validate angles
+		if (!Number.isFinite(startAngle) || !Number.isFinite(endAngle))
+			throw new Error(`angles must be finite (got start: ${startAngle}, end: ${endAngle})`);
+
+		// Calculate angular spacing
+		const totalAngle = endAngle - startAngle;
+		const angleStep = totalAngle / options.count;
+
+		// Build array of positioned solids
+		const solids: Solid[] = [];
+
+		for (let index = 0; index < options.count; index++) {
+			// Calculate angle for this element (in degrees)
+			const angleDeg = startAngle + index * angleStep;
+			const angleRad = this.degreesToRadians(angleDeg);
+
+			// Calculate position in XZ plane (horizontal circle around Y-axis)
+			const x = options.radius * Math.cos(angleRad);
+			const z = options.radius * Math.sin(angleRad);
+
+			// Clone and transform the solid
+			const element = solid.clone();
+
+			// Get the element's current Y position (preserve vertical positioning)
+			const bounds = element.getBounds();
+			const currentY = bounds.center.y;
+
+			// Rotate element to face outward if requested
+			if (rotateElements) element.rotate({ y: angleDeg });
+
+			// Position the element (preserve Y, set X and Z for circular arrangement)
+			element.at(x, currentY, z);
+
+			solids.push(element);
+		}
+
+		// Merge all solids into one
+		return Solid.MERGE(solids);
+	}
+
+	/**
+	 * Mirrors a solid across a specified axis plane.
+	 *
+	 * Creates a reflected copy of the geometry across the plane perpendicular to the specified axis.
+	 * The original solid is not modified - a new mirrored Solid is returned.
+	 *
+	 * **Mirroring behavior:**
+	 * - 'X': Mirrors across YZ plane (flips X coordinates)
+	 * - 'Y': Mirrors across XZ plane (flips Y coordinates)
+	 * - 'Z': Mirrors across XY plane (flips Z coordinates)
+	 *
+	 * **Common use cases:**
+	 * - Creating bilateral symmetry with UNION
+	 * - Mirroring asymmetric parts
+	 * - Creating full 3D symmetry by chaining multiple MIRROR calls
+	 *
+	 * @param solid - The solid to mirror
+	 * @param axis - The axis perpendicular to the mirror plane ('X', 'Y', or 'Z')
+	 * @returns A new Solid with mirrored geometry
+	 *
+	 * @example
+	 * // Create a simple asymmetric shape and mirror it
+	 * const shape = Solid.cube(10, 5, 3).move({ x: 5 });
+	 * const mirrored = Solid.MIRROR(shape, 'X');
+	 *
+	 * @example
+	 * // Create bilateral symmetry
+	 * const half = Solid.cube(10, 20, 5).move({ x: 10 });
+	 * const symmetric = Solid.UNION(half, Solid.MIRROR(half, 'X'));
+	 *
+	 * @example
+	 * // Create full 3D symmetry by chaining mirrors
+	 * const quarter = Solid.cylinder(5, 10).move({ x: 10, z: 10 });
+	 * const halfX = Solid.UNION(quarter, Solid.MIRROR(quarter, 'X'));
+	 * const full = Solid.UNION(halfX, Solid.MIRROR(halfX, 'Z'));
+	 *
+	 * @example
+	 * // Mirror works with negative solids for composition
+	 * const hole = Solid.cylinder(2, 20).move({ x: 5 }).setNegative();
+	 * const holes = Solid.MERGE([
+	 *   Solid.cube(30, 30, 5),
+	 *   hole,
+	 *   Solid.MIRROR(hole, 'X')
+	 * ]);
+	 */
+	public static MIRROR(solid: Solid, axis: 'X' | 'Y' | 'Z'): Solid {
+		// Validate axis
+		if (!['X', 'Y', 'Z'].includes(axis)) {
+			throw new Error(`axis must be 'X', 'Y', or 'Z' (got '${axis}')`);
+		}
+
+		// Clone the solid to avoid modifying the original
+		const mirrored = solid.clone();
+
+		// Brush.clone() doesn't deep clone geometry, so we need to clone it manually
+		mirrored.brush.geometry = mirrored.brush.geometry.clone();
+
+		// Update matrix before baking to ensure it's current
+		mirrored.brush.updateMatrixWorld();
+
+		// Bake all transformations (position, rotation, scale) into geometry
+		mirrored.brush.geometry.applyMatrix4(mirrored.brush.matrix);
+		mirrored.brush.position.set(0, 0, 0);
+		mirrored.brush.rotation.set(0, 0, 0);
+		mirrored.brush.scale.set(1, 1, 1);
+		mirrored.brush.updateMatrixWorld();
+
+		// Apply negative scale to the specified axis to mirror the geometry
+		const scaleX = axis === 'X' ? -1 : 1;
+		const scaleY = axis === 'Y' ? -1 : 1;
+		const scaleZ = axis === 'Z' ? -1 : 1;
+
+		// Create scale matrix and apply it to geometry
+		const scaleMatrix = new Matrix4().makeScale(scaleX, scaleY, scaleZ);
+		mirrored.brush.geometry.applyMatrix4(scaleMatrix);
+
+		// Invalidate bounding box so it gets recalculated
+		// eslint-disable-next-line unicorn/no-null
+		mirrored.brush.geometry.boundingBox = null;
+		mirrored.brush.updateMatrixWorld();
+
+		// Return the mirrored solid
+		return mirrored;
+	}
+
+	// ============================================================================
+	// SECTION 11: Utility Methods
+	// ============================================================================
 
 	// Geometry normalization
 	private static emptyCube = new Solid(this.geometryToBrush(new BoxGeometry(0, 0, 0)), 'white');
